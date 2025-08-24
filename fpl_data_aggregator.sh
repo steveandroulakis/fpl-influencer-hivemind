@@ -310,7 +310,7 @@ if [[ ${#DISCOVERED_VIDEOS[@]} -gt 0 ]]; then
     TRANSCRIPT_FILES=()
     
     for video_id in "${DISCOVERED_VIDEOS[@]}"; do
-        transcript_file="${TEMP_DIR}/transcript_${video_id}.json"
+        transcript_file="${TEMP_DIR}/transcript_${video_id}.txt"
         log_file="${TEMP_DIR}/transcript_${video_id}.log"
         
         TRANSCRIPT_FILES+=("$transcript_file")
@@ -319,7 +319,7 @@ if [[ ${#DISCOVERED_VIDEOS[@]} -gt 0 ]]; then
         cmd=(
             "${SCRIPT_DIR}/youtube-transcript/fpl_transcript.py"
             --id "$video_id"
-            --format json
+            --format txt
             --out "$transcript_file"
         )
         
@@ -424,11 +424,12 @@ done
 for transcript_file in "${TRANSCRIPT_FILES[@]}"; do
     if [[ -f "$transcript_file" && -s "$transcript_file" ]]; then
         # Extract video ID from filename
-        video_id=$(basename "$transcript_file" .json | sed 's/transcript_//')
+        video_id=$(basename "$transcript_file" .txt | sed 's/transcript_//')
         
-        # Add to transcripts object
-        jq --arg video_id "$video_id" --slurpfile transcript "$transcript_file" \
-           '.youtube_analysis.transcripts[$video_id] = $transcript[0]' \
+        # Clean transcript: remove newlines, extra spaces, and create continuous text
+        transcript_content=$(cat "$transcript_file" | tr '\n' ' ' | tr -s ' ' | sed 's/^ *//;s/ *$//' | jq -Rs .)
+        jq --arg video_id "$video_id" --argjson transcript "$transcript_content" \
+           '.youtube_analysis.transcripts[$video_id] = $transcript' \
            "$RESULTS_FILE" > "${RESULTS_FILE}.tmp" && mv "${RESULTS_FILE}.tmp" "$RESULTS_FILE"
     fi
 done

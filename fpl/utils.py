@@ -341,9 +341,7 @@ def write_csv(
         sys.exit(1)
 
 
-def write_json(
-    data: list[dict[str, Any]] | dict[str, Any], filepath: Path
-) -> None:
+def write_json(data: list[dict[str, Any]] | dict[str, Any], filepath: Path) -> None:
     """
     Write data to JSON file.
 

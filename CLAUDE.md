@@ -35,6 +35,11 @@ This is a Python project that scrapes popular Fantasy Premier League (FPL) influ
 - `./script_name.py` - Run scripts directly (if executable and using PEP 723 shebang)
 
 ### Script-Specific Commands
+#### Main Pipeline - Complete FPL Analysis
+- `./fpl_data_aggregator.sh --team-id 1178124 --output-file results.json` - **Full pipeline orchestrator**
+- `./fpl_data_aggregator.sh --team-id 1178124 --verbose` - Complete analysis with detailed logging
+- `./fpl_intelligence_analyzer.py --input results.json --output-file analysis.md --verbose` - **LLM-powered analysis and recommendations**
+
 #### FPL Data Analysis (`./fpl/`)
 - `uv run fpl/get_team_players.py --team "Arsenal" --format json` - Club roster analysis
 - `uv run fpl/get_top_ownership.py --limit 200 --out top_players.csv` - Ownership rankings
@@ -122,9 +127,35 @@ The project is designed to work with Fantasy Premier League data and includes:
 ### Coverage Exclusions
 Coverage excludes common patterns like `__repr__`, debug statements, `NotImplementedError`, and abstract methods to focus on meaningful test coverage.
 
+## Typical Workflow
+
+### Complete FPL Analysis Pipeline
+1. **Data Collection**: `./fpl_data_aggregator.sh --team-id 1178124 --output-file analysis_data.json --verbose`
+   - Collects current gameweek info, top 150 player data, personal team analysis
+   - Discovers relevant FPL videos from 5 YouTube channels in parallel
+   - Fetches and cleans transcripts for LLM processing
+   - Outputs comprehensive JSON with all aggregated data
+
+2. **LLM Analysis**: `./fpl_intelligence_analyzer.py --input analysis_data.json --output-file gameweek_X_analysis.md --verbose`
+   - Phase 1: Sonnet-4 analyzes each channel individually for team selections, transfers, captain choices
+   - Phase 2: Opus-4 generates comparative analysis with specific recommendations for your team
+   - Considers player injury status (status codes: a/d/i/s/u) in all recommendations
+   - Outputs 160+ line markdown report with executive summary, transfer recommendations, captain analysis
+
+### Individual Component Testing
+- Test FPL API: `uv run fpl/get_my_team.py --entry-id 1178124`
+- Test video discovery: `./youtube-titles/fpl_video_picker.py --single-channel "FPL Raptor" --gameweek 5 --verbose`
+- Test transcripts: `./youtube-transcript/fpl_transcript.py --id VIDEO_ID --format txt`
+
 ## Current Implementation Status
 
 ### Completed Components
+- **Complete Analysis Pipeline**: End-to-end FPL decision support system
+  - `fpl_data_aggregator.sh` - **Main orchestrator** combining all data collection in parallel
+  - `fpl_intelligence_analyzer.py` - **LLM-powered analysis engine** using Claude-4 models for recommendations
+  - **Two-phase LLM processing**: Individual channel analysis + comprehensive comparative analysis
+  - **Injury/availability integration**: Player status codes (a/d/i/s/u) factored into all recommendations
+  - **Markdown report generation**: 160+ line detailed analysis with actionable insights
 - **FPL API Integration** (`./fpl/`): Production-ready scripts for team analysis, ownership data, and gameweek management
   - `get_team_players.py` - Club roster analysis with fuzzy team name matching
   - `get_top_ownership.py` - Most owned players ranked by selection percentage  

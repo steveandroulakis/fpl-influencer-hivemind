@@ -131,8 +131,10 @@ def test_heuristic_filter():
                     score -= 2.0
 
             # Gameweek-specific bonus
-            if self.gameweek and (f"gw{self.gameweek}" in text or f"gameweek {self.gameweek}" in text):
-                    score += 5.0
+            if self.gameweek and (
+                f"gw{self.gameweek}" in text or f"gameweek {self.gameweek}" in text
+            ):
+                score += 5.0
 
             return max(0.0, score)
 
