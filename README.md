@@ -177,6 +177,14 @@ The system generates comprehensive analysis like:
    - Wan-Bissaka OUT → Milenković IN (injury status: 'a')...
 ```
 
+## TODO
+* Each component is a disaparate script, need to bring into a main 'project'
+* Prompt optimization for better reports
+    * Ensure each influencer's views are summarized out in their own section
+* Data generation script is a shell script not Python
+* Use Temporal for reliable orchestration, on a schedule
+* Markdown -> PDF or HTML report for readability?
+
 ---
 
 **My Team ID**: 1178124 | **Channels**: 5 FPL influencers | **Models**: Claude Sonnet-4 & Opus-4
