@@ -2,39 +2,37 @@
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
-#   "youtube-transcript-api==1.2.2",
+#   "yt-dlp>=2024.1.1",
+#   "requests>=2.28.0",
 # ]
 # ///
 """
 FPL Transcript Fetcher
 
-A robust command-line tool to fetch YouTube video transcripts using the youtube-transcript-api library.
-Supports multiple output formats (txt, json, csv, srt, vtt) with comprehensive error handling and retry logic.
+A robust command-line tool to fetch YouTube video transcripts using yt-dlp or EasySubAPI.
+Supports multiple output formats (txt, json, csv, srt, vtt) with comprehensive error handling, retry logic, and authentication.
+
+Methods:
+- yt-dlp: Downloads subtitles directly from YouTube (supports cookies for IP block bypass)
+- EasySubAPI: Alternative API service to bypass IP blocking (requires RAPIDAPI_EASYSUB_API_KEY)
 """
 
 import argparse
 import csv
 import json
 import logging
+import os
+import random
 import re
 import sys
+import tempfile
 import time
 from io import StringIO
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from youtube_transcript_api import YouTubeTranscriptApi
-from youtube_transcript_api._errors import (
-    CouldNotRetrieveTranscript,
-    IpBlocked,
-    NoTranscriptFound,
-    NotTranslatable,
-    RequestBlocked,
-    TranscriptsDisabled,
-    TranslationLanguageNotAvailable,
-    VideoUnavailable,
-    YouTubeRequestFailed,
-)
+import yt_dlp
+import requests
 
 
 def parse_video_id(url_or_id: str) -> str:
@@ -240,11 +238,12 @@ def format_as_vtt(transcript_data: list[dict]) -> str:
     return "\n".join(lines)
 
 
-class TranscriptFetcher:
-    """Main class for fetching and formatting YouTube transcripts."""
+class YtDlpTranscriptFetcher:
+    """Main class for fetching and formatting YouTube transcripts using yt-dlp."""
 
     def __init__(
-        self, max_retries: int = 3, retry_backoff: float = 1.5, timeout: float = 10.0
+        self, max_retries: int = 3, retry_backoff: float = 1.5, timeout: float = 10.0, 
+        cookies_path: str | None = None, delay: float = 0.0, random_delay: bool = False
     ):
         """
         Initialize the transcript fetcher.
@@ -253,17 +252,40 @@ class TranscriptFetcher:
             max_retries: Maximum number of retry attempts
             retry_backoff: Backoff multiplier for retries
             timeout: Timeout per request in seconds
+            cookies_path: Path to YouTube cookies.txt file for bypassing IP blocks
+            delay: Base delay between requests in seconds
+            random_delay: Add random jitter to delays (±25%)
         """
         self.max_retries = max_retries
         self.retry_backoff = retry_backoff
         self.timeout = timeout
-        self.api = YouTubeTranscriptApi()
+        self.cookies_path = cookies_path
+        self.delay = delay
+        self.random_delay = random_delay
+
+    def _apply_delay(self, attempt: int = 0):
+        """Apply configurable delay with optional jitter."""
+        if self.delay <= 0:
+            return
+            
+        delay = self.delay
+        if attempt > 0:
+            # Exponential backoff for retries
+            delay = self.delay * (self.retry_backoff ** attempt)
+            
+        if self.random_delay:
+            # Add ±25% jitter
+            jitter = random.uniform(-0.25, 0.25)
+            delay = delay * (1 + jitter)
+            
+        logging.info(f"Applying delay: {delay:.2f}s")
+        time.sleep(delay)
 
     def fetch_transcript(
         self, video_id: str, languages: list[str], translate_to: str = "en"
     ) -> tuple[list[dict], str, bool]:
         """
-        Fetch transcript with retry logic and translation fallback.
+        Fetch transcript using yt-dlp with retry logic and cookie support.
 
         Args:
             video_id: YouTube video ID
@@ -274,9 +296,10 @@ class TranscriptFetcher:
             Tuple of (transcript_data, language_used, was_translated)
 
         Raises:
-            Various youtube_transcript_api exceptions
+            Various yt-dlp exceptions
         """
         last_exception = None
+        url = f"https://www.youtube.com/watch?v={video_id}"
 
         for attempt in range(self.max_retries):
             try:
@@ -284,99 +307,395 @@ class TranscriptFetcher:
                     f"Attempt {attempt + 1}: Fetching transcript for video {video_id}"
                 )
 
-                # Try direct fetch with preferred languages
-                try:
-                    transcript = self.api.fetch(video_id, languages=languages)
-                    return transcript.to_raw_data(), transcript.language_code, False
-                except NoTranscriptFound:
-                    # If direct fetch fails, try finding available transcripts and translating
-                    if translate_to in languages:
-                        logging.info("Direct fetch failed, attempting translation...")
-                        return self._fetch_with_translation(
-                            video_id, languages, translate_to
-                        )
-                    else:
-                        raise
+                # Apply delay before request (except first attempt)
+                if attempt > 0:
+                    self._apply_delay(attempt)
 
-            except (RequestBlocked, IpBlocked, YouTubeRequestFailed) as e:
-                last_exception = e
-                if attempt < self.max_retries - 1:
-                    wait_time = (self.retry_backoff**attempt) * (
-                        1 + 0.1 * time.time() % 1
-                    )  # Add jitter
-                    logging.warning(
-                        f"Request failed (attempt {attempt + 1}), retrying in {wait_time:.2f}s: {e}"
-                    )
-                    time.sleep(wait_time)
-                    continue
-                else:
-                    raise
-            except (
-                TranscriptsDisabled,
-                VideoUnavailable,
-                NotTranslatable,
-                TranslationLanguageNotAvailable,
-            ):
-                # These are not retriable errors
-                raise
-            except CouldNotRetrieveTranscript:
-                # Generic transcript retrieval error
-                raise
+                # Configure yt-dlp options
+                ydl_opts = {
+                    'writeautomaticsub': True,
+                    'writesubtitles': True,
+                    'subtitleslangs': languages,
+                    'subtitlesformat': 'vtt',
+                    'skip_download': True,
+                    'quiet': not logging.getLogger().isEnabledFor(logging.INFO),
+                    'no_warnings': not logging.getLogger().isEnabledFor(logging.DEBUG),
+                }
+
+                # Add cookies if available
+                if self.cookies_path and os.path.exists(self.cookies_path):
+                    ydl_opts['cookiefile'] = self.cookies_path
+                    logging.debug(f"Using cookies from: {self.cookies_path}")
+
+                # Create temporary directory for subtitle files
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    ydl_opts['outtmpl'] = os.path.join(temp_dir, '%(id)s.%(ext)s')
+                    
+                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                        try:
+                            info = ydl.extract_info(url, download=True)
+                            
+                            # Find downloaded subtitle files
+                            subtitle_files = []
+                            for lang in languages:
+                                for ext in ['vtt', 'srt']:
+                                    subtitle_file = os.path.join(temp_dir, f"{video_id}.{lang}.{ext}")
+                                    if os.path.exists(subtitle_file):
+                                        subtitle_files.append((subtitle_file, lang, False))
+                                        break
+                                        
+                            # If no manual subtitles, look for auto-generated
+                            if not subtitle_files:
+                                for lang in languages:
+                                    for ext in ['vtt', 'srt']:
+                                        auto_file = os.path.join(temp_dir, f"{video_id}.{lang}.auto.{ext}")
+                                        if os.path.exists(auto_file):
+                                            subtitle_files.append((auto_file, lang, True))
+                                            break
+                            
+                            if not subtitle_files:
+                                # Look for any available subtitles
+                                import glob
+                                all_subs = glob.glob(os.path.join(temp_dir, f"{video_id}.*vtt"))
+                                all_subs.extend(glob.glob(os.path.join(temp_dir, f"{video_id}.*srt")))
+                                if all_subs:
+                                    file_path = all_subs[0]
+                                    # Extract language from filename (e.g., video_id.en.vtt)
+                                    parts = os.path.basename(file_path).split('.')
+                                    lang = parts[1] if len(parts) >= 3 else 'unknown'
+                                    is_auto = 'auto' in parts
+                                    subtitle_files.append((file_path, lang, is_auto))
+                            
+                            if subtitle_files:
+                                subtitle_file, language_used, was_auto = subtitle_files[0]
+                                transcript_data = self._parse_subtitle_file(subtitle_file)
+                                logging.info(f"Successfully extracted {len(transcript_data)} transcript segments")
+                                return transcript_data, language_used, was_auto
+                            else:
+                                raise Exception("No subtitle files found")
+                                
+                        except yt_dlp.DownloadError as e:
+                            error_msg = str(e).lower()
+                            if any(keyword in error_msg for keyword in ['blocked', '429', 'rate limit', 'too many']):
+                                logging.warning(f"Rate limited/blocked: {e}")
+                                raise Exception(f"Rate limited: {e}")
+                            else:
+                                raise Exception(f"Download error: {e}")
+
             except Exception as e:
                 last_exception = e
-                if attempt < self.max_retries - 1:
-                    wait_time = (self.retry_backoff**attempt) * (
-                        1 + 0.1 * time.time() % 1
-                    )
+                error_msg = str(e).lower()
+                
+                # Check if it's a retriable error
+                is_retriable = any(keyword in error_msg for keyword in [
+                    'blocked', '429', 'rate limit', 'too many', 'timeout', 'connection'
+                ])
+                
+                if attempt < self.max_retries - 1 and is_retriable:
+                    wait_time = (self.retry_backoff ** attempt) * (1 + 0.1 * random.random())
                     logging.warning(
-                        f"Unexpected error (attempt {attempt + 1}), retrying in {wait_time:.2f}s: {e}"
+                        f"Retriable error (attempt {attempt + 1}), retrying in {wait_time:.2f}s: {e}"
                     )
                     time.sleep(wait_time)
                     continue
                 else:
+                    # Log the final error
+                    if 'blocked' in error_msg or '429' in error_msg:
+                        logging.error(f"Request blocked/rate limited: {e}")
+                        logging.error("This is expected if your IP is currently blocked")
+                    else:
+                        logging.error(f"Failed to fetch transcript: {e}")
                     raise
 
         if last_exception:
             raise last_exception
+            
+    def _parse_subtitle_file(self, file_path: str) -> list[dict]:
+        """Parse VTT or SRT subtitle file into transcript format."""
+        transcript_data = []
+        
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+            
+        if file_path.endswith('.vtt'):
+            return self._parse_vtt_content(content)
+        elif file_path.endswith('.srt'):
+            return self._parse_srt_content(content)
+        else:
+            raise ValueError(f"Unsupported subtitle format: {file_path}")
+            
+    def _parse_vtt_content(self, content: str) -> list[dict]:
+        """Parse WebVTT content into transcript format."""
+        transcript_data = []
+        lines = content.strip().split('\n')
+        i = 0
+        
+        # Skip WEBVTT header and initial empty lines
+        while i < len(lines) and (not lines[i].strip() or 'WEBVTT' in lines[i]):
+            i += 1
+            
+        while i < len(lines):
+            line = lines[i].strip()
+            
+            # Look for timestamp line (format: 00:00:01.000 --> 00:00:05.000)
+            if ' --> ' in line:
+                try:
+                    start_str, end_str = line.split(' --> ')
+                    start_time = self._parse_vtt_timestamp(start_str)
+                    end_time = self._parse_vtt_timestamp(end_str)
+                    
+                    i += 1
+                    # Collect text lines until empty line or next timestamp
+                    text_lines = []
+                    while i < len(lines) and lines[i].strip() and ' --> ' not in lines[i]:
+                        text_lines.append(lines[i].strip())
+                        i += 1
+                        
+                    if text_lines:
+                        text = ' '.join(text_lines)
+                        # Remove VTT formatting tags
+                        text = re.sub(r'<[^>]+>', '', text)
+                        transcript_data.append({
+                            'start': start_time,
+                            'duration': end_time - start_time,
+                            'text': text
+                        })
+                except (ValueError, IndexError):
+                    pass
+            
+            i += 1
+            
+        return transcript_data
+        
+    def _parse_srt_content(self, content: str) -> list[dict]:
+        """Parse SRT content into transcript format."""
+        transcript_data = []
+        blocks = content.strip().split('\n\n')
+        
+        for block in blocks:
+            lines = block.split('\n')
+            if len(lines) >= 3:
+                # lines[0] = sequence number
+                # lines[1] = timestamp
+                # lines[2:] = text
+                try:
+                    timestamp_line = lines[1]
+                    start_str, end_str = timestamp_line.split(' --> ')
+                    start_time = self._parse_srt_timestamp(start_str)
+                    end_time = self._parse_srt_timestamp(end_str)
+                    
+                    text = ' '.join(lines[2:])
+                    transcript_data.append({
+                        'start': start_time,
+                        'duration': end_time - start_time,
+                        'text': text
+                    })
+                except (ValueError, IndexError):
+                    continue
+                    
+        return transcript_data
+        
+    def _parse_vtt_timestamp(self, timestamp: str) -> float:
+        """Parse VTT timestamp (HH:MM:SS.mmm) to seconds."""
+        parts = timestamp.strip().split(':')
+        if len(parts) == 3:
+            hours, minutes, seconds = parts
+            total_seconds = float(hours) * 3600 + float(minutes) * 60 + float(seconds)
+        elif len(parts) == 2:
+            minutes, seconds = parts
+            total_seconds = float(minutes) * 60 + float(seconds)
+        else:
+            total_seconds = float(parts[0])
+        return total_seconds
+        
+    def _parse_srt_timestamp(self, timestamp: str) -> float:
+        """Parse SRT timestamp (HH:MM:SS,mmm) to seconds."""
+        timestamp = timestamp.replace(',', '.')  # SRT uses comma for milliseconds
+        return self._parse_vtt_timestamp(timestamp)
 
-    def _fetch_with_translation(
-        self, video_id: str, languages: list[str], translate_to: str
+
+class EasySubApiFetcher:
+    """Alternative transcript fetcher using EasySubAPI (RapidAPI) to bypass IP blocking."""
+
+    def __init__(
+        self, api_key: str, max_retries: int = 3, retry_backoff: float = 1.5, timeout: float = 10.0
+    ):
+        """
+        Initialize the EasySubAPI transcript fetcher.
+
+        Args:
+            api_key: RapidAPI EasySubAPI key
+            max_retries: Maximum number of retry attempts
+            retry_backoff: Backoff multiplier for retries
+            timeout: Timeout per request in seconds
+        """
+        self.api_key = api_key
+        self.max_retries = max_retries
+        self.retry_backoff = retry_backoff
+        self.timeout = timeout
+
+    def fetch_transcript(
+        self, video_id: str, languages: list[str], translate_to: str = "en"
     ) -> tuple[list[dict], str, bool]:
         """
-        Attempt to fetch transcript with translation.
+        Fetch transcript using EasySubAPI with retry logic.
 
         Args:
             video_id: YouTube video ID
-            languages: Preferred languages
-            translate_to: Target translation language
+            languages: List of preferred languages (unused for EasySubAPI, always returns English)
+            translate_to: Target language (unused for EasySubAPI)
 
         Returns:
             Tuple of (transcript_data, language_used, was_translated)
+
+        Raises:
+            Exception: If transcript fetching fails
         """
-        transcript_list = self.api.list(video_id)
+        url = "https://easysubapi.p.rapidapi.com/api/easysubapi-get-transcript"
+        headers = {
+            "Content-Type": "application/json",
+            "x-rapidapi-host": "easysubapi.p.rapidapi.com", 
+            "x-rapidapi-key": self.api_key
+        }
+        payload = {"video_id": video_id}
 
-        # Try to find any available transcript and translate it
-        for transcript in transcript_list:
-            if transcript.is_translatable:
-                try:
-                    translated = transcript.translate(translate_to).fetch()
-                    return translated.to_raw_data(), translate_to, True
-                except (NotTranslatable, TranslationLanguageNotAvailable):
+        last_exception = None
+        
+        for attempt in range(self.max_retries):
+            try:
+                logging.info(f"Attempt {attempt + 1}: Fetching transcript via EasySubAPI for video {video_id}")
+                
+                if attempt > 0:
+                    wait_time = (self.retry_backoff ** attempt) * (1 + 0.1 * random.random())
+                    logging.info(f"Waiting {wait_time:.2f}s before retry")
+                    time.sleep(wait_time)
+
+                response = requests.post(url, json=payload, headers=headers, timeout=self.timeout)
+                response.raise_for_status()
+                
+                data = response.json()
+                
+                if "result" not in data or not data["result"]:
+                    raise Exception("No results found in API response")
+                
+                # Extract transcript frames from nested structure
+                result_item = data["result"][0]
+                if "data" not in result_item or "frames" not in result_item["data"]:
+                    raise Exception("Invalid API response structure")
+                    
+                frames = result_item["data"]["frames"]
+                if not frames:
+                    raise Exception("No transcript frames found")
+                
+                # Transform to standard format
+                transcript_data = self._transform_easysub_data(frames)
+                
+                logging.info(f"Successfully extracted {len(transcript_data)} transcript segments via EasySubAPI")
+                return transcript_data, "en", False
+                
+            except requests.exceptions.RequestException as e:
+                last_exception = e
+                error_msg = str(e).lower()
+                
+                is_retriable = any(keyword in error_msg for keyword in [
+                    'timeout', 'connection', '429', 'rate limit', 'too many', 'server error'
+                ])
+                
+                if attempt < self.max_retries - 1 and is_retriable:
+                    logging.warning(f"Retriable error (attempt {attempt + 1}): {e}")
                     continue
+                else:
+                    logging.error(f"EasySubAPI request failed: {e}")
+                    raise Exception(f"EasySubAPI error: {e}")
+                    
+            except Exception as e:
+                last_exception = e
+                logging.error(f"EasySubAPI processing failed: {e}")
+                
+                if attempt < self.max_retries - 1:
+                    logging.warning(f"Retrying (attempt {attempt + 1})")
+                    continue
+                else:
+                    raise
+        
+        if last_exception:
+            raise last_exception
 
-        # If translation fails, try any available transcript in original language
-        try:
-            transcript = transcript_list.find_transcript(languages)
-            fetched = transcript.fetch()
-            return fetched.to_raw_data(), fetched.language_code, False
-        except NoTranscriptFound:
-            # Last resort: get any available transcript
-            if len(transcript_list) > 0:
-                first_transcript = next(iter(transcript_list))
-                fetched = first_transcript.fetch()
-                return fetched.to_raw_data(), fetched.language_code, False
-            else:
-                raise NoTranscriptFound(video_id, languages, transcript_list) from None
+    def _transform_easysub_data(self, frames: list[dict]) -> list[dict]:
+        """
+        Transform EasySubAPI frames to standard transcript format.
+        
+        Args:
+            frames: List of frames from EasySubAPI
+            
+        Returns:
+            List of transcript segments in standard format
+        """
+        transcript_data = []
+        
+        for frame in frames:
+            try:
+                start_time = float(frame["from_time"])
+                end_time = float(frame["to_time"])
+                text = frame["message"].strip()
+                
+                if text:  # Skip empty segments
+                    transcript_data.append({
+                        "start": start_time,
+                        "duration": end_time - start_time,
+                        "text": text
+                    })
+                    
+            except (KeyError, ValueError, TypeError) as e:
+                logging.warning(f"Skipping malformed frame: {frame} - {e}")
+                continue
+                
+        return transcript_data
+
+
+def create_transcript_fetcher(
+    rapidapi_key: str | None = None,
+    cookies_path: str | None = None,
+    max_retries: int = 3,
+    retry_backoff: float = 1.5,
+    timeout: float = 10.0,
+    delay: float = 0.0,
+    random_delay: bool = False,
+    api_method: str = "auto"
+) -> YtDlpTranscriptFetcher | EasySubApiFetcher:
+    """
+    Factory function to create appropriate transcript fetcher based on configuration.
+    
+    Args:
+        rapidapi_key: EasySubAPI key (if available)
+        cookies_path: Path to YouTube cookies file
+        max_retries: Maximum retry attempts
+        retry_backoff: Backoff multiplier
+        timeout: Request timeout
+        delay: Delay between requests (yt-dlp only)
+        random_delay: Add random jitter (yt-dlp only)
+        api_method: Method to use ('auto', 'easysub', 'ytdlp')
+        
+    Returns:
+        Configured transcript fetcher instance
+    """
+    if api_method == "easysub":
+        if not rapidapi_key:
+            raise ValueError("EasySubAPI method requires RAPIDAPI_EASYSUB_API_KEY")
+        logging.info("Using EasySubAPI for transcript fetching")
+        return EasySubApiFetcher(rapidapi_key, max_retries, retry_backoff, timeout)
+    
+    elif api_method == "ytdlp":
+        logging.info("Using yt-dlp for transcript fetching")
+        return YtDlpTranscriptFetcher(max_retries, retry_backoff, timeout, cookies_path, delay, random_delay)
+    
+    else:  # auto
+        if rapidapi_key:
+            logging.info("EasySubAPI key detected - using EasySubAPI as primary method")
+            return EasySubApiFetcher(rapidapi_key, max_retries, retry_backoff, timeout)
+        else:
+            logging.info("Using yt-dlp for transcript fetching")
+            return YtDlpTranscriptFetcher(max_retries, retry_backoff, timeout, cookies_path, delay, random_delay)
 
 
 def main() -> None:
@@ -390,6 +709,11 @@ Examples:
   %(prog)s --id VIDEO_ID --format json --out transcript.json
   %(prog)s --url https://youtu.be/VIDEO_ID --format srt --include-timestamps
   %(prog)s --id VIDEO_ID --languages en,es --translate-to en --verbose
+  %(prog)s --id VIDEO_ID --api-method easysub --verbose
+  
+Environment Variables:
+  RAPIDAPI_EASYSUB_API_KEY    RapidAPI key for EasySubAPI (enables IP block bypass)
+  YOUTUBE_COOKIES_PATH        Path to YouTube cookies.txt for yt-dlp authentication
         """,
     )
 
@@ -444,6 +768,33 @@ Examples:
         help="Timeout per request in seconds (default: 10.0)",
     )
 
+    # Authentication
+    parser.add_argument(
+        "--cookies",
+        help="Path to YouTube cookies.txt file (overrides YOUTUBE_COOKIES_PATH env var)",
+    )
+
+    # API method selection
+    parser.add_argument(
+        "--api-method",
+        choices=["auto", "easysub", "ytdlp"],
+        default="auto",
+        help="Transcript fetching method (default: auto - use EasySubAPI if key available, else yt-dlp)",
+    )
+
+    # Rate limiting
+    parser.add_argument(
+        "--delay",
+        type=float,
+        default=0.0,
+        help="Delay between requests in seconds (default: 0.0, recommended: 10-20 for rate limiting)",
+    )
+    parser.add_argument(
+        "--random-delay",
+        action="store_true",
+        help="Add random jitter (±25%%) to delays to avoid detection patterns",
+    )
+
     # Logging
     parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
 
@@ -465,11 +816,26 @@ Examples:
         languages = [lang.strip() for lang in args.languages.split(",")]
         logging.info(f"Language preference: {languages}")
 
-        # Create fetcher and get transcript
-        fetcher = TranscriptFetcher(
+        # Determine cookies path (CLI arg overrides env var)
+        cookies_path = args.cookies or os.environ.get("YOUTUBE_COOKIES_PATH")
+        if cookies_path:
+            logging.info(f"Using cookies from: {cookies_path}")
+        else:
+            logging.info("No cookies specified for yt-dlp - using unauthenticated requests")
+
+        # Get RapidAPI key
+        rapidapi_key = os.environ.get("RAPIDAPI_EASYSUB_API_KEY")
+        
+        # Create fetcher using factory function
+        fetcher = create_transcript_fetcher(
+            rapidapi_key=rapidapi_key,
+            cookies_path=cookies_path,
             max_retries=args.max_retries,
             retry_backoff=args.retry_backoff,
             timeout=args.timeout,
+            delay=args.delay,
+            random_delay=args.random_delay,
+            api_method=args.api_method,
         )
 
         transcript_data, language_used, was_translated = fetcher.fetch_transcript(
@@ -502,27 +868,25 @@ Examples:
     except ValueError as e:
         logging.error(f"Input error: {e}")
         sys.exit(1)
-    except NoTranscriptFound as e:
-        logging.error(f"No transcript found: {e}")
-        sys.exit(2)
-    except TranscriptsDisabled as e:
-        logging.error(f"Transcripts disabled: {e}")
-        sys.exit(3)
-    except VideoUnavailable as e:
-        logging.error(f"Video unavailable: {e}")
-        sys.exit(4)
-    except (RequestBlocked, IpBlocked) as e:
-        logging.error(f"Request blocked: {e}")
-        logging.error("Try again later or use a VPN/proxy")
-        sys.exit(5)
-    except CouldNotRetrieveTranscript as e:
-        logging.error(f"Could not retrieve transcript: {e}")
-        sys.exit(6)
     except Exception as e:
-        logging.error(f"Unexpected error: {e}")
-        if args.verbose:
-            raise
-        sys.exit(7)
+        error_msg = str(e).lower()
+        
+        if 'no subtitle' in error_msg or 'no transcript' in error_msg:
+            logging.error(f"No transcript found: {e}")
+            sys.exit(2)
+        elif 'blocked' in error_msg or '429' in error_msg or 'rate limit' in error_msg:
+            logging.error(f"Request blocked/rate limited: {e}")
+            logging.error("This is expected if your IP is currently blocked")
+            logging.error("Try again later, use different network, or use VPN/proxy")
+            sys.exit(5)
+        elif 'unavailable' in error_msg:
+            logging.error(f"Video unavailable: {e}")
+            sys.exit(4)
+        else:
+            logging.error(f"Unexpected error: {e}")
+            if args.verbose:
+                raise
+            sys.exit(7)
 
 
 if __name__ == "__main__":

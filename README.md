@@ -9,9 +9,25 @@ A comprehensive Fantasy Premier League (FPL) decision support system that aggreg
 # Install dependencies
 uv sync
 
-# Set up Anthropic API key for LLM analysis
-export ANTHROPIC_API_KEY="your-anthropic-api-key"
+# Set up required API keys
+export YOUTUBE_API_KEY="your-youtube-data-api-v3-key"     # Required for video discovery
+export ANTHROPIC_API_KEY="your-anthropic-api-key"        # Required for LLM analysis
+
+# Optional: Alternative transcript fetching (bypasses IP blocking)
+export RAPIDAPI_EASYSUB_API_KEY="your-rapidapi-key"      # Optional for EasySubAPI transcript access
+export YOUTUBE_COOKIES_PATH="$HOME/youtube_cookies.txt"   # Optional for yt-dlp transcript access
 ```
+
+**Getting API Keys:**
+- **YouTube API Key**: Create a Google Cloud project, enable the YouTube Data API v3, and generate an API key from the Credentials section. The default daily quota is 10,000 units which is sufficient for regular FPL analysis.
+- **RapidAPI EasySubAPI Key**: Sign up at [RapidAPI.com](https://rapidapi.com/), subscribe to the [EasySubAPI service](https://rapidapi.com/belchiorarkad-FqvHs2EDOtP/api/easysubapi), and use your API key for IP-blocking-resistant transcript fetching.
+
+**Setting up YouTube Cookies (Optional for yt-dlp transcript method but Recommended):**
+YouTube transcript fetching may be IP blocked in some regions. To bypass this:
+1. Install the Chrome extension ["Get cookies.txt LOCALLY"](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc)
+2. Log in to YouTube in Chrome and visit https://www.youtube.com/
+3. Click the extension → Export → save as `~/youtube_cookies.txt`
+4. Set the environment variable: `export YOUTUBE_COOKIES_PATH="$HOME/youtube_cookies.txt"`
 
 ### Run Complete FPL Analysis (2-Step Process)
 
@@ -72,11 +88,17 @@ Test components independently during development:
 # Test FPL API integration
 uv run fpl/get_my_team.py --entry-id 1178124
 
+# Test YouTube API setup
+./youtube-titles/test_ytapi.py
+
 # Test video discovery for single channel
 ./youtube-titles/fpl_video_picker.py --single-channel "FPL Raptor" --gameweek 5 --verbose
 
-# Test transcript fetching
+# Test transcript fetching (auto-selects API method)
 ./youtube-transcript/fpl_transcript.py --id VIDEO_ID --format txt
+
+# Test with specific API method
+./youtube-transcript/fpl_transcript.py --id VIDEO_ID --api-method easysub --verbose
 
 # Test parallel channel processing
 ./youtube-titles/run_parallel_channels.sh --gameweek 5 --verbose
@@ -96,12 +118,14 @@ Each script supports multiple output formats (table, CSV, JSON) and uses PEP 723
 ## 🎥 YouTube Analysis Pipeline
 
 ### Video Discovery (`./youtube-titles/`)
-- **Intelligent content filtering**: Uses yt-dlp + Claude integration for "team selection" content ranking
+- **Intelligent content filtering**: Uses YouTube Data API v3 + Claude integration for "team selection" content ranking
 - **Parallel processing**: Shell orchestrator launches multiple channels simultaneously
-- **Channel configuration**: Structured metadata for 5 popular FPL influencers
+- **Channel configuration**: Structured metadata for 5 popular FPL influencers with automatic URL resolution
 - **Fault tolerance**: Individual channel failures don't break the pipeline
 
 ### Transcript Processing (`./youtube-transcript/`)
+- **Dual API support**: yt-dlp (direct YouTube) or EasySubAPI (IP-blocking resistant)
+- **Automatic method selection**: Uses EasySubAPI when `RAPIDAPI_EASYSUB_API_KEY` is available
 - **Multi-format support**: txt, json, csv, srt, vtt output options
 - **Robust fetching**: Handles various YouTube URL formats with retry logic and language fallback
 - **LLM optimized**: Clean text output with newline processing for AI analysis

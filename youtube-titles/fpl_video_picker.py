@@ -2,7 +2,7 @@
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
-#   "yt-dlp>=2024.8.0",
+#   "google-api-python-client>=2.0.0",
 #   "anthropic>=0.31.0",
 #   "pydantic>=2.7.0",
 #   "python-dateutil>=2.9.0.post0",
@@ -14,9 +14,13 @@
 FPL Video Picker - ./youtube-titles/fpl_video_picker.py
 
 A robust, production-ready script that finds the most likely FPL "team selection" video
-from each popular YouTube channel using yt-dlp and Anthropic Claude for intelligent ranking.
+from each popular YouTube channel using YouTube Data API v3 and Anthropic Claude for intelligent ranking.
 
 Returns one selected video per channel, analyzing each channel's recent videos individually.
+
+Environment Variables:
+    YOUTUBE_API_KEY - YouTube Data API v3 key (required)
+    ANTHROPIC_API_KEY - Anthropic Claude API key (optional, for intelligent ranking)
 
 Usage:
     ./youtube-titles/fpl_video_picker.py --gameweek 5
@@ -35,7 +39,8 @@ from pathlib import Path
 from typing import Any, ClassVar
 
 import anthropic
-import yt_dlp
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 from pydantic import BaseModel, ValidationError
 from tenacity import (
     retry,
@@ -129,78 +134,146 @@ class FPLVideoCollector:
         self.logger = logger or logging.getLogger(__name__)
         self.cutoff_date = datetime.now(UTC) - timedelta(days=days_back)
 
+    def _resolve_channel_id(self, yt_service, channel_url: str) -> str | None:
+        """Resolve various YouTube channel URL formats to channel ID."""
+        try:
+            if "@" in channel_url:
+                # Handle URL: https://www.youtube.com/@FPLRaptor
+                handle = channel_url.split("@")[1]
+                response = yt_service.channels().list(
+                    part="id",
+                    forHandle=f"@{handle}"
+                ).execute()
+                
+                if response.get("items"):
+                    return response["items"][0]["id"]
+                    
+            elif "channel/" in channel_url:
+                # Channel ID URL: https://www.youtube.com/channel/UCweDAlFm2LnVcOqaFU4_AGA
+                return channel_url.split("channel/")[1]
+                
+            else:
+                # Custom URL: https://www.youtube.com/fplfocal
+                # Extract the identifier after the last slash
+                search_query = channel_url.split("/")[-1]
+                
+                # Try search API to find the channel
+                search_response = yt_service.search().list(
+                    part="snippet",
+                    type="channel",
+                    q=search_query,
+                    maxResults=5
+                ).execute()
+                
+                if search_response.get("items"):
+                    # Return the first result's channel ID
+                    return search_response["items"][0]["snippet"]["channelId"]
+                    
+        except HttpError as e:
+            self.logger.error(f"API error resolving channel ID for {channel_url}: {e}")
+        except Exception as e:
+            self.logger.error(f"Error resolving channel ID for {channel_url}: {e}")
+            
+        return None
+
     @retry(
         retry=retry_if_exception_type(
-            (ConnectionError, TimeoutError, yt_dlp.utils.DownloadError)
+            (ConnectionError, TimeoutError, HttpError)
         ),
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=1, max=10),
     )
     def _fetch_channel_videos(self, channel_url: str) -> list[VideoItem]:
-        """Fetch videos from a single channel with retry logic."""
+        """Fetch videos from a single channel using YouTube Data API v3."""
         videos = []
+        api_key = os.environ.get("YOUTUBE_API_KEY")
+        if not api_key:
+            self.logger.error("YOUTUBE_API_KEY environment variable not found")
+            return []
+
         try:
-            ydl_opts = {
-                "quiet": not self.logger.isEnabledFor(logging.DEBUG),
-                "no_warnings": True,
-                "extract_flat": False,  # Need full extraction for metadata
-                "playlistend": self.max_per_channel,  # Limit videos fetched
-                "noplaylist": False,  # We want playlist (channel) processing
-                "ignoreerrors": True,  # Continue on errors
-            }
+            yt = build("youtube", "v3", developerKey=api_key)
+            
+            # Resolve channel URL to channel ID
+            channel_id = self._resolve_channel_id(yt, channel_url)
+            if not channel_id:
+                self.logger.error(f"Could not resolve channel ID for: {channel_url}")
+                return []
 
-            # Ensure we're getting the videos tab specifically
-            videos_url = channel_url
-            if "/videos" not in channel_url and not channel_url.endswith("/videos"):
-                videos_url = f"{channel_url.rstrip('/')}/videos"
+            # Get channel info and uploads playlist ID
+            channel_response = yt.channels().list(
+                part="snippet,contentDetails",
+                id=channel_id
+            ).execute()
 
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                self.logger.debug(f"Fetching channel videos from: {videos_url}")
-                channel_info = ydl.extract_info(videos_url, download=False)
+            if not channel_response.get("items"):
+                self.logger.error(f"Channel not found: {channel_id}")
+                return []
 
-                channel_name = channel_info.get(
-                    "uploader", channel_info.get("channel", "Unknown Channel")
-                )
-                entries = channel_info.get("entries", [])
+            channel_info = channel_response["items"][0]
+            channel_name = channel_info["snippet"]["title"]
+            uploads_playlist_id = channel_info["contentDetails"]["relatedPlaylists"]["uploads"]
 
-                self.logger.debug(f"Found {len(entries)} videos from {channel_name}")
+            self.logger.debug(f"Fetching videos from {channel_name} (ID: {channel_id})")
 
-                for entry in entries:
-                    if not entry:
-                        continue
+            # Fetch videos from uploads playlist
+            all_videos = []
+            next_page_token = None
+            
+            while len(all_videos) < self.max_per_channel:
+                videos_response = yt.playlistItems().list(
+                    part="snippet,contentDetails",
+                    playlistId=uploads_playlist_id,
+                    maxResults=min(50, self.max_per_channel - len(all_videos)),
+                    pageToken=next_page_token
+                ).execute()
 
+                items = videos_response.get("items", [])
+                if not items:
+                    break
+
+                for item in items:
                     try:
-                        # Parse upload date
-                        upload_date_str = entry.get("upload_date", "")
-                        if upload_date_str:
-                            published_at = datetime.strptime(
-                                upload_date_str, "%Y%m%d"
-                            ).replace(tzinfo=UTC)
-                        else:
-                            # Fallback to current time if no date available
-                            published_at = datetime.now(UTC)
+                        # Parse published date
+                        published_str = item["snippet"]["publishedAt"]
+                        # YouTube API returns RFC 3339 format: 2024-08-23T15:30:00Z
+                        published_at = datetime.fromisoformat(
+                            published_str.replace('Z', '+00:00')
+                        )
 
                         # Skip videos that are too old
                         if published_at < self.cutoff_date:
                             continue
 
+                        video_id = item["contentDetails"]["videoId"]
+                        video_url = f"https://www.youtube.com/watch?v={video_id}"
+
                         video_item = VideoItem(
-                            title=entry.get("title", ""),
-                            url=entry.get("webpage_url", entry.get("url", "")),
+                            title=item["snippet"]["title"],
+                            url=video_url,
                             published_at=published_at,
                             channel_name=channel_name,
-                            description=entry.get("description", "") or "",
+                            description=item["snippet"]["description"] or "",
                         )
 
-                        videos.append(video_item)
+                        all_videos.append(video_item)
                         self.logger.debug(f"  Added: {video_item.title[:60]}...")
 
                     except (ValueError, KeyError) as e:
                         self.logger.debug(
-                            f"  Skipped video {entry.get('title', 'Unknown')}: {e}"
+                            f"  Skipped video {item.get('snippet', {}).get('title', 'Unknown')}: {e}"
                         )
                         continue
 
+                next_page_token = videos_response.get("nextPageToken")
+                if not next_page_token:
+                    break
+
+            videos = all_videos[:self.max_per_channel]
+
+        except HttpError as e:
+            self.logger.error(f"YouTube API error for {channel_url}: {e}")
+            return []
         except Exception as e:
             self.logger.error(f"Failed to fetch from {channel_url}: {e}")
             return []

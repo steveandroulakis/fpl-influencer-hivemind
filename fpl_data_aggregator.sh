@@ -241,7 +241,7 @@ for channel in "${CHANNELS[@]}"; do
         --single-channel "$channel"
         --gameweek "$GAMEWEEK"
         --days 7
-        --max-per-channel 3
+        --max-per-channel 6
         --out "$discovery_file"
     )
     
@@ -298,49 +298,55 @@ if [[ $DISCOVERY_FAILED -gt 0 ]]; then
     log_warn "$DISCOVERY_FAILED out of ${#CHANNELS[@]} channels failed"
 fi
 
-# Phase 3: Transcript Fetching - Parallel
-TRANSCRIPT_FAILED=0   # FIX: ensure defined in all code paths
+# Phase 3: Sequential Transcript Fetching with Rate Limiting
+TRANSCRIPT_FAILED=0
 SUCCESSFUL_TRANSCRIPTS=0
+TRANSCRIPT_DELAY=10  # 10 second delay between requests
 
 if [[ ${#DISCOVERED_VIDEOS[@]} -gt 0 ]]; then
-    show_progress "Phase 3: Transcript Fetching - Parallel Processing"
+    show_progress "Phase 3: Sequential Transcript Fetching (Rate Limited)"
     
-    # Launch parallel transcript jobs
-    TRANSCRIPT_PIDS=()
+    if [[ ${#DISCOVERED_VIDEOS[@]} -gt 1 ]]; then
+        log_info "Processing ${#DISCOVERED_VIDEOS[@]} videos sequentially with ${TRANSCRIPT_DELAY}s delays to avoid rate limiting"
+    else
+        log_info "Processing ${#DISCOVERED_VIDEOS[@]} video"
+    fi
+    
     TRANSCRIPT_FILES=()
+    video_num=0
     
     for video_id in "${DISCOVERED_VIDEOS[@]}"; do
+        video_num=$((video_num + 1))
         transcript_file="${TEMP_DIR}/transcript_${video_id}.txt"
         log_file="${TEMP_DIR}/transcript_${video_id}.log"
         
         TRANSCRIPT_FILES+=("$transcript_file")
         
-        # Build command
+        # Add delay between requests (skip for first video)
+        if [[ $video_num -gt 1 ]]; then
+            log_info "Waiting ${TRANSCRIPT_DELAY} seconds before processing next transcript..."
+            sleep $TRANSCRIPT_DELAY
+        fi
+        
+        log_info "Processing video $video_num of ${#DISCOVERED_VIDEOS[@]}: $video_id"
+        
+        # Build command with delay and cookie support
         cmd=(
             "${SCRIPT_DIR}/youtube-transcript/fpl_transcript.py"
             --id "$video_id"
             --format txt
             --out "$transcript_file"
+            --delay 5
+            --random-delay
         )
         
         if [[ "$VERBOSE" == true ]]; then
-            log_info "Launching transcript fetch: ${cmd[*]}"
+            cmd+=(--verbose)
+            log_info "Executing: ${cmd[*]}"
         fi
         
-        # Launch in background  
-        "${cmd[@]}" > "$log_file" 2>&1 &
-        TRANSCRIPT_PIDS+=($!)
-    done
-    
-    log_info "Waiting for ${#TRANSCRIPT_PIDS[@]} transcript jobs to complete..."
-    
-    # Wait for transcript jobs
-    for i in "${!TRANSCRIPT_PIDS[@]}"; do
-        pid=${TRANSCRIPT_PIDS[$i]}
-        video_id=${DISCOVERED_VIDEOS[$i]}
-        transcript_file=${TRANSCRIPT_FILES[$i]}
-        
-        if wait "$pid"; then
+        # Execute synchronously (no background process)
+        if "${cmd[@]}" > "$log_file" 2>&1; then
             if [[ -f "$transcript_file" && -s "$transcript_file" ]]; then
                 SUCCESSFUL_TRANSCRIPTS=$((SUCCESSFUL_TRANSCRIPTS + 1))
                 log_success "Retrieved transcript for video: $video_id"
@@ -348,10 +354,9 @@ if [[ ${#DISCOVERED_VIDEOS[@]} -gt 0 ]]; then
                 log_warn "No transcript available for video: $video_id"
             fi
         else
-            log_error "Transcript fetch failed for video: $video_id - PID $pid"
+            log_error "Transcript fetch failed for video: $video_id"
             TRANSCRIPT_FAILED=$((TRANSCRIPT_FAILED + 1))
             if [[ "$VERBOSE" == true ]]; then
-                log_file="${TEMP_DIR}/transcript_${video_id}.log"
                 if [[ -f "$log_file" ]]; then
                     echo "Error log for $video_id:" >&2
                     cat "$log_file" >&2
@@ -360,9 +365,9 @@ if [[ ${#DISCOVERED_VIDEOS[@]} -gt 0 ]]; then
         fi
     done
     
-    log_success "Transcript fetching complete. Retrieved $SUCCESSFUL_TRANSCRIPTS transcripts"
+    log_success "Sequential transcript fetching complete. Retrieved $SUCCESSFUL_TRANSCRIPTS out of ${#DISCOVERED_VIDEOS[@]} transcripts"
     if [[ $TRANSCRIPT_FAILED -gt 0 ]]; then
-        log_warn "$TRANSCRIPT_FAILED out of ${#DISCOVERED_VIDEOS[@]} transcripts failed"
+        log_warn "$TRANSCRIPT_FAILED transcript(s) failed (may be due to IP blocking or rate limiting)"
     fi
 else
     log_warn "No videos discovered, skipping transcript fetching"
@@ -464,9 +469,13 @@ if [[ ${#DISCOVERED_VIDEOS[@]} -gt 0 ]]; then
         
         if [[ -f "$discovery_file" && -s "$discovery_file" ]]; then
             video_id=$(jq -r '.video_id // "N/A"' "$discovery_file" 2>/dev/null)
+            title=$(jq -r '.title // "N/A"' "$discovery_file" 2>/dev/null)
             confidence=$(jq -r '.confidence // 0' "$discovery_file" 2>/dev/null)
             if [[ "$video_id" != "N/A" && "$video_id" != "null" ]]; then
-                echo "• $channel: $video_id - confidence: $confidence"
+                echo "• $channel:"
+                echo "  - Title: $title"
+                echo "  - Video ID: $video_id"
+                echo "  - Confidence: $confidence"
             else
                 echo "• $channel: No suitable video found"
             fi

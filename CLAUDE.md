@@ -47,18 +47,23 @@ This is a Python project that scrapes popular Fantasy Premier League (FPL) influ
 - `uv run fpl/get_my_team.py --entry-id 1178124 --show "summary,picks"` - Personal team analysis
 
 #### YouTube Video Processing (`./youtube-titles/`)
+- `export YOUTUBE_API_KEY="your-key"` - **Required** for YouTube Data API v3 access
 - `export ANTHROPIC_API_KEY="your-key"` - Required for Anthropic integration
 - `./youtube-titles/fpl_video_picker.py --gameweek 5 --max-per-channel 3 --days 30` - Find FPL team selection videos (all channels)
 - `./youtube-titles/fpl_video_picker.py --single-channel "FPL Raptor" --gameweek 2 --out raptor.json` - Single channel processing
 - `./youtube-titles/run_parallel_channels.sh --gameweek 2 --days 7 --output results.json` - **Parallel processing all channels**
 - `./youtube-titles/run_parallel_channels.sh --gameweek 3 --verbose` - Parallel with detailed logging
-- **Uses yt-dlp** for reliable YouTube data extraction and **channels.json** for configuration
+- **Uses YouTube Data API v3** for reliable data extraction and **channels.json** for configuration
 
 #### YouTube Transcript Processing (`./youtube-transcript/`)
-- `./youtube-transcript/fpl_transcript.py --url "https://www.youtube.com/watch?v=VIDEO_ID"` - Fetch transcript as plain text
+- `./youtube-transcript/fpl_transcript.py --url "https://www.youtube.com/watch?v=VIDEO_ID"` - Auto-select API method (EasySubAPI if key available)
 - `uv run youtube-transcript/fpl_transcript.py --id VIDEO_ID --format json --out transcript.json` - Export as JSON
+- `./youtube-transcript/fpl_transcript.py --id VIDEO_ID --api-method easysub --verbose` - Force EasySubAPI method
+- `./youtube-transcript/fpl_transcript.py --id VIDEO_ID --api-method ytdlp --cookies ~/youtube_cookies.txt` - Force yt-dlp with cookies
 - `uv run youtube-transcript/fpl_transcript.py --url "https://youtu.be/VIDEO_ID" --format srt --include-timestamps` - Generate SRT subtitles
+- **Dual API support**: yt-dlp (direct YouTube) or EasySubAPI (IP-blocking resistant)
 - **Supports 5 formats**: txt, json, csv, srt, vtt with robust error handling and retry logic
+- **Cookie Support**: yt-dlp method uses `YOUTUBE_COOKIES_PATH` env var or `--cookies` flag for authentication
 
 ## Code Architecture
 
@@ -88,6 +93,10 @@ The project follows a **script-first development model**:
 
 ### External API Integration Patterns
 - **FPL API**: Uses official FPL endpoints (`https://fantasy.premierleague.com/api/`) with `fpl` library
+- **YouTube Data API v3**: Production integration for video metadata extraction
+  - Requires `YOUTUBE_API_KEY` environment variable
+  - Handles channel URL resolution (@handles, channel IDs, custom URLs)
+  - Uses uploads playlists with pagination for efficient video fetching
 - **Anthropic Claude**: Production integration for intelligent content analysis with JSON schema validation
   - Requires `ANTHROPIC_API_KEY` environment variable
   - Uses structured prompts with fallback strategies
@@ -144,8 +153,17 @@ Coverage excludes common patterns like `__repr__`, debug statements, `NotImpleme
 
 ### Individual Component Testing
 - Test FPL API: `uv run fpl/get_my_team.py --entry-id 1178124`
+- Test YouTube API setup: `./youtube-titles/test_ytapi.py` - Validates YOUTUBE_API_KEY and channel resolution
 - Test video discovery: `./youtube-titles/fpl_video_picker.py --single-channel "FPL Raptor" --gameweek 5 --verbose`
 - Test transcripts: `./youtube-transcript/fpl_transcript.py --id VIDEO_ID --format txt`
+- Test EasySubAPI: `./youtube-transcript/fpl_transcript.py --id VIDEO_ID --api-method easysub --verbose`
+
+### Environment Variables
+Required for full functionality:
+- `YOUTUBE_API_KEY` - YouTube Data API v3 key for video metadata extraction (required for youtube-titles/)
+- `ANTHROPIC_API_KEY` - Anthropic Claude API key for intelligent video analysis (optional, fallback to heuristics)
+- `RAPIDAPI_EASYSUB_API_KEY` - RapidAPI EasySubAPI key for IP-blocking-resistant transcript fetching (optional)
+- `YOUTUBE_COOKIES_PATH` - Path to YouTube cookies.txt file for bypassing IP blocks via yt-dlp (optional, e.g. `~/youtube_cookies.txt`)
 
 ## Current Implementation Status
 
@@ -163,21 +181,25 @@ Coverage excludes common patterns like `__repr__`, debug statements, `NotImpleme
   - `get_my_team.py` - Personal FPL team analysis using entry ID 1178124
   - Shared utilities in `utils.py` for API access and data formatting
 - **YouTube Video Processing** (`./youtube-titles/`): Intelligent FPL content discovery with parallel processing
-  - `fpl_video_picker.py` - Production-ready script using yt-dlp + Anthropic Claude
+  - `fpl_video_picker.py` - Production-ready script using YouTube Data API v3 + Anthropic Claude
   - **Dual processing modes**: Multi-channel batch processing OR single-channel mode (`--single-channel`)
   - `run_parallel_channels.sh` - **Shell orchestrator for true parallel processing** across all channels
   - `channels.json` - **Structured channel configuration** with names, URLs, and descriptions
+  - Handles all YouTube URL formats (@handles, channel IDs, custom URLs) with automatic resolution
   - Heuristic filtering with keyword scoring for "team selection" content
   - Anthropic API integration for intelligent video ranking with JSON schema validation
   - **Optimized for asyncio integration** with clean video_id + channel_name extraction
   - Comprehensive error handling, fault tolerance, and fallback strategies
 - **YouTube Transcript Processing** (`./youtube-transcript/`): Robust transcript fetching and formatting
-  - `fpl_transcript.py` - Production-ready CLI tool using youtube-transcript-api
+  - `fpl_transcript.py` - Production-ready CLI tool with dual API support
+  - **Dual API architecture**: yt-dlp (direct YouTube) or EasySubAPI (IP-blocking resistant)
+  - **Auto-selection logic**: Uses EasySubAPI when `RAPIDAPI_EASYSUB_API_KEY` available, fallback to yt-dlp
   - Multiple URL format support (watch, youtu.be, embed, shorts, mobile, raw IDs)
   - 5 output formats (txt, json, csv, srt, vtt) with proper timestamp formatting
   - Language handling with English preference and translation fallback
+  - **Dual authentication support**: cookies for yt-dlp, RapidAPI key for EasySubAPI
   - Comprehensive error handling with retry logic and exponential backoff
-  - Shared utilities in `utils.py` for transcript processing and analysis
+  - Factory pattern for clean API method selection and backwards compatibility
 
 ### Development Pipeline
 Scripts demonstrate full production readiness with:
