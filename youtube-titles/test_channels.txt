@@ -1,0 +1,4 @@
+# Test channels file for FPL video picker
+# Lines starting with # are ignored
+https://www.youtube.com/channel/UCweDAlFm2LnVcOqaFU4_AGA
+https://www.youtube.com/channel/UCxeOc7eFxq37yW_Nc-69deA
