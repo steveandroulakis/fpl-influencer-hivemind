@@ -954,6 +954,7 @@ Use --single-channel for parallel processing in shell scripts.
                         "url": channel_result.picked.url,
                         "confidence": channel_result.confidence,
                         "published_at": channel_result.picked.published_at.isoformat(),
+                        "published_at_formatted": channel_result.picked.published_at.strftime('%Y-%m-%d %H:%M UTC'),
                         "reasoning": channel_result.reasoning,
                         "matched_signals": channel_result.matched_signals,
                         "gameweek": result.gameweek,

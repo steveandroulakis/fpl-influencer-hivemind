@@ -298,6 +298,92 @@ if [[ $DISCOVERY_FAILED -gt 0 ]]; then
     log_warn "$DISCOVERY_FAILED out of ${#CHANNELS[@]} channels failed"
 fi
 
+# Phase 2.5: User Approval - Review Selected Videos
+show_progress "Phase 2.5: User Approval - Please Review Selected Videos"
+
+echo ""
+echo "=== SELECTED VIDEOS FOR REVIEW ==="
+echo "$(printf '=%.0s' {1..60})"
+
+# Store approval data for presentation
+APPROVAL_DATA=()
+
+for i in "${!DISCOVERY_FILES[@]}"; do
+    discovery_file=${DISCOVERY_FILES[$i]}
+    channel=${CHANNELS[$i]}
+    
+    echo ""
+    if [[ -f "$discovery_file" && -s "$discovery_file" ]]; then
+        # Extract key info from JSON
+        video_id=$(jq -r '.video_id // "N/A"' "$discovery_file" 2>/dev/null || echo "N/A")
+        title=$(jq -r '.title // "N/A"' "$discovery_file" 2>/dev/null || echo "N/A")
+        confidence=$(jq -r '.confidence // 0' "$discovery_file" 2>/dev/null || echo "0")
+        published_at_formatted=$(jq -r '.published_at_formatted // .published_at // "N/A"' "$discovery_file" 2>/dev/null || echo "N/A")
+        
+        if [[ "$video_id" != "N/A" && "$video_id" != "null" && -n "$video_id" ]]; then
+            echo "✅ $channel:"
+            echo "   Title: $title"
+            echo "   Video ID: $video_id"
+            echo "   Confidence: $confidence"
+            echo "   Published: $published_at_formatted"
+            # Store that this channel has a valid video
+            APPROVAL_DATA+=("$channel:FOUND:$title")
+        else
+            echo "❌ $channel: No suitable video found"
+            APPROVAL_DATA+=("$channel:NOT_FOUND:N/A")
+        fi
+    else
+        echo "❌ $channel: Discovery failed (no output file)"
+        APPROVAL_DATA+=("$channel:FAILED:N/A")
+    fi
+done
+
+echo ""
+echo "$(printf '=%.0s' {1..60})"
+echo ""
+
+# Count successful discoveries for approval summary
+SUCCESSFUL_DISCOVERIES=$(printf '%s\n' "${APPROVAL_DATA[@]}" | grep -c ":FOUND:")
+
+if [[ $SUCCESSFUL_DISCOVERIES -eq 0 ]]; then
+    echo "⚠️  No videos were successfully discovered. Nothing to approve."
+    echo "Transcript fetching will be skipped."
+    echo ""
+else
+    echo "📋 SUMMARY: $SUCCESSFUL_DISCOVERIES out of ${#CHANNELS[@]} channels have selected videos"
+    echo ""
+    echo "🤔 The AI has made these video selections. Please review the titles and confidence scores above."
+    echo "   If a video seems incorrect or if the current gameweek video hasn't been published yet,"
+    echo "   you can deny approval to avoid wasting time on transcript fetching."
+    echo ""
+    
+    # Approval prompt with enhanced messaging
+    while true; do
+        echo -n "➡️  Proceed with transcript fetching for the selected videos? [y/N]: "
+        read -r APPROVAL_RESPONSE
+        
+        case "$(echo "$APPROVAL_RESPONSE" | tr '[:upper:]' '[:lower:]')" in
+            y|yes)
+                log_success "User approved video selections. Proceeding with transcript fetching..."
+                break
+                ;;
+            n|no|"")
+                log_warn "User denied approval for video selections"
+                echo ""
+                echo "🚫 Operation cancelled by user."
+                echo "   You can run the script again later when the correct videos are available."
+                echo ""
+                exit 0
+                ;;
+            *)
+                echo "❓ Please enter 'y' for yes or 'n' for no (or press Enter for no)"
+                ;;
+        esac
+    done
+fi
+
+echo ""
+
 # Phase 3: Sequential Transcript Fetching with Rate Limiting
 TRANSCRIPT_FAILED=0
 SUCCESSFUL_TRANSCRIPTS=0
