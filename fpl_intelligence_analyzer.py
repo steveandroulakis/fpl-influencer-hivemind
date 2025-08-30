@@ -42,11 +42,15 @@ class ChannelAnalysis(BaseModel):
     """Pydantic model for individual channel analysis."""
 
     channel_name: str
+    formation: str | None
     team_selection: list[str]
     transfers_in: list[str]
     transfers_out: list[str]
     captain_choice: str
     vice_captain_choice: str
+    key_issues_discussed: list[dict[str, str]]
+    watchlist: list[dict[str, str]]
+    bank_itb: str | None
     key_reasoning: list[str]
     confidence: float
 
@@ -223,8 +227,8 @@ Format it as clear prose, not JSON."""
 CHANNEL: {channel_name}
 VIDEO: {video_title}
 
-TOP 150 FPL PLAYERS (for reference - includes injury status):
-{json.dumps(condensed_players[:50], indent=1)}  # First 50 for context
+TOP FPL PLAYERS BY OWNERSHIP (showing first 75 for context - includes injury status):
+{json.dumps(condensed_players[:75], indent=1)}
 
 PLAYER STATUS CODES:
 - a: available, d: doubtful, i: injured, s: suspended, u: unavailable
@@ -237,11 +241,20 @@ Extract the following information and return as JSON:
 
 {{
   "channel_name": "{channel_name}",
-  "team_selection": ["Player Name 1", "Player Name 2", ...],
-  "transfers_in": ["Player Name", ...],
-  "transfers_out": ["Player Name", ...], 
-  "captain_choice": "Player Name",
-  "vice_captain_choice": "Player Name",
+  "formation": "3-5-2",
+  "team_selection": ["Salah (FWD)", "Haaland (FWD)", ...],
+  "transfers_in": ["Player (POS)", ...],
+  "transfers_out": ["Player (POS)", ...], 
+  "captain_choice": "Player (POS)",
+  "vice_captain_choice": "Player (POS)",
+  "key_issues_discussed": [
+    {{"issue": "Salah vs Haaland captaincy", "opinion": "On pens, great fixtures in GW5"}},
+    {{"issue": "Arsenal defensive assets", "opinion": "Avoid due to tough fixtures next 3 weeks"}}
+  ],
+  "watchlist": [
+    {{"name": "Player (POS)", "priority": "high", "why": "Great fixtures coming up after international break"}}
+  ],
+  "bank_itb": "0.5m",
   "key_reasoning": ["Reason 1", "Reason 2", ...],
   "confidence": 0.85
 }}
@@ -249,10 +262,15 @@ Extract the following information and return as JSON:
 IMPORTANT:
 - The transcript may have transcription errors for player names
 - Use the top players list to identify correct player names and their injury status
+- ALL PLAYER NAMES must include position in format: "Player (POS)" e.g. "Salah (FWD)", "Robertson (DEF)"
 - Extract their actual team selection, transfers, and reasoning
+- Formation: Look for tactical discussions (3-5-2, 4-4-2, etc.) - set null if not mentioned
+- Key Issues: Extract 4-5 major talking points with their specific opinions on each
+- Watchlist: Players they mention considering but not immediately transferring (high/med/low priority)
+- Bank ITB: If they mention money in the bank or ITB, capture the amount (e.g. "0.5m", "2.1m")
 - Consider player availability (status/news/chance_of_playing_next_round) in analysis
 - Set confidence based on clarity of their decisions
-- If information is unclear or missing, use empty strings/arrays
+- If information is unclear or missing, use null for optional fields or empty arrays for lists
 """
 
             system = """You are an expert FPL analyst. Extract structured information from influencer video transcripts.
@@ -304,17 +322,33 @@ Return valid JSON only."""
         try:
             self.logger.info("Generating comparative analysis with Opus-4")
 
-            # Prepare channel summaries
+            # Prepare channel summaries with enhanced structured data
             summaries = []
             for analysis in channel_analyses:
+                # Format key issues
+                key_issues = ""
+                if analysis.key_issues_discussed:
+                    issues_list = [f"'{issue['issue']}': {issue['opinion']}" for issue in analysis.key_issues_discussed]
+                    key_issues = f"\n- Key Issues: {'; '.join(issues_list)}"
+                
+                # Format watchlist
+                watchlist = ""
+                if analysis.watchlist:
+                    watch_items = [f"{item['name']} ({item['priority']}: {item['why']})" for item in analysis.watchlist]
+                    watchlist = f"\n- Watchlist: {'; '.join(watch_items)}"
+                
+                # Format formation and bank
+                formation = f"\n- Formation: {analysis.formation}" if analysis.formation else ""
+                bank = f"\n- Bank ITB: {analysis.bank_itb}" if analysis.bank_itb else ""
+
                 summary = f"""
-**{analysis.channel_name}** (Confidence: {analysis.confidence})
-- Team Selection: {", ".join(analysis.team_selection)}
-- Transfers In: {", ".join(analysis.transfers_in)}
-- Transfers Out: {", ".join(analysis.transfers_out)}
+**{analysis.channel_name}** (Confidence: {analysis.confidence}){formation}
+- Team Selection: {", ".join(analysis.team_selection) if analysis.team_selection else "Not specified"}
+- Transfers In: {", ".join(analysis.transfers_in) if analysis.transfers_in else "None"}
+- Transfers Out: {", ".join(analysis.transfers_out) if analysis.transfers_out else "None"}
 - Captain: {analysis.captain_choice}
-- Vice Captain: {analysis.vice_captain_choice}
-- Key Reasoning: {"; ".join(analysis.key_reasoning)}
+- Vice Captain: {analysis.vice_captain_choice}{bank}{key_issues}{watchlist}
+- General Reasoning: {"; ".join(analysis.key_reasoning) if analysis.key_reasoning else "Not provided"}
 """
                 summaries.append(summary)
 
@@ -326,8 +360,8 @@ Return valid JSON only."""
 MY CURRENT TEAM:
 {my_team_summary}
 
-TOP PLAYERS REFERENCE (first 50 - includes injury/availability data):
-{json.dumps(condensed_players[:50], indent=1)}
+TOP PLAYERS REFERENCE (first 75 - includes injury/availability data):
+{json.dumps(condensed_players[:75], indent=1)}
 
 PLAYER STATUS CODES:
 - a: available, d: doubtful, i: injured, s: suspended, u: unavailable
@@ -336,22 +370,70 @@ PLAYER STATUS CODES:
 INFLUENCER ANALYSES:
 {combined_summaries}
 
-Create a detailed markdown report with:
+Create a detailed markdown report with the following structure:
 
-1. **Executive Summary** - Key insights and consensus picks
-2. **Transfer Recommendations** - Specific players to bring in/out with reasoning
-3. **Captain Analysis** - Best captain options with risk/reward analysis  
-4. **Differential Picks** - Lower-owned players worth considering
-5. **My Team Assessment** - How my current team compares to influencer picks
-6. **Consensus vs Contrarian** - Where influencers agree/disagree
-7. **Action Plan** - Specific steps for this gameweek
+## 1. Executive Summary
+- Key consensus picks and major disagreements across all influencers
+- Most important decisions for this gameweek
+- Overall confidence level and reliability of recommendations
 
-Focus on:
-- Actionable recommendations for my specific team
-- Comparative analysis across influencers
-- Risk assessment for different strategies
-- Clear reasoning backed by data
-- CRITICAL: Factor in player injury status and availability for all recommendations
+## 2. Channel-by-Channel Breakdown
+For each influencer, provide a structured analysis including:
+- Formation strategy (if mentioned)
+- Key transfers and specific reasoning
+- Captain choice with rationale
+- Major issues/topics they discussed
+- Watchlist players and priorities
+- Confidence assessment
+
+## 3. My Team vs Influencers Comparison
+Direct comparison showing:
+- Players I currently have that influencers are benching/dropping (cite specific channels)
+- Popular picks across influencers that I'm missing
+- Formation differences if applicable
+- Starting XI differences and bench strategies
+
+## 4. Transfer Analysis by Scenario
+Provide specific options based on transfer availability:
+- **If you have 1 free transfer**: Priority moves with reasoning
+- **If you have 2+ free transfers**: Multi-transfer strategies 
+- **If considering a hit (-4 points)**: High-confidence moves only
+- Always specify which influencers support each recommendation
+
+## 5. Captain Analysis
+Detailed breakdown with proper citations:
+- **Consensus captain picks**: Players backed by multiple influencers (specify which ones)
+- **Split opinions**: Different captain choices with specific reasoning from each channel
+- **Risk vs Reward**: Safe vs differential captain options
+- **Contrarian picks**: Unique captain choices and why
+
+## 6. Consensus vs Contrarian Analysis
+Clear identification with specific attributions:
+- **Universal picks**: Players ALL analyzed influencers are backing
+- **Majority consensus**: Players backed by most (specify exact channels)
+- **Split decisions**: 50/50 or varied opinions with citations
+- **Unique differentials**: Picks only mentioned by specific channels
+
+## 7. Watchlist & Future Planning
+Compiled from all influencer watchlists:
+- **High priority targets**: Players mentioned by multiple channels
+- **Medium/Low priority**: Secondary considerations
+- **Formation trends**: Tactical shifts being considered
+- **Banking strategy**: ITB recommendations and timing
+
+## 8. Conditional Action Plan
+Provide multiple strategic options:
+- **Primary recommendation**: Most consensus-backed strategy with specific steps
+- **Alternative strategy**: For different risk tolerances or situations
+- **Timeline considerations**: This week priorities vs future planning
+- **Injury contingencies**: Backup plans if key players become unavailable
+
+CRITICAL REQUIREMENTS:
+- Always cite specific influencers for opinions: "(FPL Harry)", "(Let's Talk FPL, FPL Raptor)"
+- Factor in player injury status and availability for ALL recommendations
+- Provide conditional advice rather than assuming transfer count
+- Use the structured data (formations, key_issues_discussed, watchlists) effectively
+- Make recommendations actionable and specific to my current team situation
 
 Return the report in clean markdown format."""
 
