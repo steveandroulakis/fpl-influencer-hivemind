@@ -511,17 +511,36 @@ for discovery_file in "${DISCOVERY_FILES[@]}"; do
     fi
 done
 
-# Add transcript data  
+# Add transcript data with channel mapping
 for transcript_file in "${TRANSCRIPT_FILES[@]}"; do
     if [[ -f "$transcript_file" && -s "$transcript_file" ]]; then
         # Extract video ID from filename
         video_id=$(basename "$transcript_file" .txt | sed 's/transcript_//')
         
+        # Find the channel that corresponds to this video ID
+        channel_name=""
+        for i in "${!DISCOVERY_FILES[@]}"; do
+            discovery_file=${DISCOVERY_FILES[$i]}
+            if [[ -f "$discovery_file" && -s "$discovery_file" ]]; then
+                discovered_video_id=$(jq -r '.video_id // empty' "$discovery_file" 2>/dev/null || echo "")
+                if [[ "$discovered_video_id" == "$video_id" ]]; then
+                    channel_name=${CHANNELS[$i]}
+                    break
+                fi
+            fi
+        done
+        
         # Clean transcript: remove newlines, extra spaces, and create continuous text
         transcript_content=$(cat "$transcript_file" | tr '\n' ' ' | tr -s ' ' | sed 's/^ *//;s/ *$//' | jq -Rs .)
-        jq --arg video_id "$video_id" --argjson transcript "$transcript_content" \
-           '.youtube_analysis.transcripts[$video_id] = $transcript' \
-           "$RESULTS_FILE" > "${RESULTS_FILE}.tmp" && mv "${RESULTS_FILE}.tmp" "$RESULTS_FILE"
+        
+        if [[ -n "$channel_name" ]]; then
+            # Add transcript with channel name as key
+            jq --arg channel "$channel_name" --arg video_id "$video_id" --argjson transcript "$transcript_content" \
+               '.youtube_analysis.transcripts[$channel] = {"video_id": $video_id, "transcript": $transcript}' \
+               "$RESULTS_FILE" > "${RESULTS_FILE}.tmp" && mv "${RESULTS_FILE}.tmp" "$RESULTS_FILE"
+        else
+            log_warn "Could not find channel for video ID: $video_id"
+        fi
     fi
 done
 

@@ -38,10 +38,14 @@ YouTube transcript fetching may be IP blocked in some regions. To bypass this:
 
 **Step 2: LLM Analysis** - Generate AI-powered recommendations using Claude-4
 ```bash
+# Standard analysis with 1 free transfer (default)
 ./fpl_intelligence_analyzer.py --input gameweek_data.json --output-file analysis.md --verbose
+
+# Analysis with 2 free transfers available
+./fpl_intelligence_analyzer.py --input gameweek_data.json --output-file analysis.md --free-transfers 2 --verbose
 ```
 
-**Result**: 160+ line markdown report with personalized transfer recommendations, captain analysis, and consensus insights from 5 FPL influencers. See [gameweek_2_analysis_EXAMPLE.md](./gameweek_2_analysis_EXAMPLE.md) for an example analysis.
+**Result**: 160+ line markdown report with personalized transfer recommendations, captain analysis, and consensus insights from 5 FPL influencers. See [example_reports/final_analysis_response.md](./example_reports/final_analysis_response.md) for an example analysis.
 
 ## ✨ Key Features
 
