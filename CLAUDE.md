@@ -36,8 +36,8 @@ This is a Python project that scrapes popular Fantasy Premier League (FPL) influ
 
 ### Script-Specific Commands
 #### Main Pipeline - Complete FPL Analysis
-- `./fpl_data_aggregator.sh --team-id 1178124 --output-file results.json` - **Full pipeline orchestrator**
-- `./fpl_data_aggregator.sh --team-id 1178124 --verbose` - Complete analysis with detailed logging
+- `uv run fpl-influencer-hivemind pipeline --team-id 1178124` - **Full pipeline orchestrator**
+- `uv run fpl-influencer-hivemind collect --team-id 1178124 --verbose` - Data collection only with verbose logging
 - `./fpl_intelligence_analyzer.py --input results.json --output-file analysis.md --verbose` - **LLM-powered analysis and recommendations**
 
 #### FPL Data Analysis (`./fpl/`)
@@ -139,9 +139,9 @@ Coverage excludes common patterns like `__repr__`, debug statements, `NotImpleme
 ## Typical Workflow
 
 ### Complete FPL Analysis Pipeline
-1. **Data Collection**: `./fpl_data_aggregator.sh --team-id 1178124 --output-file analysis_data.json --verbose`
+1. **Data Collection**: `uv run fpl-influencer-hivemind collect --team-id 1178124 --auto-approve-transcripts`
    - Collects current gameweek info, top 150 player data, personal team analysis
-   - Discovers relevant FPL videos from 5 YouTube channels in parallel
+   - Discovers relevant FPL videos for the upcoming gameweek from 5 YouTube channels in parallel, automatically falling back to the current week if nothing is published yet
    - Fetches and cleans transcripts for LLM processing
    - Outputs comprehensive JSON with all aggregated data
 
@@ -169,7 +169,7 @@ Required for full functionality:
 
 ### Completed Components
 - **Complete Analysis Pipeline**: End-to-end FPL decision support system
-  - `fpl_data_aggregator.sh` - **Main orchestrator** combining all data collection in parallel
+  - `fpl_data_aggregator.py` - **Main orchestrator** combining all data collection in parallel (invoked by CLI)
   - `fpl_intelligence_analyzer.py` - **LLM-powered analysis engine** using Claude-4 models for recommendations
   - **Two-phase LLM processing**: Individual channel analysis + comprehensive comparative analysis
   - **Injury/availability integration**: Player status codes (a/d/i/s/u) factored into all recommendations

@@ -29,21 +29,28 @@ YouTube transcript fetching may be IP blocked in some regions. To bypass this:
 3. Click the extension → Export → save as `~/youtube_cookies.txt`
 4. Set the environment variable: `export YOUTUBE_COOKIES_PATH="$HOME/youtube_cookies.txt"`
 
-### Run Complete FPL Analysis (2-Step Process)
+### Run Complete FPL Analysis (Interactive Pipeline)
 
-**Step 1: Data Collection** - Collect FPL data + analyze 5 YouTube channels in parallel
+Use the consolidated CLI to collect data and optionally trigger the LLM analyzer:
+
 ```bash
-./fpl_data_aggregator.sh --team-id 1234 --output-file gameweek_data.json --verbose
+uv run fpl-influencer-hivemind pipeline --team-id 1234 --free-transfers 2
 ```
 
-**Step 2: LLM Analysis** - Generate AI-powered recommendations using Claude-4
-```bash
-# Standard analysis with 1 free transfer (default)
-./fpl_intelligence_analyzer.py --input gameweek_data.json --output-file analysis.md --verbose
+The command will:
 
-# Analysis with 2 free transfers available
-./fpl_intelligence_analyzer.py --input gameweek_data.json --output-file analysis.md --free-transfers 2 --verbose
+1. Gather FPL API data, discover influencer videos, and download transcripts
+2. Write a timestamped JSON artifact to `var/hivemind/` (e.g. `gw05_team1234_...json`)
+3. Target the upcoming gameweek (current + 1) for discovery, automatically falling back to the current week if no matches are found
+4. Prompt with a `y/N` confirmation before running the Anthropic-backed analysis
+
+If you prefer to collect data only, run:
+
+```bash
+uv run fpl-influencer-hivemind collect --team-id 1234 --auto-approve-transcripts
 ```
+
+Both subcommands ensure filenames are unique and include the team ID to prevent accidental overwrites. Legacy runners (`./fpl_data_aggregator.py` and `./fpl_data_aggregator.sh`) delegate to the same Python pipeline for backwards compatibility.
 
 **Result**: 160+ line markdown report with personalized transfer recommendations, captain analysis, and consensus insights from 5 FPL influencers. See [example_reports/final_analysis_response.md](./example_reports/final_analysis_response.md) for an example analysis.
 
@@ -63,12 +70,13 @@ This project follows a **script-first development approach** where individual co
 ### Current Structure
 
 ```
-├── fpl_data_aggregator.sh           # 🎯 Main orchestrator - data collection pipeline
-├── fpl_intelligence_analyzer.py     # 🧠 LLM analysis engine
+├── fpl_data_aggregator.py          # 🎯 Main orchestrator - data collection pipeline
+├── fpl_data_aggregator.sh          # Shim to preserve legacy shell usage
+├── fpl_intelligence_analyzer.py    # 🧠 LLM analysis engine
 ├── fpl/                            # FPL API data analysis scripts
 ├── youtube-titles/                 # YouTube video discovery & ranking
 ├── youtube-transcript/             # Transcript fetching & processing
-├── src/fpl_influencer_hivemind/    # Main package (for future integration)
+├── src/fpl_influencer_hivemind/    # Unified CLI & pipeline helpers
 └── tests/                          # Test suite
 ```
 
