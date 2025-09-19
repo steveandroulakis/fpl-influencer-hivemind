@@ -419,7 +419,7 @@ if [[ ${#DISCOVERED_VIDEOS[@]} -gt 0 ]]; then
         # Build command with delay and cookie support
         cmd=(
             "${SCRIPT_DIR}/youtube-transcript/fpl_transcript.py"
-            --id "$video_id"
+            --id="$video_id"
             --format txt
             --out "$transcript_file"
             --delay 5
