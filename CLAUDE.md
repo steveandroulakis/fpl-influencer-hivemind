@@ -171,6 +171,7 @@ Required for full functionality:
 - **Complete Analysis Pipeline**: End-to-end FPL decision support system
   - `fpl_data_aggregator.py` - **Main orchestrator** combining all data collection in parallel (invoked by CLI)
   - `fpl_intelligence_analyzer.py` - **LLM-powered analysis engine** using Claude-4 models for recommendations
+  - `src/fpl_influencer_hivemind/youtube/video_picker.py` - In-process YouTube discovery so the pipeline streams progress directly to the CLI (no more silent subprocess gap)
   - **Two-phase LLM processing**: Individual channel analysis + comprehensive comparative analysis
   - **Injury/availability integration**: Player status codes (a/d/i/s/u) factored into all recommendations
   - **Markdown report generation**: 160+ line detailed analysis with actionable insights
@@ -181,7 +182,7 @@ Required for full functionality:
   - `get_my_team.py` - Personal FPL team analysis using entry ID 1178124
   - Shared utilities in `utils.py` for API access and data formatting
 - **YouTube Video Processing** (`./youtube-titles/`): Intelligent FPL content discovery with parallel processing
-  - `fpl_video_picker.py` - Production-ready script using YouTube Data API v3 + Anthropic Claude
+  - `fpl_video_picker.py` - Thin CLI wrapper around the shared module (uv-run friendly)
   - **Dual processing modes**: Multi-channel batch processing OR single-channel mode (`--single-channel`)
   - `run_parallel_channels.sh` - **Shell orchestrator for true parallel processing** across all channels
   - `channels.json` - **Structured channel configuration** with names, URLs, and descriptions

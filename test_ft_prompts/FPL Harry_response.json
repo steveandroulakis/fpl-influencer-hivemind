@@ -1,0 +1,54 @@
+```json
+{
+  "channel_name": "FPL Harry",
+  "formation": null,
+  "team_selection": [
+    "Sánchez (GKP)",
+    "Pedro Porro (DEF)", 
+    "Aït-Nouri (DEF)",
+    "N.Williams (DEF)",
+    "M.Salah (MID)",
+    "B.Fernandes (MID)",
+    "Rogers (MID)",
+    "Reijnders (MID)",
+    "Sarr (MID)",
+    "João Pedro (FWD)",
+    "Watkins (FWD)"
+  ],
+  "transfers_in": [
+    "Sarr (MID)",
+    "Wood (FWD)"
+  ],
+  "transfers_out": [
+    "Palmer (MID)",
+    "Marc Guiu (FWD)"
+  ],
+  "captain_choice": "B.Fernandes (MID)",
+  "vice_captain_choice": null,
+  "key_issues_discussed": [
+    {
+      "issue": "Palmer injury concern",
+      "opinion": "Planning to transfer out if definitely ruled out due to groin injury"
+    },
+    {
+      "issue": "Bruno Fernandes captaincy despite ban",
+      "opinion": "Still considering as captain option despite losing to Grimsby"
+    },
+    {
+      "issue": "Squad depth improvement",
+      "opinion": "Upgrading Marc Guiu to Chris Wood would provide better squad depth and strong first sub"
+    }
+  ],
+  "watchlist": [],
+  "bank_itb": null,
+  "key_reasoning": [
+    "Palmer ruled out with groin injury, needs replacement",
+    "Upgrading Marc Guiu to Chris Wood for better squad depth",
+    "Sarr benched due to away fixture at Aston Villa",
+    "Three home defenders with good fixtures",
+    "Using both free transfers if Palmer definitely out"
+  ],
+  "confidence": 0.75,
+  "transcript_length": 1225
+}
+```

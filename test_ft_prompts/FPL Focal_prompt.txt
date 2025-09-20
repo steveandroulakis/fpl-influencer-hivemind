@@ -1,0 +1,878 @@
+Analyze this FPL influencer's video transcript for gameweek 2.
+
+CHANNEL: FPL Focal
+VIDEO: MY FPL GW3 TEAM 🌍 WHAT TO DO WITH PALMER ⚠️
+
+TOP FPL PLAYERS BY OWNERSHIP (showing first 75 for context - includes injury status):
+[
+ {
+  "web_name": "Jo\u00e3o Pedro",
+  "team_name": "Chelsea",
+  "position": "FWD",
+  "price": 7.6,
+  "selected_by_percent": 59.1,
+  "total_points": 17,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "M.Salah",
+  "team_name": "Liverpool",
+  "position": "MID",
+  "price": 14.5,
+  "selected_by_percent": 53.3,
+  "total_points": 13,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Palmer",
+  "team_name": "Chelsea",
+  "position": "MID",
+  "price": 10.5,
+  "selected_by_percent": 40.5,
+  "total_points": 3,
+  "status": "i",
+  "news": "Groin Injury - Unknown return date",
+  "chance_of_playing_next_round": 0
+ },
+ {
+  "web_name": "D\u00fabravka",
+  "team_name": "Burnley",
+  "position": "GKP",
+  "price": 4.0,
+  "selected_by_percent": 34.1,
+  "total_points": 8,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": 100
+ },
+ {
+  "web_name": "Reijnders",
+  "team_name": "Man City",
+  "position": "MID",
+  "price": 5.7,
+  "selected_by_percent": 33.3,
+  "total_points": 12,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Haaland",
+  "team_name": "Man City",
+  "position": "FWD",
+  "price": 14.1,
+  "selected_by_percent": 32.0,
+  "total_points": 15,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Kudus",
+  "team_name": "Spurs",
+  "position": "MID",
+  "price": 6.6,
+  "selected_by_percent": 31.8,
+  "total_points": 13,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Van de Ven",
+  "team_name": "Spurs",
+  "position": "DEF",
+  "price": 4.5,
+  "selected_by_percent": 28.7,
+  "total_points": 12,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Cucurella",
+  "team_name": "Chelsea",
+  "position": "DEF",
+  "price": 6.1,
+  "selected_by_percent": 27.2,
+  "total_points": 13,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Ekitik\u00e9",
+  "team_name": "Liverpool",
+  "position": "FWD",
+  "price": 8.7,
+  "selected_by_percent": 26.5,
+  "total_points": 20,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Wood",
+  "team_name": "Nott'm Forest",
+  "position": "FWD",
+  "price": 7.7,
+  "selected_by_percent": 25.7,
+  "total_points": 15,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Pedro Porro",
+  "team_name": "Spurs",
+  "position": "DEF",
+  "price": 5.6,
+  "selected_by_percent": 25.1,
+  "total_points": 11,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Gy\u00f6keres",
+  "team_name": "Arsenal",
+  "position": "FWD",
+  "price": 9.0,
+  "selected_by_percent": 25.0,
+  "total_points": 13,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "S\u00e1nchez",
+  "team_name": "Chelsea",
+  "position": "GKP",
+  "price": 5.0,
+  "selected_by_percent": 24.7,
+  "total_points": 11,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Virgil",
+  "team_name": "Liverpool",
+  "position": "DEF",
+  "price": 6.0,
+  "selected_by_percent": 24.3,
+  "total_points": 6,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Semenyo",
+  "team_name": "Bournemouth",
+  "position": "MID",
+  "price": 7.2,
+  "selected_by_percent": 23.1,
+  "total_points": 21,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Wirtz",
+  "team_name": "Liverpool",
+  "position": "MID",
+  "price": 8.4,
+  "selected_by_percent": 22.8,
+  "total_points": 4,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Raya",
+  "team_name": "Arsenal",
+  "position": "GKP",
+  "price": 5.5,
+  "selected_by_percent": 21.4,
+  "total_points": 16,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "B.Fernandes",
+  "team_name": "Man Utd",
+  "position": "MID",
+  "price": 9.0,
+  "selected_by_percent": 21.1,
+  "total_points": 4,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Watkins",
+  "team_name": "Aston Villa",
+  "position": "FWD",
+  "price": 9.0,
+  "selected_by_percent": 20.7,
+  "total_points": 4,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Gabriel",
+  "team_name": "Arsenal",
+  "position": "DEF",
+  "price": 6.1,
+  "selected_by_percent": 20.4,
+  "total_points": 12,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Est\u00e8ve",
+  "team_name": "Burnley",
+  "position": "DEF",
+  "price": 4.0,
+  "selected_by_percent": 18.7,
+  "total_points": 7,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Sels",
+  "team_name": "Nott'm Forest",
+  "position": "GKP",
+  "price": 5.0,
+  "selected_by_percent": 18.6,
+  "total_points": 4,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Saliba",
+  "team_name": "Arsenal",
+  "position": "DEF",
+  "price": 6.1,
+  "selected_by_percent": 18.1,
+  "total_points": 15,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "A\u00eft-Nouri",
+  "team_name": "Man City",
+  "position": "DEF",
+  "price": 6.1,
+  "selected_by_percent": 17.7,
+  "total_points": 10,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": 100
+ },
+ {
+  "web_name": "Wan-Bissaka",
+  "team_name": "West Ham",
+  "position": "DEF",
+  "price": 4.5,
+  "selected_by_percent": 17.5,
+  "total_points": 1,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Marc Guiu",
+  "team_name": "Sunderland",
+  "position": "FWD",
+  "price": 4.5,
+  "selected_by_percent": 16.2,
+  "total_points": 1,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": 100
+ },
+ {
+  "web_name": "Mbeumo",
+  "team_name": "Man Utd",
+  "position": "MID",
+  "price": 8.0,
+  "selected_by_percent": 15.0,
+  "total_points": 4,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Konsa",
+  "team_name": "Aston Villa",
+  "position": "DEF",
+  "price": 4.5,
+  "selected_by_percent": 14.6,
+  "total_points": 3,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": 100
+ },
+ {
+  "web_name": "Aina",
+  "team_name": "Nott'm Forest",
+  "position": "DEF",
+  "price": 5.0,
+  "selected_by_percent": 14.1,
+  "total_points": 5,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Gu\u00e9hi",
+  "team_name": "Crystal Palace",
+  "position": "DEF",
+  "price": 4.5,
+  "selected_by_percent": 13.1,
+  "total_points": 8,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Cunha",
+  "team_name": "Man Utd",
+  "position": "MID",
+  "price": 8.1,
+  "selected_by_percent": 12.6,
+  "total_points": 4,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Richarlison",
+  "team_name": "Spurs",
+  "position": "FWD",
+  "price": 6.7,
+  "selected_by_percent": 12.5,
+  "total_points": 17,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Gakpo",
+  "team_name": "Liverpool",
+  "position": "MID",
+  "price": 7.6,
+  "selected_by_percent": 12.4,
+  "total_points": 17,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Pickford",
+  "team_name": "Everton",
+  "position": "GKP",
+  "price": 5.5,
+  "selected_by_percent": 12.1,
+  "total_points": 17,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Frimpong",
+  "team_name": "Liverpool",
+  "position": "DEF",
+  "price": 5.9,
+  "selected_by_percent": 11.8,
+  "total_points": 1,
+  "status": "i",
+  "news": "Hamstring injury - Expected back 14 Sep",
+  "chance_of_playing_next_round": 0
+ },
+ {
+  "web_name": "Eze",
+  "team_name": "Arsenal",
+  "position": "MID",
+  "price": 7.5,
+  "selected_by_percent": 10.5,
+  "total_points": 3,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Kelleher",
+  "team_name": "Brentford",
+  "position": "GKP",
+  "price": 4.5,
+  "selected_by_percent": 10.4,
+  "total_points": 6,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": 100
+ },
+ {
+  "web_name": "A.Becker",
+  "team_name": "Liverpool",
+  "position": "GKP",
+  "price": 5.5,
+  "selected_by_percent": 10.2,
+  "total_points": 2,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Saka",
+  "team_name": "Arsenal",
+  "position": "MID",
+  "price": 9.9,
+  "selected_by_percent": 9.8,
+  "total_points": 9,
+  "status": "i",
+  "news": "Hamstring injury - Unknown return date",
+  "chance_of_playing_next_round": 0
+ },
+ {
+  "web_name": "Mu\u00f1oz",
+  "team_name": "Crystal Palace",
+  "position": "DEF",
+  "price": 5.5,
+  "selected_by_percent": 9.6,
+  "total_points": 10,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Milenkovi\u0107",
+  "team_name": "Nott'm Forest",
+  "position": "DEF",
+  "price": 5.5,
+  "selected_by_percent": 9.6,
+  "total_points": 4,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Ndiaye",
+  "team_name": "Everton",
+  "position": "MID",
+  "price": 6.5,
+  "selected_by_percent": 9.4,
+  "total_points": 10,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "N.Williams",
+  "team_name": "Nott'm Forest",
+  "position": "DEF",
+  "price": 5.0,
+  "selected_by_percent": 9.0,
+  "total_points": 3,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Rogers",
+  "team_name": "Aston Villa",
+  "position": "MID",
+  "price": 7.0,
+  "selected_by_percent": 8.9,
+  "total_points": 5,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": 100
+ },
+ {
+  "web_name": "Bowen",
+  "team_name": "West Ham",
+  "position": "FWD",
+  "price": 7.8,
+  "selected_by_percent": 8.8,
+  "total_points": 4,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Johnson",
+  "team_name": "Spurs",
+  "position": "MID",
+  "price": 7.1,
+  "selected_by_percent": 8.7,
+  "total_points": 17,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Rice",
+  "team_name": "Arsenal",
+  "position": "MID",
+  "price": 6.5,
+  "selected_by_percent": 8.6,
+  "total_points": 12,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Elanga",
+  "team_name": "Newcastle",
+  "position": "MID",
+  "price": 7.0,
+  "selected_by_percent": 8.6,
+  "total_points": 5,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Reinildo",
+  "team_name": "Sunderland",
+  "position": "DEF",
+  "price": 4.0,
+  "selected_by_percent": 8.5,
+  "total_points": 9,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Dorgu",
+  "team_name": "Man Utd",
+  "position": "DEF",
+  "price": 4.5,
+  "selected_by_percent": 8.5,
+  "total_points": 3,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Calafiori",
+  "team_name": "Arsenal",
+  "position": "DEF",
+  "price": 5.6,
+  "selected_by_percent": 8.2,
+  "total_points": 26,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Mateta",
+  "team_name": "Crystal Palace",
+  "position": "FWD",
+  "price": 7.5,
+  "selected_by_percent": 7.9,
+  "total_points": 3,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Cherki",
+  "team_name": "Man City",
+  "position": "MID",
+  "price": 6.5,
+  "selected_by_percent": 7.8,
+  "total_points": 7,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Tarkowski",
+  "team_name": "Everton",
+  "position": "DEF",
+  "price": 5.5,
+  "selected_by_percent": 7.6,
+  "total_points": 12,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "\u0160e\u0161ko",
+  "team_name": "Man Utd",
+  "position": "FWD",
+  "price": 7.5,
+  "selected_by_percent": 7.6,
+  "total_points": 2,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "A.Ramsey",
+  "team_name": "Burnley",
+  "position": "MID",
+  "price": 4.5,
+  "selected_by_percent": 7.6,
+  "total_points": 0,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Marmoush",
+  "team_name": "Man City",
+  "position": "MID",
+  "price": 8.4,
+  "selected_by_percent": 7.5,
+  "total_points": 2,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Henderson",
+  "team_name": "Crystal Palace",
+  "position": "GKP",
+  "price": 5.0,
+  "selected_by_percent": 7.2,
+  "total_points": 8,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Alex Moreno",
+  "team_name": "Aston Villa",
+  "position": "DEF",
+  "price": 4.0,
+  "selected_by_percent": 7.2,
+  "total_points": 0,
+  "status": "u",
+  "news": "Has joined Girona permanently.",
+  "chance_of_playing_next_round": 0
+ },
+ {
+  "web_name": "Livramento",
+  "team_name": "Newcastle",
+  "position": "DEF",
+  "price": 5.0,
+  "selected_by_percent": 7.1,
+  "total_points": 13,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Vicario",
+  "team_name": "Spurs",
+  "position": "GKP",
+  "price": 5.0,
+  "selected_by_percent": 6.9,
+  "total_points": 18,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "J.Timber",
+  "team_name": "Arsenal",
+  "position": "DEF",
+  "price": 5.6,
+  "selected_by_percent": 6.8,
+  "total_points": 24,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Caicedo",
+  "team_name": "Chelsea",
+  "position": "MID",
+  "price": 5.5,
+  "selected_by_percent": 6.4,
+  "total_points": 13,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Verbruggen",
+  "team_name": "Brighton",
+  "position": "GKP",
+  "price": 4.5,
+  "selected_by_percent": 6.4,
+  "total_points": 3,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Grealish",
+  "team_name": "Everton",
+  "position": "MID",
+  "price": 6.5,
+  "selected_by_percent": 6.3,
+  "total_points": 12,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Murillo",
+  "team_name": "Nott'm Forest",
+  "position": "DEF",
+  "price": 5.5,
+  "selected_by_percent": 6.3,
+  "total_points": 3,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Anderson",
+  "team_name": "Nott'm Forest",
+  "position": "MID",
+  "price": 5.5,
+  "selected_by_percent": 6.0,
+  "total_points": 8,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Gibbs-White",
+  "team_name": "Nott'm Forest",
+  "position": "MID",
+  "price": 7.5,
+  "selected_by_percent": 6.0,
+  "total_points": 7,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Beto",
+  "team_name": "Everton",
+  "position": "FWD",
+  "price": 5.4,
+  "selected_by_percent": 5.9,
+  "total_points": 2,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "James",
+  "team_name": "Chelsea",
+  "position": "DEF",
+  "price": 5.5,
+  "selected_by_percent": 5.7,
+  "total_points": 6,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Diouf",
+  "team_name": "West Ham",
+  "position": "DEF",
+  "price": 4.5,
+  "selected_by_percent": 5.6,
+  "total_points": 4,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Kerkez",
+  "team_name": "Liverpool",
+  "position": "DEF",
+  "price": 6.0,
+  "selected_by_percent": 5.6,
+  "total_points": 1,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Sarr",
+  "team_name": "Crystal Palace",
+  "position": "MID",
+  "price": 6.5,
+  "selected_by_percent": 5.5,
+  "total_points": 11,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Neto",
+  "team_name": "Chelsea",
+  "position": "MID",
+  "price": 7.0,
+  "selected_by_percent": 5.3,
+  "total_points": 10,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ }
+]
+
+PLAYER STATUS CODES:
+- a: available, d: doubtful, i: injured, s: suspended, u: unavailable
+- Pay attention to "status", "news", and "chance_of_playing_next_round" fields
+
+TRANSCRIPT:
+[Music] [Music] The point is go. [Music] [Music] [Music] It&#39;s absolutely sensational. [Music] [Music] Cole Carl. [Music] And we&#39;re live. Welcome back for another deadline stream. Good morning everyone. How are we all today? As always, I&#39;ve left it way too late deciding what to do with my team and I&#39;m going to be making some transfers during the stream and I&#39;m not even sure exactly what those moves are yet. Oh, you know what? Annoyingly, Palmer went down in price last night. Did you guys see the price changes? But now that I look at it more, I&#39;m kind of glad it happened cuz I might end up doing something completely different. I was going to sell Palmer for Dango last night and I was going to Yeah, Palmer to Dango and Gu to Jockarez. Um, did anyone have Palmer for the price for last night? I mean, how annoying was that? Type one in chat if they should make price changes transparent or price or type two in the chat if you think it&#39;s good that the price changes are a mystery. You content creator is a huge overthinkers. Oh, trust me, Anthony. We absolutely are. We absolutely are. I mean, we have we have to. It&#39;s what we do in it. We do FPL for a living. So, we sit here all day thinking and thinking, overthinking, deciding what to do. Is that the right move? Is it the wrong move? Often what happens is the first thing I think of was the best thing and the last thing I think of wasn&#39;t. Pretty divided. Pretty divided on the price changes. So last night Vaneran, Livermento, Greish and Smen went up. 8 Nor went back down to where he started 6 mil. Uh who else went down? Maron went down again. Watkins went down. That&#39;s annoying. I&#39;ve got Watkins. I know a lot of you do. Palmer went down was obviously the other notable one. So, uh, yeah, that&#39;s a bit annoying, but I&#39;m probably going to make completely different moves now, so maybe it&#39;ll work out. We&#39;ll see. Uh, Austin, thank you for the 37 months. He says, &quot;Morning, Oscar. Wood or Bruno captain? Good luck, everyone.&quot; I&#39;m on Bruno captain, and that&#39;s not changing personally, and I know I know some of you are not going to like that, but I just think Burnley home. If I&#39;m not going to capt Bruno home to Burnley, when am I? I know it&#39;s I know Man United are like rock bottom right now. They just got knocked out the League Cup by League 2 Grimby, but it&#39;ll be a full strength team. I just still think it could be like a 3 4-nil game. Uh, Triny says, &quot;Are you streaming already? I now came back from a date and forgot my team.&quot; Yeah, it&#39;s 9:00 UK time. We just went live. How did the date go? Um, so yeah, what was I saying? I think I&#39;m going to actually sell Strand Lars now, which absolutely pains me cuz I love him. Do you make transfers during live streams or before? Usually it&#39;s during the streams. I like to make my transfers as late as possible because the closer you make a move to the deadline, the most upto-ate information you can have. I worded that horribly, but the later you leave it, the more information you have. So often I do my transfers like 15 minutes from deadline because you never know there could be some kind of leak that affects your plans or you know imagine imagine 20 minutes from the deadline for Britio tweets Strand Larsson to Newcastle. Here we go. He&#39;s not it looks like he&#39;s not going to play this week anyway. I don&#39;t know if you guys have seen the news but um Pereira said he&#39;s a doubt and then last night I saw this tweet. Strand Lson&#39;s not at the Wolves team hotel this evening and expected to miss the game against Everton tomorrow. In today&#39;s press conference, Pereira cast doubt on Larsson&#39;s involvement due to an Achilles issue. Um, welcome all to the stream. We&#39;ve got Luke here, we&#39;ve got Pesang, we&#39;ve got CH, we&#39;ve got Oogie Boogie, Bradley here, George. Good see lots of members. Josh is here. Ben, FP, Nick, 24, Kwell, uh, Cheeseman, Chris, Hydro, Scrabble, Otto, Noct, Tambul, Nat, Dwan, good to see you all here. Welcome to the stream. What transfers you guys are making this week? Henning, how we doing? Oven, good to see you all. Chin Lloyd in the chat. What transfers everyone making? Are you selling Palmer? Who you selling for? Tuna says, &quot;Uh, with Isak likely to go to Liverpool, who will be most affected? Echo or Gako? Milenovic captains a better pick than Bruno Fernandez?&quot; You go for it, Tuna. Fair play if that comes off. I hope it does because I&#39;ve got Marillo. I hope they get a clean sheet and maybe get a goal as well. Uh, in terms of who&#39;s affected, it could be either of them. Like Ekit and Isak, they both could play down the left. I&#39;m actually looking at buying Gakpo, as mad as that sounds, despite the potential EAC move. I know some of you don&#39;t like FP review, but I was fiddling around with the default minutes, default minutes just before going live, and by default, he&#39;s on 72 minutes, which I think is way too harsh. He&#39;s just played backto-back 90s. And if you knock him up to like, I don&#39;t know, 85 this week, 80 in gameweek four, then obviously they&#39;ve got Burnley after the break as well, suddenly he becomes a really, really interesting pick. So I&#39;m going to go I think Palmer to Gakpo or Semeno and then it&#39;ll be Strand Larsson to Yarez. What do we think about that? So let&#39;s see. What are you guys making? What what moves are you making? Palmer to Anderson or Gibbs. White. Paul&#39;s got his free hit active. Jay says Palmer and Strand Larsson with the face palm focal emoji. Josh says I free hit last night. instantly regret it. I don&#39;t think it&#39;s necessarily a bad week. Obviously, it depends on your team and so on. Day eight of calling focal specs Giza. Who should I replace full crew with? Jedro, Mateta, Echit, or Wood. I think if I was going for any of those, it&#39;d be wood. I like Mateta second most, I would say. Palmer situation. Moresca says he&#39;s out. So, no Palmer this week. I&#39;m guessing he&#39;ll be back game four. He&#39;s not been called up for England duty. Go with Endoi. I looked at Endoi. Um he&#39;s 6 millil so I&#39;m priced out of doing Palmer to Endo and Q to Yakarez by 0.1 mil now. Uh OP talent thanks for your super chat says play for Bugan against City or Dravka against United. Uh Captain Harland versus Vugan or Bruno versus Dravka. Hm. I&#39;ll be honest with you. I think they&#39;re both conceding. They&#39;re both going to get you one or two points. So, there&#39;s nothing in that. Let&#39;s have a look at the what the clean sheet odds are saying. Courtesy of uh this really great website I came across. FPL.page. Uh made by that guy FP Focal. Uh let&#39;s see what the odds saying. So, clean sheet odds. Burnley 10% Brighton 15. So, go for Bugan just for the 5%. Harland or Bruno captain. That&#39;s an interesting one. If I had both, I think I&#39;d be going Harland if I had both. Yeah, I think it would be Harland if I had both. We&#39;re going to give away actually some uh more season premium memberships to the uh Focal app and FPL.page. So, make sure you&#39;ve got it installed. We&#39;ll give those away in a bit. Uh yeah, captaincy then. Let&#39;s do a poll. Who&#39;s your captain? So, we go Harland, Bruno. I mean, who do we go? Sal or other? I think it has to be, doesn&#39;t it? Let us know in chat if you&#39;re going other. I bet you I bet you loads of you are going wood, aren&#39;t you? And I would like to have included him on the poll. If you go other, let us know though. Is it Wood or is it someone else? Oh, I&#39;m dreading Wood&#39;s ownership this week. Oh, everyone&#39;s going Wood. I&#39;m actually dreading Wood&#39;s effective ownership this week. It&#39;s going to be absolutely killer if he smashes it against West Ham. Uh, right. Chris says, &quot;Cold bloody Palmer. Immediately transferred him out for Gordon. Then he got sent off. Minus four for Kuna and then I saw them get beat by Grimby. Did you already take the minus four? Chris, this is why this is why I always make last minute transfers cuz just things can change drastically. Like he played 90 against Grimby, they got knocked out. I still think Kuna&#39;s great though. I still think he&#39;s solid. Mark says, &quot;What&#39;s the best wild card team?&quot; Uh, I could do a wild card draft. I&#39;ll have to think about that. Who would I have? Should you want me to do a wild card draft? Um, God, where&#39;d you even start? Would I go Harland? Would you guys have Harland and Salah in a wild card? Probably have C. Oh god, it&#39;s actually hard to think about a wild card. Cucar. I&#39;d have semen. I think I&#39;d keep Randers. God, I&#39;d have to keep Bruno, I think, as well because it&#39;s Bernie home. I&#39;d have Jockerz for sure. I think I&#39;d keep Watkins even. What&#39;s that? Nothing in the bank. I&#39;d keep Porro for sure. So, I&#39;d find a way to squeeze Gabriel in. I&#39;d probably have to lose Merillo. Can you see that on your screen? Yeah, it&#39; be along these lines. I&#39;d probably leave Sanchez in. I wouldn&#39;t change too much actually. That&#39;s minus 1.1 mil though, so that doesn&#39;t work. And then Yeah. And then probably Watkins to Wood. That works. Yeah, that&#39;s 0.1 mil on the bank. I think I&#39;d go something like that. Uh the defense isn&#39;t quite right. Probably just swap Anderson to a different 4.5 that you could start this week. Maybe Dorgu, but that&#39;s not very in very inspiring pick. But I think something like that if I was wild carding. That&#39;d be the wild card draft. You could go Mateta over wood. You could go Xiao Pedro. A few variations there. You might not want to go with Bruno. Hab says Simemeno or Sar. It&#39;s a classic form versus fixtures. He says, &quot;Yeah, a really good question is I was looking at both seno and s and I smen is better.&quot; Basically, what it boils down to is what you can do with the extra money cuz Semeno&#39;s gone up again last night. So, how much is Simenya now? He&#39;s like 7 7.3 I think. So, you&#39;re talking about a 0.8 mil difference. So, it depends what can you do with that. 8 mil. You know, like if I went if I did that and I had the 8.8 8 mil then gaming four I could go Romero to Munoz for Sunderland home you know those those sort of options suddenly open up or you know I could go Rogers to Gako for Burnley like there&#39;s suddenly loads of options that open up when you got the extra money so it does depend on on your team which is I guess is very often the case with these questions it&#39;s team dependent and what you can do with that money I like S I think Sar&#39;s great I really really like S I said it in all the preseason videos he&#39;s my favorite 6.5 5 mil mid and I think that&#39;s what he&#39;s emerging as now compared to the others but I guess kudus is nice. Uh is there anyone else? Yeah, I mean Sar&#39;s my favorite still. Nimble says high focal and chat sell strand Arsenal or full crew. I would prioritize full crew definitely. I&#39;m reluctant to sell Strand Lson like it looks like he&#39;s going to miss this game and then I know he does have Newcastle away but look at the run from game five. I guess you can&#39;t see that it&#39;s leads leads home, Spurs away, Brighton home, Sunderland away, Burnley home. So, it&#39;s a really nice run of games um from game week five onward. So, definitely sell for group first. We just have to hope that Newcastle don&#39;t buy him because that would probably ruin him as an option in FPL cuz uh they&#39;ve signed Wolf Mada, right, for was it 65 million pounds as the EAC replacement you&#39;d imagine? Tommy says, &quot;Watch you on here or the FPL show?&quot; The FPL show. Did anyone see it? I was on the FPL show on TV yesterday. I was so nervous. Um, but it went well. I think I got a clip of it somewhere here. That said, they asked me what transfers I was making and what the transfers I&#39;m going to end up making are completely different to what I said. So, uh, that&#39;s not great. Uh, here we go. Or is that changed? I&#39;m really like going back and forth in this cuz as boring as it is, I love because it just makes you so flexible. Like it&#39;s so fun, isn&#39;t it? Ever since we&#39;ve got more transfers, I know. Exactly. Now we can have up to five. Like if I came back from the international break with three transfers, there&#39;s so much I can do there. You know, maybe I&#39;ll buy Eatique and that sort of thing. I&#39;ll buy Gakpo. But it&#39;s like potential points I could lose by not selling Palmer. So I&#39;m also considering Palmer to Sar or Simemeno something like that and then I got the funds to do due up to a 7 and a half mil forward like Mateta or Wood. So I&#39;m looking at potent if I if the deadline was in 10 minutes I&#39;m probably making those two transfers. Yeah. Or is that anyway? Yeah, I was proper nervous but um it went all right and then like on the drive home back I was like come on we did it. We did it. I was actually talking to myself in the car cuz I was like so hyped that I didn&#39;t mess up cuz I was trying not to think. It goes literally on TV around the world. So, it&#39;s quite like intimidating to think about. Uh, it&#39;s not even just the UK. It goes on Sky and TNT in the UK, but it&#39;s like live on TV around the world. So, I was like, &quot;Please do not think about it when we&#39;re doing this.&quot; But, no, I really enjoyed it and they they want me to come back. So, it went well, I think. Uh, Dad says, &quot;Thanks for all the content. What do you think of Palmer to Sar or Kudus? No bias, please.&quot; And G to Meta or Wood. I prefer Sar to Kudus. Yeah, I like that. and goo to Mateta and wood looks good as well. If I was going either, I&#39;d say wood. Again, it does it does depend on chip strategy cuz some people are going free hit six and that makes wood less appealing cuz if you&#39;re freehitting in six, you&#39;re going to get wood anyway. I think he&#39;s got Burnley home. You did a great job on TV, Oscar. Thank you very much. Yeah, I was uh I was buzzing with how it went. Yeah, they said I sounded confident, but honestly, in my head, I was dying inside. I was just like, please just do not mess up. Uh yeah, I I think I would go wood and saw if I was doing that. I like those moves. I&#39;ve had a lot I&#39;ve had a change of heart and I think what I&#39;m going to actually do I&#39;ll show you guys. I think what I&#39;m going to do is Strand Larsson to Yokarez and then Palmer to Semeno or Gakpo. Now obviously the problem with Gako is if if EAC joins which I guess you&#39;d say is likely now then what&#39;s his minutes like longer term? He&#39;s got Burnley away game four. He&#39;s got Everton home game five. I&#39;d like to think he starts those games and maybe comes off early and then it&#39;s just do I free hit in six or wild card? If a wild card in six, then I think he&#39;s really nice for the next three game weeks. If I free hit six, then obviously I get him back for Chelsea game week seven, which isn&#39;t so good. But I think he he&#39;s got a lot of potential for like a short-term play for three weeks. Isak&#39;s not had a preseason. He&#39;s going to be getting up to fitness. So I&#39;m I&#39;m looking at that now. And I&#39;m probably going to regret changing my mind late as often. You know what? Actually, this season, the late decisions I&#39;ve made so far have been good ones. Who was here on the uh last week&#39;s stream when I was going back and forth on Sanchez versus Dravka? I I was a I was a broken man in that stream. It was Sanchez versus Dravka and it was Salah versus Palmer captaincy and obviously Palmer ended up injured anyway, but I think that that would have been the right decision if he&#39;d started that game because they beat them 5-1 without Palmer. So, that was unlucky, but I got the Bravka right. Uh, right. I&#39;m going to keep going with the questions. I&#39;m a bit behind. Bear with me. Uh, Jonathan says, &quot;Jonath uh Jonathan says Johnson versus Cudy versus Gish on a free hit.&quot; On a free hit, I wouldn&#39;t have any of uh probably Kudus if I had to pick one of those. Just trying to think there any better options though. Like I&#39;d rather have Semenyo probably, but I like cudies. You might have semen already though. I would say cudies out of those options. Yeah. Mr. F says, &quot;Hey Oscar, wild card draft, Sard Deick, Trip, Trippia, Meenovic, Alanga, Randers, Salabuno, Enzo Wood, and Jia, Pedro, Petravic, Echo, Richard, and on the bench. Some Maverick picks.&quot; Yeah, I wouldn&#39;t I wouldn&#39;t go anywhere near Trippia. Like it could be a any any game given gamew week that Livere starts right back hall left back. Um I&#39;d go Dorgo over Delect. I wouldn&#39;t go Enzo. Uh do I still have Yeah, that was the wild card draft I put together. So feel free to screenshot that. I did just put it together in the space of like a minute though, so uh take it with a pinch of salt. But it&#39;s um it&#39;s got some similarities but some differences for sure. Yeah, definitely some Maverick picks in there. Not a bad team though. But those are a few changes I would make like the league to Do get rid of Trippia. We probably wouldn&#39;t go Enzo either. How much do you think Chavy Simmons will cost? Uh maybe seven mil. What do you guys reckon? How much for Jav Simmons? Maybe 7 mil. Don&#39;t know if I&#39;d go 7 and 1/2 when you&#39;ve got CIS for 6.5. That doesn&#39;t make sense really, does it? 8 mil. 7 and 1/2. 6.5. They got to they got to price him similarly to Cudis. Otherwise, it just Why would you ever go for him over Cudis? Unless he obviously absolutely smashes it. Uh right. Bradley says thoughts on Palmer of 5 mil maybe S Watkins to Harland for free. I&#39;ve got 5.5 mil Anderson and Salah Palmer Sman Guta Wood. Now I&#39;m not a fan of that. I get the I get the appeal like having Harland&#39;s nice but losing Watkins and having to have a 5 mil mid not keen on that personally. Bradley, I think it hurts your balance too much. I I much prefer the second option. Palmer to seno gear to wood. I would do that. Ugie Boogie says peak FPL not using Harland/ Salah midfielder plus striker blanks. Not using them in my team. I&#39;ve got Salah, but I&#39;m not c I&#39;m vice captaining him. I&#39;ve not been impressed by Salah first two games weeks, I have to be honest. But um I&#39;m going to keep him like I can&#39;t get rid of him, especially with the fixtures after Arsenal. Uh Luke says, &quot;Hi, Aricon. Extra transfers. Will they be on top of already banked?&quot; Yeah. So, if you guys didn&#39;t know, Gam 16, we get five free transfers and that&#39;s regardless of what you had the week before. So if you had four transfers in gimmick 15, you&#39;ll have five the next week. If you spend all your transfers in gimmick 15, so you got none left, you&#39;re going to get topped up to to five free transfers in gimmick 16. So obviously the meta is you spend all your transfers before game 16 because everyone&#39;s going to be on five. So basically we all get an extra little wild card uh in essence. Chris says pick three to start. Concer Gabriel Pora Marillo. Uh Concer Porro Marillo I would say and bench Gabrielle away at Anfield. How are you? Says Elena Captain if I do two free transfers gimmick three and then free hit. Do I get two free transfers gimmick four? Yeah, if you make two transfers activate you free hit. You&#39;ll go back to the transfers you had before. So yeah, you&#39;ll have two free transfers uh next week if you free hit. Probably wouldn&#39;t captain a langanger. It&#39;s a little bit rogue. I mean, I don&#39;t hate it because it&#39;s a great fixture, but I think there&#39;s better options this week. Uh, what&#39;s the captain widget actually saying? Let&#39;s have a look. Bruno five stars. Uh, Harland, Salah, and Kuna three, and Bumo two. So, Wood&#39;s not even in the top five on the captaincy widget. I&#39;m guessing he&#39;d be like sixth, though. I&#39;m guessing he must be very close up there. Chen says, &quot;Uh, does EZ start against Liverpool, EZ or Anderson?&quot; I wouldn&#39;t probably wouldn&#39;t buy Ez. I mean, Sacka&#39;s back in a few weeks as well, so I think there&#39;s a good chance he does, but I wouldn&#39;t be surprised if um Arteta starts with Martinelli and then EZ comes on, but uh I don&#39;t know. Martinelli seems a little bit out of favor, so I&#39;m not sure exactly what he&#39;s going to do there. Could be mad and Martinelli starting out on the wings and as he comes on since it&#39;s his debut, but we&#39;ll see. I wouldn&#39;t buy him. You could get him a draft if you&#39;re playing that. Struggling this game says hi Oscar. Thoughts on Palmer Sars/cudus due to Pedro/wood? No Man United players. Triple Liverpool attack. I&#39;ll have a massive bench headaches but at the same time team is looking bad this week. Yeah, I like the Palmer to SAR due up to a 7.5 mil combination. I think that&#39;s what lots of people are doing. I prefer Sar to Kudus and I prefer wood to Xiao Pedro, but it&#39;s very close. Again, depends on chip strategy. Like wood is amazing for the next four besides Arsenal and gimmick four, but if you&#39;re free hitting gam six, then that reduces wood&#39;s appeal a bit. or if you&#39;re wild carding gam six. Not sure yet what I&#39;m going to do, but I&#39;m I&#39;m thinking about wild carding all three hitting gam six myself, which is why I mentioned it. But yeah, I like those moves. I think um yeah, I think I think that&#39;s an obvious way to go. Palmer to queue up to uh one of the seven half mil forwards. Mateta is also worth looking at, but uh yeah, if I was picking one, it&#39; be wood. Akil says, &quot;Is there merit to free hitting?&quot; Says, &quot;I have Palmer, Watkins, Ratt, and Rogers, Plant, Wild Card, Game 7. Or should I save it? You already have gakpo?&quot; No, save it. Oh, you&#39;re right. How many transfers have you got, Akal? You could just sell Palmer. If you got two transfers, sell Palmer and Ratt. If you don&#39;t have Bruno, you could do Palmer to Bruno. And then if you need the second transfer, if you&#39;ve got one, Rattier to Semen, not worth a free hit for that. Definitely not. Rogers and Watkins are fine. I know they&#39;ve blanked twice in a row, but they&#39;re fine. Eagle says, &quot;Start Juicy Hall of Rat with an injury with a cameo potential. I would start Juby Hall and Rat if he does play. He&#39;s got City anyway.&quot; So, um, I would say Juice Hall. Who to bench? Ask Dave. Rinders or S. Reluctantly, I think I&#39;d bench Sar, you know. 5050 that one. That one really is 50/50. S&#39;s got great record against uh Villa as well. Last season he scored two goals in one game and I think it was a goal and assist the other. Three goals, one assist uh last season, but yeah, he&#39;s never he&#39;s never blanked against them in the league. So that is a really tricky one. And obviously Villa have got Anana and Camera both out as well. So it could be like Tielemans and McIn CDM or something. So, that one&#39;s really close. Uh, you know what? I think I&#39;d probably bench rinders and start Saw. I think that&#39;s what I would do there. Really is a 50/50, but yeah, I&#39;d bench Rinders. K says, &quot;Harlins, Jia, Pedro, or Bruno for captain?&quot; Uh, if I had all three, I&#39;d probably go Harland myself. Bruno Vice otherwise Bruno because I don&#39;t have Harland. So that&#39;s why I&#39;m captaining Bruno. J Pedro is nice. Obviously he&#39;ll be on pens with Palmer out. There&#39;s lots of nice options this week. We&#39;ve got like Wood&#39;s a good option as well. You could just go Salah. Like when in doubt, go sell Salah. I didn&#39;t see who that was, but thank you for the two months. Uh message retracted and member for two months. You took a photo of me at Glastonbury. You&#39;re watching me. Did you really, Ben? I don&#39;t believe you. Send me a send me a a send me the photo in DMs. I&#39;m devastated there&#39;s no Glas next year. So much fun there. Kai says why wild card six um if if for Arsenal players can&#39;t use free transfers. It&#39;s just like there&#39;s a fixture swing basically. Let me go back over here to the ticker game six. So you&#39;ve got like Bournemouth against Leeds Man City Burnley home. So I&#39;d get Harland in possibly add a third city asset maybe defender or maybe the keeper situation&#39;s clear. Forest have got Sunland home. Again this also means it&#39;s a free hit opportunity because you could free hit like triple forest or you know a double defense and wood that sort of thing. Spurs have got Wolves home then they&#39;ve got leads after that. So yeah, there&#39;s lots of uh ways you can go there. Arsenal have got Newcastle. So um yeah, if you got Newcastle assets, you could look to drop them. Then Palace&#39;s fixtures turn as well. Liverpool, Everton, Bournemouth, Arsenal. So opportunity to hop off Palace assets. So yeah, just some early thoughts, but it&#39;s a wild card window for sure. Um thank you everyone for being here. If you&#39;re enjoying the stream so far, do hit like on it and make sure you&#39;re subscribed. So, I do these streams every deadline and videos during the week. Would you recommend benching Palmer? I really don&#39;t know what to do with him. I mean, if you&#39;ve got like decent depth, I really don&#39;t mind benching him. I would love to bench him myself this week if I had better depth, but I&#39;ve got Anderson who&#39;s got Chelsea and I&#39;ve got a Stev who&#39;s got Man United. So, how&#39;s Teddy? Yeah, he&#39;s good. He&#39;s asleep. He&#39;s asleep under the desk. He was on my lap just before he went live, but uh he doesn&#39;t he see he&#39;s a bit shy with the streams these days. He just disappears. The Stev better call. Uh what are the clean sheet odds actually? Fulham versus Burnley. Burnley 10% Fulham 14. Yeah, I think I&#39;ve got it right there. Anderson first on bench. Um Ed, thanks for the super chat. It says bench one of Gakpo Rogers and Rinders. I&#39;ll definitely start Rogers and I&#39;d probably start Rinders. So, I think it&#39; be Gakpo and the bench. Yeah, for a free hit, Jiao Pedro or Wood. What&#39;s your uh who you have a strikers if it&#39;s between those? I think if I was on a free hit, I&#39;d have Harland, Wood, and Jiao Pedro, but uh I&#39;d say Wood. Solan, morning, Oscar. Wishing you a good game, mic. Love you. Good morning, Senora Lump. Right, how many players have you guys got from the scout selection? Let&#39;s have a look at the team. So, they&#39;ve gone Cells in goal. They&#39;ve gone Cucku, Rya, Pedro, Porro, Dorgu, Bruno, Captain Kuna, Gibbs, White, and Damsgard, Harland, Wood, and Xiao, Pedro. So, I&#39;ve got Porro, Bruno. I&#39;ve got two. Oh, mate. I&#39;m in so much trouble. So, anyone got more than two? Combat Waffles got two. Luke&#39;s got one. Okay, I feel better now. That&#39;s the lowest I&#39;ve had all season. And even after even if I make my two transfers, I still have two. Oh man. Seven on a free hit. Yeah, on a free hit I guess you&#39;d more you&#39;d resemble that more. Five. Three. Three. Yeah, just two for me. Damn. Mine is literally Porro and Bruno. Can I count it as three if it&#39;s Bruno captain? Probably not. Amy Pan says one free transfer 3.8 mil on the bank. Sanchez, Porro, Van Deven, Marillo, Bruno, Salah, Sar, Coulis, Rinders, Watkins and Xiao, Pedro benches, the Bravka, Guamac Stev, uh, Palmer Tudis is done. What are your thoughts? So, you got 3.8 mil. Just thinking if there&#39;s a a second move worth making like you can afford Gu to Wood for example, right? But you&#39;d have to bench you&#39;d have to bench Saw. So yeah, I don&#39;t think I think that&#39;s okay. You could just leave it at that. I think that&#39;s fine. Yeah. I mean, is anyone is anyone considering that? Cuz obviously when you go Palmer down to like Saw or Semenya, you&#39;ve got the money to go Gu up to one of those 7.5ish strikers. Is anyone not doing that second move to avoid a benching headache? Cuz like you&#39;re going to have to bench someone like Sar, aren&#39;t you? Or or I don&#39;t know, Randers or someone like that. Kudos. So, is anyone just not doing the second move? So, you have two transfers coming back from the break. I think that&#39;s I think that&#39;s perfectly fine as well to do that. Anyone else top 10K in the focal league? I don&#39;t think I even am though. Where is it? I&#39;m I&#39;m 36k in the focal league. How many managers are in that league? What the hell? If anyone&#39;s not in the league, um the code&#39;s below. I think it&#39;s DDQ IOU. DDQ IOU is the code. There&#39;s an auto join link in the description. 24th in the focal league. Let&#39;s have a quick look at it. David is top. He&#39;s 27th in the world. What? He&#39;s got Timber and Pikford last week, mate. What is this team? He smashed it. Yeah, J Pedro. Oh, he got unlucky with captaincy as well. He could have been right up there like first in the world. He had Timber and Pick for 39 points. I bet you that&#39;s more than a lot of teams out there. I got 42 last game week. He got three points fewer just between Pigford and Timber. Oh, mate. What a team. Fair play if you&#39;re watching that watching this stream for having Timber in your team. This is the thing like I would never go near Timber just cuz I&#39;m worried maybe White will share minutes with him at some point. But what do I know? He&#39;s just got 24 points. You&#39;re 24th in the world. If I was buying an Arsenal defender, it&#39; be Gabrielle. Who to replace full crew with? Uh, I think Wood&#39;s great, Matt is great, J Pedro, but you need a bit extra money obviously. So, I guess what a lot of people are doing is Palmer down to a cheaper mid if they&#39;ve got Palmer. By the way, if anyone um here watching doesn&#39;t even have Palmer, you&#39;re probably sick of us talking about Palmer. And I&#39;m sorry if that&#39;s you cuz uh obviously he&#39;s the talk of the week cuz he was so highly owned. But there&#39;s I guess there&#39;s a lot of you still watching that never had him to begin with and you&#39;re probably just like, can we not talk about Palmer anymore? Are you doing the transfer? I&#39;m waiting on you. I&#39;ll do it a bit near the deadline. I always do my transfers near deadline just in case there&#39;s any last minute news or leaks or anything that could change my plans. I&#39;m thinking Strand Larsson to Yarez and Palmer to Gakpo. That&#39;s where I&#39;m at. Um Jonathan says he&#39;s on a free hit. Dango Gish. Dango is an interesting one. I was Yeah, Dango Gurish MB is that in Buma and Kukar Pope Dorgu Tarovski and Kukura if that I&#39;m struggling to follow this one. It&#39;s not even a complete team, is it? Is this like a A versus B? It can&#39;t It&#39;s not A versus B either. How many? That&#39;s like seven. eight players. It&#39;s not even a full 11. I&#39;m sorry, Jonathan. What&#39;s the question here? I wouldn&#39;t have Greish on a free hit. Uh, if that&#39;s what you&#39;re asking. The rest I I pretty much agree with. Yeah. MBNCU. I like Dango on the free. I was actually going to buy him or I was thinking of buying him if but then Palmer fell in price last night. So now I&#39;m priced out of that. I was gonna do Palmer to Dango and Gu to Garez. This might be like Arsenal fan delusion, but I really want Yarez. I just I just have a feeling he&#39;s going to be where the template ends up in a few weeks. And it&#39;d be funny to come back to this to see if that&#39;s completely right or completely wrong. I just think that&#39;s could be where people end up. Havz is out for a while. It could be as much as a couple of months. He&#39;s on penalties. Obviously, the fixtures aren&#39;t great, but I&#39;m not necessarily put off by some difficult fixtures. Like, it&#39;s going to lead to more open expansive games, isn&#39;t it? Arsenal going to be able to counter. So, it&#39;s not necessarily a bad thing when you look at bad fixtures like that. What did uh Madman says two free transfers Palmer Marmish to Bruno Rinders? I like that. Yeah. Can you you could you must be able to afford someone better than Rinders. Like if if I was I mean you could consider Semeno. By the way, I&#39;m actually looking at buying Gako. And I&#39;ve not really mentioned him at all, but I&#39;m looking at Gakpo, but he might book me into a game 86 free hit or wild card. I just think for the next few weeks, he could be brilliant. like he&#39;s returned in the first two games. I know Arsenal home&#39;s not great, but then it&#39;s Burnley and then it&#39;s Everton. So, it potentially will be for three weeks. So, it&#39;s like Gakpo versus Semeno for three weeks. I think that&#39;s quite close. So, I&#39;m actually thinking Gakpo. That&#39;s where I&#39;m at. And I&#39;m probably probably not going to change my mind now cuz it stresses me out changing my mind during streams. Uh, Jonathan says, &quot;Sorry, mate. 50 cars. Erling Pedro.&quot; Oh, characters. Cars. Okay. 50 characters. Uh, Erling, Jia, Pedro, and Wooden Attack. Okay. So, Dangga Greish. I&#39;m still not sure who MB and CU is. Can anyone confirm who MBNCU is? Pope Doggy, Taroski, Cukarea. Yeah, I like that team. I like that draft. I would go with the same attack. Uh the only thing I might change is Greish to someone else like a semen if you can afford him. Trying to think who else there is for one week. I don&#39;t dislike Gritish though. That&#39;s a nice draft. That&#39;s a nice free hit. Oh, you could go like Barnes. They&#39;ve got leads. I think Barnes are a langanger. Yeah, Lisa said anger as well. I think I&#39;d probably go for a Newcastle mid versus leads over Gish versus Wolves. Tom Stevenson says he&#39;s seventh in the focal league at the moment with a great gim two free hit. You are seventh in the focal league. You are not Tom Stevenson. Seventh in the focal league is URA. Are you talking about another league? Members league. I do not see you. Oh, is it the Discord league? There you are. Yeah, you. Okay, I see you now. 80 points you got last week. You almost got double my score. Fair play. Nice free hit. Unlucky of Palmer. Who came off your bench? Sessi. So you got Sessi&#39;s nine points off your bench as well. I mean that&#39;s a great output on a free hit here. I&#39;d be really happy if I got something like that from it. Nice work, Tom. Brian says, &quot;Should I go Palmer to Bruno or Smeno?&quot; I think Bruno. If I was actually picking a Palmer replacement and I didn&#39;t have Bruno. Yeah, I would say Bruno. I know like everyone&#39;s saying you&#39;re mad because they just lost to Burnley uh to Grimby in the League Cup, but my read on that Burnley game is there&#39;s going to be lots of goals in that still. So I I still think Bruno&#39;s great and I&#39;m captaining him, so I&#39;m putting my money where my mouth is. Let&#39;s see what happens. Is anyone else captaining Bruno or are you put off by their form? It&#39;s weird, isn&#39;t it? Like against against Arsenal, they look great game week one. Fulham bit disappointing to draw and then it just got even worse like game on game and then knocked out by Grimby. Alfred says not any concern selling Palmer now after the decrease. Same boat. Um I&#39;m considering cudis and wood though for Palmer and Gu. Uh why would I be concerned after a price decrease? It doesn&#39;t affect my thinking if a player&#39;s fallen in price. It&#39;s annoying, don&#39;t get me wrong. It&#39;s really annoying that he fell in price last night because I didn&#39;t think he would. It was very um live FPL was tracking and it was like a very late change and obviously I&#39;m not staying up till half 2 UK time when I&#39;ve when I was up at like 7 this morning. I&#39;m already on a lack of sleep as it is. I couldn&#39;t stay up to see if Palmer was going to drop and annoyingly he did. But that&#39;s that&#39;s the I guess that&#39;s the advantage for some being in other time zones. But then the the disadvantage is like right now if you live in I don&#39;t know North America, South America, it&#39;s the early hours. Is anyone tuned in right now in North or South America? If so, where are you and what time is it? What time is it where you are? I know some people stay up all night for these streams and some people set alarms, you know, like 3:00 in the morning. So fair play if that&#39;s you. Because obviously that&#39;s the disadvantage. Like sometimes there&#39;s leaks in deadline streams that if you&#39;re asleep, you don&#39;t get access to or you miss the leaks cuz you&#39;re asleep, which is fair enough. It&#39;s 1:41 in the morning in California. 6:11 p.m. in Australia, Arizona. 1:41 a.m. Yeah. I mean, it&#39;s uh I guess you haven&#39;t been to bed yet at that time. I guess if anyone&#39;s like East Coast, they might have they might have set a super early alarm, but I think there&#39;d be very few. 4:30 a.m. Is that central time? Are you rolling? No, I&#39;m not, Adam. I&#39;m going to make two transfers. Uh it&#39;s probably going to be Strandlarsen to Yarez and Palmer to Gakpo or Semeno. Patrick says, &quot;Am I being silly with Palmer to gakpo and len to jock for a minus four?&quot; It&#39;s the same moves I&#39;m considering, Patrick. For a minus four, probably. I&#39;m not so keen on it for a hit. Not so much for a minus four. I don&#39;t hate it, but maybe not for a minus four. Probably wouldn&#39;t do it for a hit. I&#39;ve got two transfers, so I&#39;ll spend both of them. Dylan says, &quot;Alanganger or Barnes on a free hit.&quot; That&#39;s honestly a coin toss. Um, I would probably say Barnes Gordon suspended, so surely he&#39;s nailed on for like at least 80 plus. Might not happen. But I I like Barnes slightly more than Langanger. Like he&#39;s more clinical. Barnes just feels likelier to me to Hall somehow than Alanganger. Elanga doesn&#39;t feel like a Hall player. Barnes feels like he could just come out of a brace against Leads and I wouldn&#39;t be surprised. Whereas Alanganger&#39;s one of those like he he scores the odd goal here and there. He might get the assist. I think they I think they probably do put a few pass leads though and they&#39;re both great. And you could even go both on a free hit. I don&#39;t dislike that. and anger could play as a nine. Is that a good thing? I think Gordon&#39;s actually a better FP asset playing left wing. You know, Gordon was playing striker, wasn&#39;t he? Uh cuz Each&#39;s been out. And I actually think Gordon&#39;s a better FP asset playing left wing. Yeah, Wood is a good captain this week. I mean, let&#39;s have a look at the captain poll. 35% Bruno, 22% Harland, 28% other, 15% Salah. So yeah, I think loads and loads are going wood this week. So well done to anyone that got timber last week. Who&#39;s going to be king of the game week, gameweek three? Chuck your guesses in the chat. I&#39;m going to go I&#39;m actually going to go with one of the Newcastle mids. I&#39;m going to go Barnes. Barnes, king of the gameweek. You heard it here first. What do you reckon? Kuna. Oh yeah, Man United mids are a good shot. Elanga Wood, Dorgu, Dorgu. I could actually see if he like keeps a clean sheet and scores then he could definitely take it with 15 points. Brennan and Bumo Defo Barnes and Doy Trust Meovic Thiago Richison Foster Lyall Foster. Guess that&#39;s the only foster. Cesco. Surely Cesco&#39;s got to start sooner than later. Surely Porro. I&#39;ll take Porro. Itara. Oh, Dylan. Honestly, if it&#39;s Dango when I was when I wanted to buy him and I couldn&#39;t now cuz I&#39;m priced out, I&#39;d be devastated. I really like Dango for 6 mil. Sunderland. Great fixture. After that, the fixture is a bit middling, but I think he&#39;s a solid option. Matthew, thanks for the 34 months. He says, &quot;Yes, focal bench verts or Jewsbury Hall.&quot; Jewsbury Hall. Not even close. Not even close that one. Start Verts. I know like Arsenal&#39;s a difficult fixture, but you&#39;ve got to start verts. Praying for the Vanderin and Spence master class. I hope so. But the other two defenders for me. I&#39;ve got Porro and Romero. I&#39;m doubled up. What&#39;s your transfer plans? I am now thinking Strand Larsson to Yakarez and Palmer to Semen or Gakpo. Uh Mark says, &quot;Can we go back to the wild card one as I can&#39;t afford Rogers to gakpo? Uh as I&#39;d like to keep some.&quot; Do you mean the wild card draft? That one? Yeah. If I Hang on. This was a That was a Was this a free hit? No, it was a wild card. Yeah. Seno. Yeah, that works. 0.1 mil. If I was old card, it would be something like that. Yeah, that works. That gives me.1 mil in the bank. So, I think you should all be able to afford that. And you play Dorgio over Gabriel this week. And then you&#39;ve got like a set and forget back three there. Gabriel Porro Cucar. The midfield&#39;s nice. We&#39;ll have to see um about Bruno as an FPL asset after this game week. I might just keep Bruno until he&#39;s playing Cam again under a new manager. So yeah, that was the wild card draft I threw together. Maybe Rogers you could swap out as well. Yeah, probably S for Rogers. So now you&#39;ve got 6 mil so that you got more to play with there. Maybe Duo could be a better keeper. Sorry, better defender like a 5 mil one. I like that a lot. 6 mil as well. So you might find somewhere you like you&#39;d want to spend that. You could be upgrading Dorgu. I don&#39;t dislike Dorgu for four or five though. You could go you could go Rya double arle defense but you might end up wanting Sacka. Oh Edzo, thanks for the five gifted memberships. Thank you very much for that. Edzo, appreciate your support. Uh EF got one of those. W Jeb got one of those. Lewis got one of those. HB and Dylan got one. Thanks very much Edzo. Appreciate your support. Does the nuke make a sound when that just went off? And is it loud? Smoke machine. Did it make a sound or was it quiet? No sound. Okay, fine. What&#39;s the reasoning behind transferring out Strand Larsson instead of Gu uh both with Palmer out as well? So the thinking is it looks like Strand Lson is going to miss this game week. Pereira said he was a doubt and then I saw this last night. He&#39;s not at the the uh the Wolves team hotel expected to miss the game. And then it&#39;s Newcastle in gameweek four who&#39;ve been really really good defensively. They&#39;re the best team for XGC. Small sample size two game weeks. But if I sell Strand Lson instead, I can afford a lot more selling Palmer. Whereas if I sell Gu, the only player I can buy is Anderson. There is no one else I can afford. Palmer went down in price last night. So I no longer can afford one of the six mill mids. I was looking at Dango. So I can&#39;t afford Dango now. There are a few 5.9s, but they don&#39;t appeal to me. Like there is Damsgard. He could do well against Sunderland. There is Pakita. But now I&#39;m thinking I could still go back to Strand Lson when the fixtures turn nice again. But the next two game weeks might get zero points this week. I hate to say this because he&#39;s like my favorite epic asset, but and then it&#39;s Newcastle away. That could be a two-pointer. Maybe not. Uh yeah, my team value is not 100.3. You are correct. Yeah, after last night&#39;s changes 100.1. I can change that now. fact. Thank you for the reminder. Uh where is it? That one, I think. Let&#39;s see. 100.1. There you go. That That gave me no joy updating my team value down by 0.2 million. Your team&#39;s 100.6 mil. Damn, you must be smashing it rankwise, Jack. To have that team value this early on. You&#39;ve already got half a mill more than me. What&#39;s everyone&#39;s team value? Uh, I was trying to see if Edzo said anything, but he didn&#39;t. He was just uh being very nice. Thank you again, Edzo, for that. Uh, what was I saying? So, yeah, that was the thinking of selling Strand Larsson instead. I might end up wild carding game six as well. So, it be for three weeks, in which case I get Burnley and Everton are the notable fixtures out of Gakpo. The risk is joining Liverpool, which do you guys think that&#39;s going to happen now? [Applause] Will he&#39;s go to Liverpool? The risk is You think it will? You think he will? The risk is like maybe Gako&#39;s not completely nailed, but I&#39;d like to think he would be for the next three. No, but maybe in January. I mean, if that happens, like I&#39;m absolutely laughing if I go gakpo. 100.3 mil more than me. He&#39;s act already in Liverpool as we speak. Uh right, bidding coming today £120. £120. That&#39;s quite low. I think I need to chuck at least100 million on that. Barn&#39;s not in squad today. Are you serious? I&#39;ve not seen that. Although, I&#39;ve been streaming, so why would I have? Let&#39;s have a look. You&#39;re winding us up. Nicholas Jackson to buy. And here we go. I can&#39;t believe Newcastle just didn&#39;t grab Jackson on loan for the season. I I think he&#39;s a bit underrated, Jackson. I know he gets me&#39;d a bit, but I actually think he&#39;s a bit underrated. I think he&#39;s a decent striker. Yeah, I&#39;m not seeing anything of Barnes. 13 million loan fee and a 7 mill 70 million option to buy. Um Dylan says Palmer to wood and cudies Palmer to wood plus cies on Mateta and Semeno for next week. I was thinking of changing my double forest defense to double Spurs or move on Tielemans. Yeah, double Spurs defense looks tricky game four obviously Arsenal away Pakistan&#39;s rumored heavily to Villa. Yeah, 70 mil. I can&#39;t see Bayern spending that as a backup to Kane. That doesn&#39;t make sense. But Chelsea somehow will get 70 mil for him because they just keep getting mad fees for players. Um, right. Palmer to Wood plus Kudos. I prefer Mateta and Semeno if you can only afford one or the other. Yeah, Mateta and Semeno I like more. Uh, I don&#39;t dislike selling a forest defender next week. And you can keep one. Depends how it depends on the rest of your defense though because obviously the fixtures after Arsenal are really nice. You&#39;ve got Burnley and Sunderland back to back. How are you says WTF is the logic for transfer profit taxed at 50%. Uh yeah, what is the reason for that? I guess I guess it would be like it it&#39;d be so broken if you could wild card and make like a million over an international break. Maybe that&#39;s the reason. There&#39;s probably another reason I&#39;m missing. But yeah, for every 2 million they rise, you only get 0.1. Son Lump says, &quot;Captain Kulu, Echitica, or Watkins, you&#39;re looking for the upside.&quot; Oh, surely you&#39;ve got better options, uh, Senora Lump, than those three. I mean, if I had to pick one of them, I think it&#39;d be Watkins, but there&#39;s a lot of players I&#39;d put ahead of those three for captaincy this week. Bruno, Wood, Kuna, Abumo, Harland, Salah to name a few, but I&#39;ll say Watkins. Natan says, uh, what to do with Palmer, Sacker, and Larsson with Gu on the bench. I think you got to prioritize the immediate issues and Saka has to go. So, you could sell Sack and Palmer. Don&#39;t know who you&#39;ve got though, the rest of your team. So, it&#39;s hard to answer. Like you could go and UFC will. He&#39;s He&#39;s so hit and miss. He&#39;s so He&#39;s very hit and miss. Could be smoke where there&#39;s fire, but he&#39;s definitely been wrong before. I think I&#39;ve even got him blocked. But yeah, it might be true. He&#39;s sometimes right. But yeah, maybe that&#39;d be enough to put me off going Barnes on a free hit or a wild card. Certainly. Maybe go Langanger just to be safe. That&#39;s not great though for the Newcastle attack with no EAC, no Gordon, potentially no Barnes as well. Uh yeah, if you don&#39;t have Bruno in that Dwan, you could go like Palmer to Bruno, Sacka to Semeno, something like that. Or if you&#39;re looking for a short-term play, Gakpose, who I&#39;m looking at, if you&#39;re thinking of wild card in like gaming six, you&#39;re going to have to sell those two first and just keep Strand Lawson and ride it out. Uh Amir, thank you for becoming a FPL focal member as well. Thank you very much Amir for the support. Appreciate that. Busted Flush says Shia Pedra captain over over Bruno. Start for Bugan or De Bravka? I would start for Bugan. These are the clean sheet odds this week. Uh so obviously we&#39;re going to be going to the bottom, but we&#39;ve got Burnley 10% is the lowest odds. Brighton&#39;s 15. So, it&#39;s only 5% more, but I&#39;d start with Bugan. Uh, Xiao Pedra captain. If I had Xiao Pedra, I&#39;d probably still be on Bruno, but I don&#39;t hate Xiao Pedra captain. I don&#39;t hate it cuz of course he&#39;ll be on pens. His minutes were much better last game week. I think he&#39;s fine as a captain. A lot of good options this week. BTP says Palmer Sacka and Strand Larsson minus four to Harland Dango and SL Sudus. Yeah, I was thinking about this just now of Natan&#39;s question because he&#39;s got those exact three players and obviously you&#39;ve got the option to go to Harland for a hit. I don&#39;t think I would do it for a minus four personally. Probably not for a minus four. It&#39;s not terrible for a set of three transfers though, but I think I wouldn&#39;t do that for a hit. I think I&#39;d rather just replace Palmer Sacka unless unless obviously you&#39;ve got no depth in your bench, no one good that comes on if Stran Larson misses out cuz Sacka&#39;s out, Palmer&#39;s out, Strand Lson&#39;s probably out. So, it definitely does depend on your bench. I should caveat that. If you&#39;ve got a really weak bench, like you&#39;ve got a stev coming on, then I probably would just take the hit. Yeah, but it does depend on that. So, it&#39;s hard to answer that without the context of who you play if you don&#39;t take the minus four if that makes sense. I prefer S to Dango, by the way. Way, way better than Dango. Anthony says, &quot;I need to bench someone from this midfield, but I&#39;m struggling.&quot; Vertz, Bruno, Langanger, Kudus, and Rinders. What are your thoughts? I think it would be Vert. You know, out of all of those, I think Vertz makes the most sense. Verts or Rinders? Like there was a question earlier, Vertz or Jewish Hall, and that one was more obvious. ly start Verts but Verts versus Rinders. What do you guys think? Would you start Verts against Arsenal or Rinders against Brighton? I think I&#39;d start Rinders. Verse is going to be great from game week four, but I think I&#39;d bench him with that midfield. Treach says I&#39;d get Wolf M as soon as he&#39;s in game. I&#39;ll be honest, I don&#39;t know anything about him. I know he&#39;s a big striker. scored something like was it like 15 goals Bundesliga last season. Seen a couple of clips on Twitter, few compilations already out there. Don&#39;t know anything about him. I&#39;m definitely not buying him though. Definitely not buying him myself. I&#39;d want to see him hit the ground running and definitely Newcastle&#39;s main man and at a reasonable price. Be interesting to see how much he is. Could be another 7 and a half mil option. But if he&#39;s at if he&#39;s 7 and a half mil, I would rather Wood, Jia, Pedro, Mateta, all those guys for about the same price. We got one out till the deadline. Butter Knight says, &quot;Wild, but Salah/ETK captain need a different captain.&quot; I would say Salah over Ech definitely. I wouldn&#39;t captain Echot against Arsenal. Salah. Yeah, why not? But no, I wouldn&#39;t captain Nekat. Got to go Salah if you&#39;re going to go for a Liverpool player. Khalid says, &quot;Game three, free hit draft. Man United mid, triple up.&quot; Uh, free hit draft. Who would I have? I&#39;d have Bruno. I would go double Man United mid if I was freehitting. I&#39;ve already got him. I&#39;d actually go and bumo over Kuna. I think would I&#39;d have probably Xiao Pedro. Oh no, I&#39;d have Harland actually. Is it possible to I think I&#39;d go no Salah on a free hit. I think that&#39;s what I would do. Who else would I have here? Alanganger. Yeah, I&#39;m 5.4 mil short, so I&#39;d have to go No Salah. What midfielder am I not considering here? Maybe Smeno Du piping goal something like that on a free hit. Uh yeah. So Merillo, Porro, Dorgu, Bruno and Bumo, Semeno, Alanga. Is there a forward I&#39;m not thinking of here? I wouldn&#39;t go Ralison Jedro. Maybe that. Yeah. 343 and then you just go Rogers down to uh someone cheap like Anderson. That feels about right. and then Anderson first on bench. Something like that on a free hit. There&#39;s a few bench players to change as well there, but that would be the foundation of it. Um, so yeah, double up I would go. Divan says, &quot;I&#39;m thinking of going down to Gakpo from Verse. What do you think?&quot; Uh, who do I get instead of Palmer? I was thinking Simeo. Verse to Gakpo is way too sideways. That is not worth a transfer in my opinion. I know Gako&#39;s been delivering, but it&#39;s just too sideways. It&#39;s just not worth a free transfer. Palmer replacements. Yeah, I&#39;d agree. Semeno, if you haven&#39;t got Bruno, I&#39;d probably put Bruno top and then Semeno. I mean, you could go double Liverpool mid with Gakpo. That&#39;s also an option, but I think I&#39;d rather Bruno and Semeno in your case. The one says, &quot;How much do you think Chavis Simmons will cost?&quot; I think he&#39;s got to be not much more than Kudos otherwise there&#39;s no reason to go for him. Maybe 7 mil 7.5. Uh Jordan says bench one out of Rinders S Meta and Kudus. Uh I&#39;d go Rinders. I would say Rinders on the bench out of those four. Start Star. Start Mateta. Start cudies. Oh, Tim&#39;s in the building. Tim says, &quot;I think I&#39;m going to roll this week. I&#39;m dreading.&quot; I can&#39;t remember what your team looks like, Tim. But if you&#39;re well set up, then by all means roll. Yeah, I can&#39;t remember what your team looks like. I&#39;m I&#39;m dreading it as well cuz we&#39;ve I&#39;ve got I haven&#39;t got Xiao Pedro and he&#39;s something mad like 60%, isn&#39;t he? I&#39;m not I haven&#39;t got Wood who&#39;s going to be so heavily captained. Uh and I&#39;m going like Yakarez. I&#39;m going Gakpo. Like Gakpo&#39;s got Arsenal. Jockarez got Liverpool. Ah, when I say out loud, yeah, could be a difficult week. We&#39;ll see. We need that AI the AI guy. What are your transfer plans? I&#39;m looking at Strand Larsson to Yarez and Palmer to Gakpo. Goal scorer odds. Uh, let&#39;s see. There they are. So Harland 61 goals. Sileni this assumes they start which Sileni is not going to of course keep that in mind. Piao Pedro 0.47 Richardalison 46 Wood 46 Cesco Watkins Yokarez is actually higher than I thought. So that&#39;s actually quite encouraging. Salah&#39;s on.37 same as Palmer who obviously won&#39;t play Bruno the lap won&#39;t play Kuna and then there&#39;s one like goal involvement so that&#39;s like goals and assists combined this is all on the focal app these odds um become available for free 24 hours from the deadline or for members you can get them anytime in fact yeah we were going to do a giveaway um five season memberships for the Focal app if anyone&#39;s not got the Focal app. It&#39;s FPL Focal in the app store. There&#39;s a link below to install it. I&#39;m going to put a code on screen which gives you the entire season premium membership for free. So, we&#39;ll do a giveaway right now. Five of those. So, to claim the code, go through the steps like you&#39;re going to subscribe and then enter the code that&#39;s going to be on screen in a second. And whoever enters the codes first then will redeem premium membership for the whole season for free. All right, here we go. The code is Wait, did I do the graphic? Oh, I did. There it is. What the FPL is the code. Bad reflexes. I give up. First come, first serve. Five of those to whoever enters it first and that gives you the entire season for free. What the FPL is the code. So, you go to subscribe on the site, enter that like like you&#39;re going to check out, but you don&#39;t actually check out because it redeems the whole season for free. Uh let&#39;s see. Oh, they&#39;re gone already. That was rapid. Congrats whoever got them. Uh if you haven&#39;t got the app though, there is loads of free stuff on there as well. Most of the features are free, but if you&#39;d like to uh get the app, then search FP Focal on the app store or FPL.page from your browser. Yeah, what the FPL? I was trying to think of a good code. Anyway, you got it. Nice one, Mayor. Just make sure you cancel it straight away and then uh when the season ends, then uh it won&#39;t like carry on and charge you anything. So, just cancel it. Why is your background different this year, mate? Uh, I&#39;m in a new office and I don&#39;t know where my green screen is and I I&#39;ve given up trying to find it. Is it better with like an actual backdrop or do you prefer the green screen or do you not care? What was the poll again? Will EAC go to Liverpool? 66% yes. 34% no. Green screen&#39;s better. Wait, when you say better, is it better like this? Office tour. I&#39;ve got to be careful cuz I&#39;m in a t-shirt, but I&#39;m streaming in my boxes cuz it&#39;s really hot in here. This is my signed messy shirt. You can&#39;t see a signature. signed uh signed World Cup Messi shirt, but uh that&#39;s all I can do as far as a I shouldn&#39;t have done that with the camera. No close stream. So, yeah, got that. Uh oh, yeah, I&#39;ve got the play buttons for 100,000 subscribers. I got two of them. It&#39;s getting there. Still got stuff everywhere in the office, but it&#39;s coming along. Got some stuff behind me that I need to sort out as well. Anyway, let me get back to the questions. Sorry, I&#39;m missing so many. Boxes reveal. Are using an old school webcam? I literally am. That&#39;s the thing in here. I&#39;ve got like the the play button 200 something thousand, but I&#39;ve got a literally a 15 quid Amazon webcam. I don&#39;t I don&#39;t appear in my videos though. Literally the streams are the only time that you see me. So, um I don&#39;t really don&#39;t really need a fancy webcam. You can see me, can&#39;t you? It&#39;s all right. Sorry. Super chats. TCK says, &quot;Bench boost the Brava King concert. Strand Lenar.&quot; No, I wouldn&#39;t do that. King, I wouldn&#39;t want to bench boost King right now. Certainly not Dravka and Strand Lson might not play TCK. So, no, don&#39;t do it. Wade says, &quot;Livermento, is he a good investment for the next three?&quot; Yeah, Newcastle&#39;s next two especially are amazing fixtures. So, I like Livermentoto for 5 mil. Yeah, he&#39;s a good option. Eden says, &quot;Sancho, Pors, Livermento, Aia, Smeno, Salah, Dango, Kaisedo, Harland, Yakarez, and Woody topheavy. What are your thoughts?&quot; Uh yeah, it&#39;s a it&#39;s a bit topheavy, but as far as a Salah and Harland draft, I like it. The problem is you do have to make lots of sacrifices, don&#39;t you, when you go Salad and Harland. Like Kaisedo is not great. I&#39;d rather I mean, yeah, it&#39;s a nice team all in all. If it&#39;s a wild card, then I&#39;d make some changes like a different four mil. I&#39;d have like Rinders or Anderson over Kaisedo. Like I&#39;d probably go probably go Rinders and Anderson over Dango and Kaisedo and then you&#39;ve got a bit of money to change upon. But if that&#39;s your actual team that&#39;s fine. Simmer says, &quot;I&#39;ve got this front eight and two free transfers. Palm Bruno, Georgino, Randers, Anderson, and Harland. Watkins and Bowen. What to do? Why don&#39;t you sell bowing for wood and rinders to saw? Can you afford that? Or rinders to sorry, Georgino. Sorry, not rinders. Georgino to sar bow into wood. Something like that if you can afford it. Or if not, Anderson&#39;s good. Oh, you&#39;ve got Anderson already. Um, I would just make the one transfer and bench Georgino. Bowing to bow into one of the seven half mill forwards. Probably bow to wood is what I would do. Are you rolling your transfer? No, I&#39;m going to make a couple of transfers. Um, I&#39;ll make them a bit nearer to the deadline in about half an hour. I&#39;m looking to sell Strand Lson and Palmer. Yeah, I&#39;d sell Bowen. That&#39;s what I would do. Uh, and Bench Georgioho. Mav says, &quot;Sorry, Oscar, but content creators are taking the absolute Hang on. Content creators are taking the absolute piss this week. Pushing triple United assets. Bruno captaincy. The swing is going to be wild. Tell us how you really feel, man. Bloody hell. on a free hit. I genuinely would have triple United. I don&#39;t think that&#39;s taking the piss. I know United are like they just got knocked out by Grimby, but they&#39;re home to Burnley. Like, come on. On a free hit. How are you not going at least double United on a free hit? I&#39;m I&#39;m I&#39;m definitely taking triple. Let&#39;s see what happens. My age horribly if Burnley win like 1 nil. Amarim sacked. At least I&#39;ll probably get Bruno playing Cam again in the next manager. But I would free hit draft. Well, this was the free hit I put together that Mav certainly did not like. Uh Anderson I chop and change. There&#39;s 7 mil in the bank, but you wouldn&#39;t need to start him anyway. Um Divan says Semeno from Palmer and Xiao Pedro from Gu. Yeah, I like that a lot. I think that&#39;s what most people are doing. That&#39;s what most people are doing and maybe that&#39;s what I should be doing. But I&#39;m I&#39;m actually thinking about Jockarez for Strand Larson instead of selling Gu. If I sell Gu, then I have to go Palmer to Anderson. So I&#39;m thinking about selling Strand Lson instead. Strand Lson kills me to sell him. I love him. I absolutely love him. But he&#39;s going to be probably 6.3 mil by game four, isn&#39;t he? Um, TJM, thanks for your super chat as well. Appreciate that very much. Thank you. Jonathan says, &quot;Bring one midfielder 5 to 7 mil.&quot; You&#39;ve got none. The one for seven to 9 mil. Got none for gamic three and same combo for gaming four. Bringing two this round and two for gimmick four. Who? Two this round. Two for this and two for game four. So, if I was going to get two for gaming four, I would go S and Yarez in gameweek four. But if I was if I was doing it this week, I think it&#39;d still be Saw, but the forward would be instead someone like Wood. So, Sar and Wood this week or Sar Yakarez next week? No. S I think my answer would be Sar and Yok regardless. I think I&#39;d go S Yres regardless. Ah, I hate how big this decision actually could be. Like would Wood&#39;s fetches are so good that I I just can&#39;t shake the feeling that Yres could actually end up an incredible FPL asset for 9 mil. So I&#39;m prepared to take a chance on that. So my answer is Jo Yarez, but I think most people who ask will say would I&#39;m definitely buying Yarez. I just think Havs is out for it could be two months. He&#39;s on penalties. His minutes look great. I&#39;m not necessarily put off by difficult fixtures either. So I think he&#39;s really nice. Mav, thanks for the five gifted memberships. Thank you very much. Appreciate that. Thanks for your support, Mav. I&#39;ve lost track. Where did I get to? Uh, I think it was Ailing said, &quot;Start Ban Dyke or Anderson?&quot; Start Ban Djk. Got to start Van Dyke every game regardless of opponent. TJM says, &quot;Would you captain Bruno Salah or Wood?&quot; Uh, Bruno. I&#39;ve got Bruno Salah and I&#39;m a Bruno captain. If I had Wood, I don&#39;t. If I had Wood, he&#39;d probably be my vice captain. That&#39;s it. Bruno captain for me, which I know Mav&#39;s not going to like. James says, &quot;I&#39;m playing FP Challenge. Who&#39;s most likely to get Defcon points?&quot; They get 10 extra points. Taroski Merillo, they got Defcon the most frequently last season. James Miller did it 19 times. I can&#39;t remember how many times Taroski did it, but it was it was in twothirds of his games. So, a lot. They&#39;re the Defcon merchants for sure. I&#39;d go with those two. And the fixes aren&#39;t too bad. The difficult thing with Defcon is players are obviously likely to get it in tougher games because they&#39;re defending more. But yeah, I would go with them. Alexi, thanks for the super chat as well. And son with the 21 months says, &quot;Would you bench Vertz Rogers or Anderson? Happy 21.&quot; Vert Rogers or Anderson? I think I&#39;d have to bench Anderson over Verts. quite close though because Anderson has got West Ham home but I think I I think it&#39;d be Vert. Uh I&#39;d start Rogers I&#39;d start and bench Anderson. Close one that but yeah start Rogers and start Verts. Ian says Rogers Sar Rers bench one. Oh I think I bench Rinders. Start Rogers and start bench Rinders. Uh that air. Thanks for eight months. Says, &quot;Hey Oscar, bench one at Vert Sar and Rinders.&quot; Oh, these are such hard questions. Vert Rinders. I think I&#39;d bench vert. Yeah, I think I&#39;d bench verts there. Hanjo says Full Creek Palmer and Gu for wood for Jiao Pedro wood and King 343 for a minus 4. That must be why not just do Palman full crew out for two players and avoid the hit. So, I mean, I don&#39;t mind that for a minus four, but I think I&#39;d rather save the minus four and just go for someone like Bruno and then one and then one of wood or Pedro or Semeno and one of Wood and Xiao Pedro and then save yourself a minus four cuz you&#39;re taking a hit there to sell Gu for King basically. I think I&#39;d rather do that. It&#39;s not a bad minus four though. That could easily be repaid straight away, but I&#39;d prefer to do that and save the hit. What would your wild card team be like? Um, this was the wild card draft I put together. Joseph says, &quot;Thoughts on Rales over Wood?&quot; Nah, not for me. No chance. His minutes, I just don&#39;t trust his minutes enough. He&#39;s going to come off early and if he has a bad game, Salanki could start the next one. Wood or Wood over over a Charleston all day. Ties FPS&#39;s bench Anderson gakpill rinders pro. Oh, probably I probably bench Anderson out of those three. Start gakpo. Start rinders. There&#39;s some real benching dilemas this week, isn&#39;t there? Let&#39;s do a chip poll because I think there&#39;s quite a few active. Which chip have you got active? None. Free hit. Wild card. Other. All right. Let me just flick over see what&#39;s going on on Twitter. Any leaks or anything like that? What&#39;s the first game today? Is it one that we could even get leaks for? Oh, we&#39;ve got 2,900 watching. Whoa. Thank you all for being here. Awesome turnout. And Kungu&#39;s left Chelsea. Oh, and Kungu. You know what the mad thing is? Last season I I made way more mistakes than my gamut one team, but started way better than this season. I know the season&#39;s long. Like I&#39;m not I&#39;m not worried right now, but last season I had Ink in Kungu, I had Guansa. Luckily, I avoided Barco. That would have been a hat-tick of disasters. I really don&#39;t dislike my team this season. I mean, the injuries have been annoying, but I think the players picked have genuinely been okay choices. Um, but yeah, and Kungu, thanks for the memories. By the time I saw Quansa last season, he was like 4.1 mil. Absolutely killer. That was ended up top 5K by gamic 38 and I was like something like 3 million in gam 7. So if you&#39;re having a slow start like me long way to go things can change fast. Freak says Kuna Salah or Xiao Pedro captain I would go Kuna home to Burnley. Famous last words but I still think you back that fixture. That&#39;s why I&#39;m on Bruno captain. Bman says pal to Bruno and then captain him but bank the money difference and save the other transfer or roll and start Anderson and come back with three. No, I&#39;d make the transfer but I think it&#39;s worth it when you don&#39;t have Bruno especially make the transfer save the other. Simon says pros and cons of using a wild card during the international break. Well pros, you can react to price changes, maybe make a bit of profit. You can react to injuries. Um are there any cons? Don&#39;t think there are any cons. The only cons is obviously like there could be other weeks that could be better. Like gim six I&#39;m considering gam 13 there&#39;s a big fixture swing. Uh but yeah I mean I think that&#39;s pretty much it. That&#39;s the tweet. There&#39;s any others that I&#39;ve forgotten let me know in chat. But I think that&#39;s pretty much it. If anyone&#39;s joining late and wondering what transfers I&#39;m making, I&#39;ll tell you where I&#39;m at. I&#39;m thinking Strand Larsson to Yokarez and Palmer to Gakpo. That&#39;s what I&#39;m looking at doing this week, but I seem to be the only one that&#39;s thinking of doing it. Uh, which is a bit worrying. Lots of people are going like Saw and Wood. So, I just think I think Yarez could be someone that ends up in everyone&#39;s teams. Not everyone&#39;s, but you know, there&#39;s a fixture swing gaming seven, but I think the next few actually not bad fixtures for Arsenal for a striker. Love the videos. Keep up the good work. Thank you, Tyler. I appreciate that. Just roll. I&#39;m not rolling with this, mate. I&#39;ll have Anderson and a st off my bench. There&#39;s no chance I&#39;m rolling. Best 5 mil mid. I think it have to be Jbury Hall Danny, but he&#39;s not great. But I think he&#39;s probably the best. Maybe Stack actually from Leeds. Uh, yeah, maybe Stack. I think that&#39;s I think that&#39;s how you say his name. I think he&#39;s 5 mil. I think I&#39;d probably go with him. Him or Ju Hall. Mosiah says, &quot;Play concert or riches. I noticed Crystal Palace are better away.&quot; Uh, I&#39;d start concert though. Start concert with the home fixture. Better clean sheet odds. Who&#39;s the most bought this week then? Oh my god. Looking at these most transfer and I don&#39;t have any of them. 1.1 million people have bought Semeno. Are any of you one of those? 959,000 have bought Xiao Pedro. Oh, I&#39;m actually ruined if he halls this game week. I&#39;m not looking forward to not owning Xiao Pedro with Palmer and he&#39;s on pens. Wood as well. Almost a million new owners. Johnson, Richalis, and Cuz Eatik Gakpo. Cuckarea. So, who&#39;s the most sold? 2.8 mill. That&#39;s got to be a record. I reckon that&#39;s a new alltime record. I reckon official FPL will fact check that and tweet it later if that&#39;s true. How we doing, Hassan? FBL Focal Town. 2.8 million have sold Palmer. Uh about a million have sold Saka Fong versy Watkins. Yeah, that Watkins price was annoying, but I&#39;m keeping him. Bowen Guamaka. Andrea says, &quot;I&#39;ve got Sacka Palmer Fong. What do you think of a free hit?&quot; uh and seeing who&#39;s fit after the break instead of doing a transfer. I think there&#39;s going to be better free hit weeks potentially. I don&#39;t hate the free hit this week, but I think I&#39;d probably save it in your position and just spend a transfer or two fixing Sack and Palmer. Sack is the more priority if you&#39;re only selling one, but it&#39;s really unlucky to have three like that. I think I&#39;d save the free hit though. I think you might get more out of it in another week. But it&#39;s not a bad free hit week when you&#39;ve got three problems like that. Initial thoughts were just sell those players or two of them if you can and save the free hit. Very unlucky to have three injuries this early on. Word is Barnes is out. Yeah, I&#39;ve been hearing that. I&#39;ll I&#39;ll have a check if there&#39;s a a more reliable source, but um yeah, that&#39;s word on the street. Tuna says Palmer to cement wood and bench rinders. Yeah, I like that. This is kind of the one that keeps popping up this week. People are selling gu to wood by funding it from Palmer downgrade to like a SAR or Semeno. The only thing I&#39;ll say on Sar Semeno is they&#39;re both extremely good options and just check check like what the extra money will allow you to do cuz I think they&#39;re point8 million apart now. Like if you&#39;ve got8 million I was saying at the start of the stream that&#39;s like going Romero or you know Nico Williams to Munoz for Sunderland home in gaming 4 or that&#39;s like doing Rogers to Gakpo in gaming four when he&#39;s got Burnley stuff like that. So you have to also look at what you can do with the money. But I think Semeno overall is better than SAR, but it&#39;s about the combinations and what you can do with the extra money. Thank you all for being it. By the way, we&#39;ve got half an hour till deadline. Do hit like on the stream if you are liking it or obviously dislike if you are disliking it and hit subscribe as well. Philip says, &quot;Arsenal attack without Sakura and Erdigard. Is it a problem?&quot; Saka&#39;s only going to miss a few weeks so he could be back like gameweek five. Early guard I heard has got a chance of making the game as well. So don&#39;t think it&#39;s a huge issue and also they they&#39;ve made like some great signings. Like if it ends up Erdigar makes the game Sacka doesn&#39;t then Ezek is like still very good wingers to have playing in Sacka&#39;s absence or it could be Martinelli and Ez playing the Erdigard role. Alexander says, &quot;Have you considered Strand Lass and Palmer to Semeno and Xiao Pedro with two mill in the bank?&quot; I have. I just I think I prefer Yakarez over Xiao Pedro longer term, but I do hate I do hate that it&#39;s quite a big decision because if I like if Xiao Pedro Halls again this week, I could still get to him selling Watkins, but I don&#39;t want to sell Watkins with the fixtures he&#39;s got. And I did consider going Xiao Pedro first and then Watkins to Jockz later, but I think I prefer it this way round with my transfers. And I think I&#39;d buy Wood over Jia Pedro, but then I&#39;d want to sell Wood after the next four games. So, it&#39;s like a transfer in and back out. So um yeah, in terms of my transfers, I&#39;ll go through what I&#39;m thinking. So be Strand Larsson to Yakarez and then Palmer to Gakpo and then I may wild card in gameweek six. So I&#39;d get Arsenal home, Burnley away, Everton home. Might not wild card. I could free hitting six instead. Um, also depends what happens with EAC. I I think in theory his minutes should be secure for the next three gameweeks, maybe more. So, he&#39;s a bit of a short-term pick. The alternative is Semeno. Need to find out a way to move this across cuz this new website layout just doesn&#39;t make sense. It&#39;s like why is that over on the right side? Just put it in the middle of the screen. Um anyway, yeah, he&#39;s got Tottenham away, Brighton home, Newcastle home. So, if I did go wild card six, then it&#39;s not the fures aren&#39;t nearly as good. But yeah, I I think I don&#39;t know, just a gut feeling again on Yarez. Also, I should say like the models do really like him as well. And I do like I do look at the models to help guide decisions. And the models had the wood and semen combination equally good. So you can go either way. Like both are good routes. So instead I could do uh Semeno and Wood or Xiao Pedro and then sell Gu instead and keep Strand Larsen. But I quite like this is like a three-week play. Liverpool&#39;s a better attack than Bournemouth. Yeah, exactly. And Gakpo&#39;s played two 90s in a row. So, I tweeted about Gakpo in the preseason and I wish I&#39;d followed through with it. I said, &quot;Are we all sleeping on Gakpo?&quot; And um I wasn&#39;t confident enough to go through with it because I wasn&#39;t sure about the whole EAC situation and it could still be a problem. But in hindsight, I could activate the wild card on Gimmick 6 and just get myself out of gakpo if he&#39;s if he ends up like a bad choice. But I think he&#39;s all right for the next three. But I&#39;ve seen everyone buying like Wood Jiao Pedro Semeno S. So I wouldn&#39;t I wouldn&#39;t recommend like necessarily copying this cuz this could go horribly wrong. But that&#39;s where I&#39;m at. And I don&#39;t think I&#39;m going to change my mind last minute. Anyway, I don&#39;t know. What do you guys think of that? Good moves or bad moves? Nick says, &quot;Would you hold Palmer here? Sanchez, Porro, Meenovic, Marillo, Bruno, Kuna, Gakpo, Xiao, Pedro, Watkins, Mateta, and the benches to Bravunos be and Palmer.&quot; Yeah, I actually would I actually would keep him in your situation. You&#39;ve got a perfectly fine start on 11. Nothing wrong with that. I would keep him. Yeah, that&#39;s what I would have loved to have done myself if I could. I would love to have kept Palmer if I had better depth, but my hand&#39;s been forced. I said in the team selection video, I reluctantly am looking to roll, but I&#39;ve ended up with Strand Lson as well. So, like, it&#39;s just forced my hand completely. I can&#39;t be playing Anderson and Estv. Like, so I&#39;m going to make two transfers. Use both my free transfers. Um, Bram says, I&#39;ve got Strand Larsson and Palmer. Riners and J on the bench. No free transfer. Should I take a hit? I might wild card game four and prepare for a BV in game five. Is that bench boost you mean? No free transfers and you&#39;ve got a Strand Lson and Palmer. This is why I always make transfers really late cuz stuff can happen that completely changes the complexion of your gameweek. Like you&#39;ve got no transfers and you&#39;ve got two players out. Well, Strson is not certainly out but it seems like according to the rumors he will be. Palmer Moresca said is out not called up for England. If you haven&#39;t got Bruno, then I&#39; I&#39;d do palm to Bruno. Something like that&#39;s worth a hit. I don&#39;t know if Oh, sorry. You&#39;ve got Riners on your bench. What are you asking me here? You&#39;re saying you&#39;ve got Shashan, Larsson, and Palmer, Riners, and Jof on the bench. So you start you start rinders. Just start rinders. That&#39;s fine. Not worth a hit if you can just start rinders. Fudgy says Palmer Semeno due to wood, but I&#39;m benching Semeno. No goals or assists in his record against Spurs. Frank&#39;s also set up well. Mate, I hope I hope that comes true cuz I&#39;m I&#39;m a double Spurs defense. Yeah, Palmer, Semeno, Ga Wood, Benin, Semeno. I don&#39;t dislike that. I think that&#39;s fine. What I will say about SMO though is he does deliver against teams you least expect it. Like last season, I had him when he was 5.5. I benched him against City and he scored. I benched him against Chelsea and he scored. I benched him against United, but I guess that&#39;s not too bad and he scored. So yeah, I wouldn&#39;t put it past him to score against Spurs, but I think that makes sense to bench him depending on who the rest of your team anyway. Yeah, I think that&#39;s fine. I think a lot of people are doing that. Like if they&#39;re going Sar and Wood for example and you you have to bench S like so be it. Luke says, &quot;What puts you off Echk and Kudus?&quot; I&#39;m just not soul on cudish yet honestly I Liverpool just a way better attack and I think gakpo with those next three fixtures obviously not so much this week I think gakpo could be I don&#39;t know I think he&#39;s better than kudos basically and I think sar is better than kudos as well right nip into the toilet be right back two seconds I got to be careful cuz I&#39;m in my boxes uh where&#39;s the There he is. Right, I&#39;m back. Oh, I forgot my AirPods. Sorry, I&#39;m back. And so is the cat. All right. Can&#39;t hear anything. Where&#39;s the music? Right. Sorry. Is the music playing? No. Oh, there we go. Perfect. Right. Sorry about that. Wicked bladder award goes to me. Um, yeah. In terms of the strikers, I think Ekit TK is I think there&#39;s better options. I know he&#39;s he&#39;s got the most points, but I&#39;d rather have Wood. I&#39;d rather have Xiao Pedro. I&#39;d rather have Mateta than Ecat right now. And I&#39;d rather have sirens and many other kudos. I just think they&#39;re more solid picks. There&#39;s no music. Oh, should be. Can you not hear that? Yeah, I heard Barnes is out. Uh, NUFC will reporting it. He I mean, he&#39;s a bit hit and miss his record in the past. He&#39;s um I wouldn&#39;t say he&#39;s like that reliable, but I don&#39;t think he would tweet that for no reason cuz that&#39;s quite a bold statement. So, it&#39;s probably true if anyone was looking at buying him or had him on a free hit. Churkey is ruled out of Man City&#39;s trip to Brighton this weekend with a thigh injury. So, hopefully that means Gonzalez CDM and we see Ryers bombing forward playing more advanced like he was gameweek one. Yeah, no leaks at the moment. Don&#39;t think we&#39;ll get any to be honest with you. Right, how long we got? 20 minutes. I&#39;m going to make my transfers soon. I&#39;ll probably give it like another 10 minutes. Um, well says Semeno versus S. I&#39;m going Yokarez for Strand Larsson and I own Salah/Vertz. I mean, I think Semeno is better, but it&#39;s like I was saying earlier, it depends on what you can do with the extra money. And yes, I&#39;m checking my phone. Baitman, if you&#39;re watching, what&#39;s the question? It was Semeno versus Saw Yakarez to Stan Larson. Yeah, it&#39;s what you can do with the extra money. Um Semeno is like 08 million more. So it&#39;s like I was saying earlier, Romero to Yakarez, Rogers to Gakp. It opens the door to lots of extra interesting moves. Or if you&#39;ve got Strand Lson, it could be Strand Lson to Evan Nlson game four. So it really depends on what you can do with the money. Seno is better, but not considerably. So, I think Sar&#39;s good if if he means you&#39;re more flexible, your team&#39;s more robust cuz that&#39;s actually such a big thing in FPL, having a robust team. And that&#39;s what scared me a bit about the moves I was making with exact money cuz I was looking at what I was looking at to Yarez, Palmer to Dango, but that left me with nothing in the bank. So, like what happens if Stran Larson leaves for Newcastle when he&#39;s backup or he doesn&#39;t start game four or whatever? There&#39;s nowhere you can go with 6.5 mil. You can go Thiago, but I don&#39;t really want to buy Thiago. So, having a robust team is important and having money in the bank&#39;s important in FPR. So, you&#39;re flexible. Um, Fudgy says, &quot;Brun, Salah, Roger, Sateta, Watkins, Wooden on the bench.&quot; What&#39;s What&#39;s the question, Fudgy? Who to bench? I think it&#39;d have to be Saw. Out of all of those I&#39;d bench S. So you start Bruno Salah Rogers Semeno Mateta Watkins Wood. I&#39;m sorry for all the missed questions by the way. I&#39;m trying to get through him as fast as possible. Uh Mark says, &quot;Will Gay start the possible transfer to Liverpool lumin? I&#39;m also on triple captain wood.&quot; I mean that yeah with that one we&#39;re kind of guessing whether there&#39;s actually a definite transfer happening or not because obviously behind the scenes if they put in a bid and it&#39;s been accepted then obviously Liverpool say we don&#39;t want him to play you know it&#39;s like with Arsenal and EZ sadly EZ played his last game and he didn&#39;t know at the time that was definitely his last game we didn&#39;t get to do like a goodbye and all that Arsenal said we&#39;re having you that&#39;s it didn&#39;t play in Europe no one can tell you that really besides those that know what&#39;s happening in the Liverpool boardrooms and what bids are happening and what requests they&#39;re asking. I mean, they do need a center back, but will they pay that for Guay or will they wait until next summer and get him for free? If I was to guess, I&#39;d say he starts. It&#39;s a bit last minute now, isn&#39;t it? Mad says, &quot;Would you free hit if you had injured Palmer at Nori, Cherokee, Barry, and three from Arsenal, Liverpool, and Ekatique, Vertz, and Yakarez?&quot; I you&#39;re probably not going to want to hear this 20 minutes from deadline, but I think I&#39;d wild card mads cuz if you pre- hit, you&#39;re getting you&#39;re getting all those players back. So, you still have Chery, you still got Barry, you still got Sack who&#39;s out, you&#39;ve got 8 Nori. 8 Nor is okay, actually. He&#39;s available, but I would wild card mads. I did put together a draft, so at least that will help. Uh, it was that that was what I put together if I was wild carding. So, you could use that as a starting point, but I think I think I&#39;d wild card cuz like I say, you free hit. You&#39;re getting back these players that you really don&#39;t want long term. Palmer&#39;s okay after the break. Sacka will still be a problem. Churkey will still be a problem. Barry probably will be. Verts I&#39;d probably get rid of and so on. Yeah. Dmitri says, &quot;Palter gakpose done. Same forwards as you but a midfielder. I have Wilson flag. The plan is wild card 13. Three hits six. Should I use another transfer or roll for the international break? 3 mil on the bank.&quot; Depends who you&#39;re starting. If you if you keep hold of uh Wilson Demitri like it depends on your bench depth cuz you can do Wilson to Smeno Sar Gako they&#39;re all great options but transfers a king in FPL so if you can roll extra transfers I&#39;d always prioritize that when possible but I can&#39;t answer without knowing who&#39;s on your bench. Palmer to Alango. Semeno from tropical. Semeno. Semeno overanga. Waza says semen versus Johnson versus any other for Palmer. Yeah. Um my number one would be Bruno if you haven&#39;t got him. After that I&#39;d say Semeno and then S. It depends on chip strategy though. I&#39;m looking to buy gakpo cuz I&#39;m I might wild card in gam six and I think for 3 weeks gakpo potentially is even higher ceiling than semen or saw. So I&#39;m looking at gakpo in for palmer and strand lson to yarez. Uh Liam says wild card Len Guu Verts Palmer concert wisaka Yokarez for Pedro Ecatik Smeno Rinders Livermento Timber and Wood is it worth it to use the wild card so early depends how many transfers you&#39;ve got. If you&#39;ve got one, I think you could just about justify it. I&#39;d probably I think I&#39;d go Gabriel over Timber by the way. But um other than that, yeah, I like the players you&#39;ve brought in. If you&#39;ve only got one transfer, I&#39;d probably do it cuz you got Palmer and Strand Larson probably out. Wbeac is not great. Vert&#39;s not great. Wasaka not great. Conc is okay. If you got one transfer, Liam, I would do it. Yeah. So, 81% no chip, 9% free hit, 7% wild card, 3% other. Let&#39;s stick a final captain poll up. Who&#39;s your captain? Uh, Salah, Harland, Bruno, and other maybe I should go wood over Salah. Maybe that&#39;ll be more popular. Novvice, thanks for the 34 months. Says, &quot;Hi, Captain Bruno or Harland. Benches Evson and Jewsbury.&quot; I would bench I think I&#39; I&#39;m sorry. I think I&#39;d captain Harland over Bruno if I had Harland. So, Captain Harland, Bruno Vice, bench Evan Nilson or Jubury? Bench Drewsbury Hall definitely. Jack says, &quot;Hey, Oscar, on a free hit, um, Harland, Jockz, or Watkins for third striker. Other two options are Xiao Pedro and Wood.&quot; On a free hit, I&#39;d go Harland, Wood, and Xiao Pedro. That would be my front three. If you need some inspiration, I might have lost it actually. The free hit team I put together. Where was it? Was it that? Yeah, that was the free hit team. So, it was Harland Xiao Pedro Wood. If I was freehitting, it would be that. We could go Dango over Semeno. Something like that. You need to sort out a Stev and Anderson, but that&#39;s that would be the core of it if I was freehitting. Oscar says, &quot;Post your experts video. Have most now transferred out Palmer. Feels like the views have changed. What are your views on replacements for him?&quot; I think the Strand Lson injury has definitely pushed a few managers into now selling. Um, I don&#39;t I don&#39;t know what they&#39;ve done after the video. I ask them before I make the video, what are you doing? But I don&#39;t ask again after the video is complete. Have you changed your mind on anything? So sometimes there are changes from what happens in the video to what happens by the deadline. It&#39;s not normally significant changes. Eliia, thank you very much for becoming an FP Focal Elite member. Thank you very much for that. Appreciate your support. Yeah, I have a feeling more will have sold now because of Strand Len for example. What are my views on replacements? I think Semeno, Bruno, Gakpo, S are all great. I&#39;m looking to go Palmer to Gakpo, Strand Larsson to Yarez. Um, Dr. Yasen, how we doing? He says, &quot;Hi, hey, bro. Hope you&#39;re doing well. Captain Wood versus Harland.&quot; I would go Harland. Harland over wood if I was picking between the two. He&#39;d be my number one captain this week. On the captain widget, he was actually second. Oh, it&#39;s updated. Here&#39;s the latest. Bruno five stars, Harland three, Salakuna and Bumo two stars. Yeah. So, Bruno heavily favored on the captain widget. I need to make my transfer in a minute. So, no more super chats, please, cuz I&#39;m going to need to I need to sort my transfer and tweeted it and tweet my team. Anorag says, &quot;Hi, Oscar. Must have been asked a hundred times. Sorry, got late. Two free transfers in the banks. Brian, Salah, Rogers, Bruno Palmer, Watkins, Jia Pedro, Guest, Stevan, Anderson on the bench, Palmer to Semeno or use both transfers. In your case, you don&#39;t need to make the second move. You can just make the one move and play the 352. So, Watkins, Jia Pedra up front, Ryan Salah, Rogers, Bruno, Semeno. Yeah, you don&#39;t need to make a second move. Otherwise, you have to bench Rinders. Is that worth a transfer to bench Rinders? All right, let&#39;s have a quick look on Twitter. I need to make my transfers in a second. I&#39;m seeing some Bruno and Kuna owners. Interesting. If you&#39;re on a free hit, did you go triple United midfield or not? All right, I need to make my transfers. Um, doesn&#39;t look like there&#39;s going to be any leaks. I don&#39;t think we ever get any for the first game anyway, do we? When it&#39;s uh Chelsea. Is it Chelsea first today? Yeah. Right. Palmer to Gakpo. Strand Larsson to Yakarez. Palmer to Gakpo. Strand Larsson to Yakarez. Done. So, Bruno Captain Salivvice. That looks right. Screenshot that game week three. Palmer. [Applause] Try and last on to Yakarez. [Applause] Game three. Strandos and Seakarez. Palmer to Gakpo. Very close call between Gakpo and Smeno. Mike Wildard and six. Hence the shortterm punt on Gakpo. Good luck. All bench is right. Perfect post. Triple Captain Wood. Surely not. Uh, right. Let me try and get through chat messages. I&#39;m not going to get through all the super chats, so please don&#39;t send any more. I&#39;m going to try and get through these as quick as I can. Palmer to Foden. You think he starts? No, I don&#39;t buy Fodm. Palmer replacements. Bruno&#39;s good. Semeno, Gakpo, Sar, I would say. Axhat says, &quot;Should I take a hit to do Strand Larsson to Pedro Wood or play Anderson Fulham?&quot; Um, I would take the hit. Yeah, take the hit. I think I prefer Wood to Xiao Pedro just about RPM says, &quot;Tempted to wild cost. I&#39;ve got Palmer Georinho&#39;s risk as well as Bowen Vvers Rogers who I see as issues. Do I do two free transfers though? If you got two transfers, save it. Save it. Sell Palmer. Sell sell Georo I think is what I would do there. So you could do Palmer to Bruno if you haven&#39;t got him or Palmer to Semeno and then Georo to the other one whichever you don&#39;t have. Semeno S all good. Gakpo&#39;s good. Sweno says and Daimo Sard and Doy Riches and Harland Wood are they all good? Yeah. Yeah. All great picks. Ralison I&#39;m not keen on, but if you&#39;ve already got him already, like fine. Frank said he&#39;s his number nine right now, so I think he&#39;s fine to keep. Bournemouth home. Nice fixture. Longer term I&#39;d be a bit worried about him, but he&#39;s all right for the time being. I prefer obviously they cost more, but I prefer uh Wood Xiao Pedro. Uh, who&#39;s the other one? Mateta A says Verts are in die to bench. Oh, I think I&#39;d bench Vert. So, I think yeah, Verts bench start and die given he&#39;s got wolves and he&#39;s on pens. Start and die. Mark says, &quot;Hi, thanks for last week&#39;s advice. I avoided the free hit temptation and stuck to the preseason strategy of rolling until the first international break. Good luck, everyone.&quot; Thank you, Mark. Yeah, I hope uh being patient paid paid off for you. I really wanted to roll this week. I didn&#39;t want to make any transfers, but when I&#39;ve got Palmer out and Strand Lson likely out, it&#39;s kind of forced my hand a bit. So, yeah, I ended up making the two moves, so I&#39;m locked in. Why are you putting Jocker as in? There&#39;s two reasons. Number one, Havz is out for potentially a couple of months, so his minutes are good. Number two, he&#39;s on penalties. And I don&#39;t think bad fixtures on paper are actually bad for Arsenal. Like I think there&#39;ll be plenty of goals in these games. Liverpool, Forest, City, Newcastle. When you go look at the head-to-head results of these games in the past, they&#39;re not like nil nil games actually. So I really like Yarez and if he does do well in those weeks, I think everyone&#39;s going to end up on him anyways. I&#39;m trying to get ahead of the template. Game seven is when the fixtures really get amazing. West Ham, Fulham, Palace, Burnley, Sunderland. So I&#39;m hoping he&#39;s a long-term buy. Um, Palmer and Bowen to Wood and Fernandez or Sar from Vic from Vicas. Palmer and Bowen to Wooden Fernandez or Sar. Uh, wood and Fernandez is what I would do there. Yeah, go Wood and Bruno. Struggling this game says Wood or Pedro. I prefer wood. I think both are great. Matt is good as well. Honestly, all three are genuinely equal, I would say. But if I had to pick one, I&#39;d say Wood just cuz three of the next four are incredible fixtures. So, I&#39;d say would uh Joshua Gray says, &quot;Elanga or Barnes?&quot; There&#39;s a rumor that Barnes is out. So, I wouldn&#39;t chance it based on that. And I&#39;d go Elanga. Endoy or Elanga? Uh, Elanga. Is this team confirmed? Yeah, this is me locked in now. I&#39;m locked in now. Yeah. So, that&#39;s me. Sanchez, Marillo, Porro Romero, Salakpo, Bruno Rogers, Ryan, Yakarez, and Watkins. uh Bruno captain. Why Gakpo over someone like Kudos? I just think as a short-term play, Gakpo looks really nice. I think he&#39;s going to start the next three. And if you look at his minutes, I think we&#39;re being too harsh on Gako&#39;s minutes as well. He&#39;s played backto-back 90s. Even if Liverpool joins, I don&#39;t expect Gako to just immediately drop to the bench. Like, he&#39;s not had a preseason. EAC, it&#39;s going to take him some time to get up to speed if he does join. So, I think for the next three, all in all, Gakpo is really nice and I regret not having him get one cuz I was tweeting about him in preseason. And in fairness, like everyone was saying there is the EAC factor and uh I didn&#39;t disagree with that and that put me off. But I just now I look at it again. The next three are really nice and I might wild card gaming six. I might freeh hit gaming six. I&#39;m not sure yet, but I think he&#39;s a nice short-term pick compared to a semen. Saw is the one that I was really tempted by as well. I think Smeno Sar are really nice. The big call for me was Gu to Wood and then Palmer to Sarmeno or I get rid of Strand Lars and instead I can afford someone like a gakpo. So I&#39;m I&#39;m now hoping that Strand Larsson misses this game week and there is truth to that and then he&#39;s got Newcastle where I have to hope he blanks and then I can get Strand Lson back in. So that&#39;s me locked in. Um I&#39;m going to a wedding today so I&#39;m not going to be around and I&#39;m going to have to shoot the second the deadline passes. So uh with these last two minutes getting your last minute questions in. Thank you all for being here. Do hit like before you go. Make sure you subscribed. I appreciate you all turning up. Isn&#39;t Dy a good pick? I probably wouldn&#39;t chance him. You really love Strand Lson, don&#39;t you? I do. I actually love Strand Lson. He&#39;s brilliant. He served me so well last season. Everyone went Xiao Pedro last season. I went Strand Len and I got a couple of braces from Strand Len. So, I&#39;m devastated about the injury. And I mean, I hope he doesn&#39;t go to Newcastle cuz he won&#39;t be nailed anymore. And I might end up buying him back in like gaming five when the fixtures are nice again for walls. But yeah, in the interim I had to sell. Well, I didn&#39;t have to. I could have done the the gu route, but it&#39;s done. Good luck to all of you this game, Mick. I hope you all smash it. I hope you get big green arrows. Um, is better going to start? Uh, probably. Why did I say I&#39;ve got two transfers? I did have. I&#39;ve just spent them both. I&#39;ve just spent them both. So, I&#39;m on zero now. So, I&#39;ll have one transfer in gaming four. Go to the wedding in your boxes. I&#39;m going to miss all the games, which is devastating, but it is a wedding. Weddings are always fun. So, there is that. But, uh, yeah, I&#39;ll miss all the games, so I probably won&#39;t be tweeting or anything even. I might keep an eye on just uh I&#39;ll keep an eye on the scores. Might tweet the bonus points if um if they&#39;re not about if they&#39;re not saying their vows or something. They&#39;ll be in the middle of the vows and then I&#39;ll be like Bruno boxer reveal now. No. Right. That&#39;s it. I&#39;m dipping guys. Thank you so much. I hope you&#39;ll smash it this game week. Big Green Arrows. Obviously, I won&#39;t be back for a couple of weeks because it&#39;s an international break which we don&#39;t like. Um, but I&#39;ll do a transfer plans video probably tomorrow. I might do something on Monday, like a wild card team for the international break. So, still a couple of videos to go. Uh, yeah. As I say, I hope you all have a great game week, great weekend, and I will see you in the not tooistant future. Focal out.
+
+Extract the following information and return as JSON:
+
+{
+  "channel_name": "FPL Focal",
+  "formation": "3-5-2",
+  "team_selection": ["Salah (FWD)", "Haaland (FWD)", ...],
+  "transfers_in": ["Player (POS)", ...],
+  "transfers_out": ["Player (POS)", ...], 
+  "captain_choice": "Player (POS)",
+  "vice_captain_choice": "Player (POS)",
+  "key_issues_discussed": [
+    {"issue": "Salah vs Haaland captaincy", "opinion": "On pens, great fixtures in GW5"},
+    {"issue": "Arsenal defensive assets", "opinion": "Avoid due to tough fixtures next 3 weeks"}
+  ],
+  "watchlist": [
+    {"name": "Player (POS)", "priority": "high", "why": "Great fixtures coming up after international break"}
+  ],
+  "bank_itb": "0.5m",
+  "key_reasoning": ["Reason 1", "Reason 2", ...],
+  "confidence": 0.85,
+  "transcript_length": 98683
+}
+
+IMPORTANT:
+- The transcript may have transcription errors for player names
+- Use the top players list to identify correct player names and their injury status
+- ALL PLAYER NAMES must include position in format: "Player (POS)" e.g. "Salah (FWD)", "Robertson (DEF)"
+- Extract their actual team selection, transfers, and reasoning
+- Formation: Look for tactical discussions (3-5-2, 4-4-2, etc.) - set null if not mentioned
+- Key Issues: Extract major talking points with their specific opinions (if any discussed)
+- Watchlist: Players they mention considering but not immediately transferring (high/med/low priority)
+- Bank ITB: If they mention money in the bank or ITB, capture the amount (e.g. "0.5m", "2.1m")
+- Consider player availability (status/news/chance_of_playing_next_round) in analysis
+- Set confidence based on clarity of their decisions and transcript length
+- If information is unclear or missing, use empty arrays for lists and default values
+- FOR SHORT TRANSCRIPTS (<3000 chars): Focus on extracting the most essential information (transfers, captain)
+- ALWAYS return valid JSON even if limited information is available

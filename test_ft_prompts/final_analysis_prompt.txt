@@ -1,0 +1,544 @@
+Generate a comprehensive FPL analysis report for gameweek 2.
+
+MY CURRENT TEAM:
+# Seattle Melbournians - FPL Team Summary
+
+**Current Performance:** 102 total points, ranked 5,128,155 overall with 69 points scored in the latest gameweek.
+
+**Team Finances:** Squad valued at £100.0m with £0.5m in the bank and 2 free transfers available.
+
+## Starting XI
+
+**Goalkeeper:** Dúbravka (Burnley, £4.0m) - 8 points
+
+**Defence:** 
+- Wan-Bissaka (West Ham, £4.5m) - 1 point
+- Estève (Burnley, £4.0m) - 7 points  
+- Van de Ven (Spurs, £4.5m) - 12 points
+
+**Midfield:**
+- Kudus (Spurs, £6.6m) - 13 points
+- Wirtz (Liverpool, £8.4m) - 4 points
+- Ndiaye (Everton, £6.5m) - 10 points
+- **M. Salah (Liverpool, £14.5m) - 13 points [CAPTAIN]**
+
+**Attack:**
+- Marc Guiu (Sunderland, £4.5m) - 1 point
+- João Pedro (Chelsea, £7.6m) - 17 points
+- Gyökeres (Arsenal, £9.0m) - 13 points
+
+## Bench
+- Kelleher (Brentford, £4.5m, GKP) - 6 points
+- **Palmer (Chelsea, £10.5m, MID) - 3 points [VICE-CAPTAIN]**
+- Frimpong (Liverpool, £5.9m, DEF) - 1 point
+- Konsa (Aston Villa, £4.5m, DEF) - 3 points
+
+**Key Observations:** The team features Mohamed Salah as captain with Palmer as vice-captain. João Pedro leads the scoring with 17 points, while several premium assets like Palmer and Wirtz are underperforming on the bench and in the starting lineup respectively.
+
+TOP PLAYERS REFERENCE (first 30 - includes injury/availability data):
+[
+ {
+  "web_name": "Jo\u00e3o Pedro",
+  "team_name": "Chelsea",
+  "position": "FWD",
+  "price": 7.6,
+  "selected_by_percent": 59.1,
+  "total_points": 17,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "M.Salah",
+  "team_name": "Liverpool",
+  "position": "MID",
+  "price": 14.5,
+  "selected_by_percent": 53.3,
+  "total_points": 13,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Palmer",
+  "team_name": "Chelsea",
+  "position": "MID",
+  "price": 10.5,
+  "selected_by_percent": 40.5,
+  "total_points": 3,
+  "status": "i",
+  "news": "Groin Injury - Unknown return date",
+  "chance_of_playing_next_round": 0
+ },
+ {
+  "web_name": "D\u00fabravka",
+  "team_name": "Burnley",
+  "position": "GKP",
+  "price": 4.0,
+  "selected_by_percent": 34.1,
+  "total_points": 8,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": 100
+ },
+ {
+  "web_name": "Reijnders",
+  "team_name": "Man City",
+  "position": "MID",
+  "price": 5.7,
+  "selected_by_percent": 33.3,
+  "total_points": 12,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Haaland",
+  "team_name": "Man City",
+  "position": "FWD",
+  "price": 14.1,
+  "selected_by_percent": 32.0,
+  "total_points": 15,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Kudus",
+  "team_name": "Spurs",
+  "position": "MID",
+  "price": 6.6,
+  "selected_by_percent": 31.8,
+  "total_points": 13,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Van de Ven",
+  "team_name": "Spurs",
+  "position": "DEF",
+  "price": 4.5,
+  "selected_by_percent": 28.7,
+  "total_points": 12,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Cucurella",
+  "team_name": "Chelsea",
+  "position": "DEF",
+  "price": 6.1,
+  "selected_by_percent": 27.2,
+  "total_points": 13,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Ekitik\u00e9",
+  "team_name": "Liverpool",
+  "position": "FWD",
+  "price": 8.7,
+  "selected_by_percent": 26.5,
+  "total_points": 20,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Wood",
+  "team_name": "Nott'm Forest",
+  "position": "FWD",
+  "price": 7.7,
+  "selected_by_percent": 25.7,
+  "total_points": 15,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Pedro Porro",
+  "team_name": "Spurs",
+  "position": "DEF",
+  "price": 5.6,
+  "selected_by_percent": 25.1,
+  "total_points": 11,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Gy\u00f6keres",
+  "team_name": "Arsenal",
+  "position": "FWD",
+  "price": 9.0,
+  "selected_by_percent": 25.0,
+  "total_points": 13,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "S\u00e1nchez",
+  "team_name": "Chelsea",
+  "position": "GKP",
+  "price": 5.0,
+  "selected_by_percent": 24.7,
+  "total_points": 11,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Virgil",
+  "team_name": "Liverpool",
+  "position": "DEF",
+  "price": 6.0,
+  "selected_by_percent": 24.3,
+  "total_points": 6,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Semenyo",
+  "team_name": "Bournemouth",
+  "position": "MID",
+  "price": 7.2,
+  "selected_by_percent": 23.1,
+  "total_points": 21,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Wirtz",
+  "team_name": "Liverpool",
+  "position": "MID",
+  "price": 8.4,
+  "selected_by_percent": 22.8,
+  "total_points": 4,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Raya",
+  "team_name": "Arsenal",
+  "position": "GKP",
+  "price": 5.5,
+  "selected_by_percent": 21.4,
+  "total_points": 16,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "B.Fernandes",
+  "team_name": "Man Utd",
+  "position": "MID",
+  "price": 9.0,
+  "selected_by_percent": 21.1,
+  "total_points": 4,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Watkins",
+  "team_name": "Aston Villa",
+  "position": "FWD",
+  "price": 9.0,
+  "selected_by_percent": 20.7,
+  "total_points": 4,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Gabriel",
+  "team_name": "Arsenal",
+  "position": "DEF",
+  "price": 6.1,
+  "selected_by_percent": 20.4,
+  "total_points": 12,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Est\u00e8ve",
+  "team_name": "Burnley",
+  "position": "DEF",
+  "price": 4.0,
+  "selected_by_percent": 18.7,
+  "total_points": 7,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Sels",
+  "team_name": "Nott'm Forest",
+  "position": "GKP",
+  "price": 5.0,
+  "selected_by_percent": 18.6,
+  "total_points": 4,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Saliba",
+  "team_name": "Arsenal",
+  "position": "DEF",
+  "price": 6.1,
+  "selected_by_percent": 18.1,
+  "total_points": 15,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "A\u00eft-Nouri",
+  "team_name": "Man City",
+  "position": "DEF",
+  "price": 6.1,
+  "selected_by_percent": 17.7,
+  "total_points": 10,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": 100
+ },
+ {
+  "web_name": "Wan-Bissaka",
+  "team_name": "West Ham",
+  "position": "DEF",
+  "price": 4.5,
+  "selected_by_percent": 17.5,
+  "total_points": 1,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Marc Guiu",
+  "team_name": "Sunderland",
+  "position": "FWD",
+  "price": 4.5,
+  "selected_by_percent": 16.2,
+  "total_points": 1,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": 100
+ },
+ {
+  "web_name": "Mbeumo",
+  "team_name": "Man Utd",
+  "position": "MID",
+  "price": 8.0,
+  "selected_by_percent": 15.0,
+  "total_points": 4,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Konsa",
+  "team_name": "Aston Villa",
+  "position": "DEF",
+  "price": 4.5,
+  "selected_by_percent": 14.6,
+  "total_points": 3,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": 100
+ },
+ {
+  "web_name": "Aina",
+  "team_name": "Nott'm Forest",
+  "position": "DEF",
+  "price": 5.0,
+  "selected_by_percent": 14.1,
+  "total_points": 5,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ }
+]
+
+PLAYER STATUS CODES:
+- a: available, d: doubtful, i: injured, s: suspended, u: unavailable
+- Consider "status", "news", and "chance_of_playing_next_round" in all recommendations
+
+INFLUENCER ANALYSES:
+
+**FPL Raptor** (Confidence: 0.75)
+- Team Selection: Sánchez (GKP), Pedro Porro (DEF), N.Williams (DEF), Richards (DEF), M.Salah (MID), Wirtz (MID), B.Fernandes (MID), Reijnders (MID), Palmer (MID), Watkins (FWD), Ekitiké (FWD)
+- Transfers In: Semenyo (MID), Wood (FWD)
+- Transfers Out: Palmer (MID), Ekitiké (FWD)
+- Captain: B.Fernandes (MID)
+- Vice Captain: Not specified
+- Key Issues: 'Palmer injury concern': Will sell unless Maresca confirms he's fit for GW3; 'Bruno Fernandes captaincy': Planned captain vs Burnley at home but wavering due to Man United's poor performances; 'Salah and Wirtz disappointment': Both have been disappointing but can't sell with Burnley and Everton fixtures in GW4-5; 'Forward line struggles': Both Watkins and Ekitiké have been terrible, planning to sell Ekitiké
+- Watchlist: Wood (FWD) (high: Considering as replacement for Ekitiké); João Pedro (FWD) (high: Considering as replacement for Ekitiké); Mateta (FWD) (high: Considering as replacement for Ekitiké)
+- General Reasoning: Richards achieved 8 defensive contributions last week, good chance of bonus points even if concedes; Reijnders will do a job against Brighton this week; Palmer likely to be sold due to injury unless confirmed fit; Semenyo has great fixtures over next 3 weeks as Palmer replacement; Both forwards have underperformed and need changing
+
+
+**FPL Mate** (Confidence: 0.88)
+- Team Selection: Sánchez (GKP), Pedro Porro (DEF), Murillo (DEF), Richards (DEF), M.Salah (MID), Palmer (MID), B.Fernandes (MID), Rogers (MID), Jbury Hall (MID), Watkins (FWD), João Pedro (FWD), Dúbravka (GKP), Estève (DEF), Marc Guiu (FWD), Jof (DEF)
+- Transfers In: Sarr (MID)
+- Transfers Out: Palmer (MID)
+- Captain: João Pedro (FWD)
+- Vice Captain: B.Fernandes (MID)
+- Key Issues: 'Palmer injury and replacement': Comfortable selling Palmer due to injury and can free hit him back in GW6; 'Bruno Fernandes after Man United's poor form': Still a great player with good underlying stats, bookmakers favor United heavily vs Burnley; 'Aston Villa attackers underperforming': Rogers and Watkins failing to deliver, losing patience but giving one more chance; 'Richards vs Jof defensive choice': Playing Richards despite having Villa attackers, hedging bets based on form over fixture; 'Captain choice between João Pedro and Bruno': Torn between both, João Pedro gets edge due to Palmer being out and penalty potential
+- Watchlist: Wood (FWD) (medium: Potential upgrade from Marc Guiu but best fixture in free hit week); Barnes (MID) (medium: Potential upgrade from Jbury Hall but may be out of starting XI soon); Muñoz (DEF) (high: Considering for GW4 transfer, good fixtures coming up); Gabriel (DEF) (high: Arsenal defender option for GW4, good long-term fixtures except City)
+- General Reasoning: Palmer injury makes him comfortable to sell and free hit back in GW6; Sarr has excellent record vs Villa (7 goals, 3 assists in 6 starts, never blanked); João Pedro benefits from Palmer being out - plays behind striker and potential penalty taker; Bruno still has great underlying stats despite United's poor form, bookmakers heavily favor them; Planning for GW8 bench boost by freeing up funds through Palmer sale; Saving second transfer to have two free transfers going into GW4 for more flexibility
+
+
+**Let's Talk FPL** (Confidence: 0.92)
+- Formation: 3-5-2
+- Team Selection: Sánchez (GKP), Aït-Nouri (DEF), Pedro Porro (DEF), N.Williams (DEF), M.Salah (MID), Wirtz (MID), B.Fernandes (MID), Palmer (MID), Dewsbury-Hall (MID), Watkins (FWD), Strand Larsen (FWD)
+- Transfers In: Sarr (MID), Mateta (FWD)
+- Transfers Out: Palmer (MID), Marc Guiu (FWD)
+- Captain: B.Fernandes (MID)
+- Vice Captain: M.Salah (MID)
+- Bank ITB: 0.0m
+- Key Issues: 'Palmer injury concern': Will sell Palmer even if he's back for GW4 to use two free transfers and improve squad depth; 'Wirtz poor start': Won't sell this week due to good fixtures coming - Arsenal home then Burnley away and Everton home; 'Strand Larsen transfer speculation': Will keep regardless of Newcastle move - good value if stays at Wolves, potentially better if moves to Newcastle as first choice; 'Bruno Fernandes captaincy': Will captain against Burnley at home despite poor start - was always the plan and it's a great fixture on paper; 'Bench boost timing': Considering bench boost in GW5 if Palmer is sold, as bench depth will be improved and it's before wildcard
+- Watchlist: Reijnders (MID) (medium: Good value option if selling Palmer, though prefers Sarr for more money in bank); Semenyo (MID) (medium: Good pick at 7.2m but only leaves 0.3m in bank for future upgrades); Muñoz (DEF) (high: Plans to get him in GW4 for Sunderland at home fixture, selling N.Williams); Gyökeres (FWD) (medium: Could upgrade straight to him instead of Wood/João Pedro but feels bad before Liverpool away)
+- General Reasoning: Has two free transfers after rolling GW2 transfer, putting him in better position than those who knee-jerked; If Palmer is out, will use opportunity to improve squad depth and make Dewsbury-Hall 8th attacker; Prefers Sarr over Semenyo as leaves more money in bank (1.0m) for future upgrades like Muñoz; Choosing Mateta over Wood/João Pedro due to better fixtures GW4-5 and fits with free hit GW6 strategy; Won't sell Wirtz if Palmer is out as no justification - Wirtz has good fixtures after Arsenal; Plans to free hit GW6 when Crystal Palace play Liverpool, allowing flexibility with Palace assets; Confident in captaincy options without Palmer - Salah GW4-5, can free hit for Haaland GW6
+
+
+**FPL Focal** (Confidence: 0.92)
+- Formation: 3-5-2
+- Team Selection: Sánchez (GKP), Porro (DEF), Romero (DEF), Milenkovic (DEF), Salah (MID), Bruno Fernandes (MID), Gakpo (MID), Rogers (MID), Reijnders (MID), Gyökeres (FWD), Watkins (FWD)
+- Transfers In: Gakpo (MID), Gyökeres (FWD)
+- Transfers Out: Palmer (MID), Strand Larsson (FWD)
+- Captain: Bruno Fernandes (MID)
+- Vice Captain: Salah (MID)
+- Bank ITB: 0.1m
+- Key Issues: 'Palmer injury situation': Forced to sell due to groin injury and 0% chance of playing; 'Bruno Fernandes captaincy despite Man United form': Still backing Bruno home vs Burnley despite poor form and Grimsby defeat; 'Strand Larsson injury concerns': Likely to miss gameweek due to Achilles issue, not at team hotel; 'Gakpo vs other Palmer replacements': Gakpo preferred as short-term play for next 3 gameweeks, might wildcard GW6; 'Gyökeres vs Wood debate': Gyökeres preferred long-term despite difficult fixtures, on penalties with Havertz out
+- Watchlist: Wood (FWD) (high: Amazing fixtures next 4 gameweeks, heavily captained this week); Semenyo (MID) (high: Great form, popular Palmer replacement option); Sarr (MID) (medium: Good 6.5m midfielder option, cheaper than Semenyo)
+- General Reasoning: Palmer injury forces transfer out with 0% chance of playing; Strand Larsson likely out with Achilles injury, not at team hotel; Gakpo chosen over Semenyo as short-term 3-week play before potential wildcard GW6; Gyökeres preferred over Wood long-term despite fixtures - on penalties with Havertz out; Bruno captaincy backed despite Man United poor form - home vs Burnley too good to ignore; Team value dropped to 100.1m after Palmer price fall
+
+
+**FPL Harry** (Confidence: 0.75)
+- Team Selection: Sánchez (GKP), Pedro Porro (DEF), Aït-Nouri (DEF), N.Williams (DEF), M.Salah (MID), B.Fernandes (MID), Rogers (MID), Reijnders (MID), Sarr (MID), João Pedro (FWD), Watkins (FWD)
+- Transfers In: Sarr (MID), Wood (FWD)
+- Transfers Out: Palmer (MID), Marc Guiu (FWD)
+- Captain: B.Fernandes (MID)
+- Vice Captain: Not specified
+- Key Issues: 'Palmer injury concern': Planning to transfer out if definitely ruled out due to groin injury; 'Bruno Fernandes captaincy despite ban': Still considering as captain option despite losing to Grimsby; 'Squad depth improvement': Upgrading Marc Guiu to Chris Wood would provide better squad depth and strong first sub
+- General Reasoning: Palmer ruled out with groin injury, needs replacement; Upgrading Marc Guiu to Chris Wood for better squad depth; Sarr benched due to away fixture at Aston Villa; Three home defenders with good fixtures; Using both free transfers if Palmer definitely out
+
+
+You are an analyst that turns influencer summaries/transcripts + my FPL squad data into a concise, actionable gameweek report.
+
+CRITICAL ANALYSIS REQUIREMENT:
+- ALWAYS check if universal/majority captain choices are in my squad
+- If influencers are captaining a player I don't own, this is the #1 gap to highlight and fix!
+
+STYLE
+- Keep it terse and practical. Use bullets and compact tables. No fluff.
+- Cite influencers inline like: (FPL Harry), (Let's Talk FPL, FPL Raptor). Never invent citations.
+- Only use the four section headers below. Do not add others.
+
+DEFINITIONS
+- Universal = backed by all listed influencers
+- Majority = backed by >50% of influencers
+- Split = clear disagreement with no >50% majority
+- Differential = either mentioned by a single influencer or (if ownership provided) <10% owned
+
+DATA YOU CAN USE (may be partially provided)
+- influencers[]: [channel name, formation_strategy?, key_transfers?, captain?, vice?, watchlist[], key_issues_discussed[], chip_talk?, starting_xi?, bench?, notable_rationale?]
+- my_team: [squad[15] with positions/teams/prices/sell_prices, starting_xi?, bench_order?, captain?, vice?, itb, free_transfers (IMPORTANT: consider this number (and the number of hits beyond that number) when making transfer recommendations), planned_hits?, team_value, chips_available, risk_tolerance?]
+- context (optional): [gw, deadline_utc, fixture_difficulty, minutes/injury flags, projections, blank/double indicators, price_change_risk]
+
+FPL VALIDATION RULES FOR ALL RECOMMENDATIONS
+- Obey budget (use sell_prices if provided; otherwise use current prices and label as estimate).
+- Max 3 players per real club.
+- Legal starting XI formation (GK x1, DEF 3-5, MID 2-5, FWD 1-3; 11 players total).
+- Always provide bench order (1/2/3) and GK decision.
+- Show remaining ITB after any proposed moves and the hit cost if applicable.
+- If required info is missing, say “not stated” rather than guessing.
+
+--------------------------------------------------
+## 1) Consensus, Contrarian & Captaincy Snapshot
+- **Universal picks**: brief bullets with why and citations.
+- **Majority picks** (>50%): bullets with reasons and which channels back them.
+- **Splits / debates**: A vs B with one-line reasons per side, cited.
+- **Differentials to watch**: bullets with role (enabler/ceiling), cited.
+- **Key cross-channel talking points**: 3-6 bullets summarizing shared themes (injuries, fixture swings, chip timing, formation trends).
+- **Captaincy matrix**: a compact table:
+  | Captain | Pros | Cons/Risk | Backers |
+  Include safe vs upside notes. Add vice-captain considerations if mentioned.
+
+## 2) Channel-by-Channel Notes (every influencer with a summary)
+For each influencer name:
+- **Ensure you list every single player in the starting XI, if known, and bench players**
+- Formation strategy (if mentioned)
+- Key transfers + one-line rationale (who OUT → who IN, est. cost)
+- Captain (and vice if stated) + rationale
+- Watchlist highlights (1-3)
+- Key issues discussed (their main talking points)
+- Chip talk (if any)
+Keep this section concise; use bullets. Always cite this influencer after their opinions.
+
+## 3) My Team vs Influencers (Gap Analysis)
+- **Ensure you list every single player in my starting XI if known (with position), and bench**
+- **Players I have that are being benched/sold by influencers**: list with citations.
+- **Popular picks I'm missing**: list by PRIORITY with brief why and names of backers.
+  CRITICAL: If influencers are captaining a player you don't own, that's #1 priority!
+  Order: 1) Universal/majority captains not in squad, 2) High ownership/selected players, 3) Differentials
+- **Formation & XI differences**: note mismatches vs consensus trends.
+- **Risk flags**: minutes/fitness/rotation or suspension risks in my squad.
+- **Money & constraints**: current ITB, FTs, per-club counts that block moves.
+Use a small table where helpful:
+| Slot | My Player | Influencer View | Risk/Reason | Suggested Alt | Backers |
+
+## 4) Action Plan (This GW + Short-Term)
+Start with 1-3 **clear recommended paths** (transfers, captaincy, XI) for what to do this week. Highlight these upfront before going into scenarios.
+
+### Transfers
+- Use my current number of free transfers (FTs) from the MY TEAM data.
+- Always consider:
+  - Rolling transfers (now up to 5 can be banked).
+  - Impact of taking hits: (extra transfers beyond free) × 4 points.
+  - Budget, ITB, per-club limits, and position requirements.
+- If missing a **universal captain choice**, prioritise bringing them in.
+- Recommendations should include: OUT → IN, est. cost, new ITB, and which influencers back the move.
+
+### Scenarios
+- **0FT**: Must either roll or take a hit. Recommend whether a hit is justified or whether rolling is stronger.
+- **1FT**: Suggest best use, but also say if rolling is sensible to set up 2FT next week.
+- **2+ FTs (up to 5)**: Suggest optimal sequences. Note that using fewer than available means the rest can still be banked (until 5 max).
+
+### If Considering a Hit (-4 or worse)
+- Only suggest high-conviction moves with strong influencer backing and clear expected upside.
+- Show hit cost calculation.
+- If upside is marginal, recommend avoiding the hit or rolling.
+
+### Captain & Vice
+- Recommend captain and vice, with Safe vs Upside tags and citations.
+
+### Starting XI & Bench Order
+- List recommended XI by position.
+- Show bench order (1/2/3) and highlight any 50/50 calls, with reasoning.
+
+### Chips
+- Only recommend chip use if influencers strongly advocate or if gameweek context demands it (e.g., doubles/blanks). Otherwise: “No chip recommended.” Cite any mentions.
+
+### Future Planning (GW+1 to GW+3)
+- Suggest 2-4 priority future targets with reasoning (fixtures, form, price).
+- Recommend when to roll to set up a bigger move.
+- Call out potential early vs late transfer timing (e.g., due to price rises).
+
+--------------------------------------------------
+CRITICAL REQUIREMENTS
+- Always attribute influencer opinions by name.
+- Factor injuries/rotation into every rec.
+- Enforce budget and per-club limits.
+- Give conditional advice for 0FT/1FT/2FT and optional hits, if prudent.
+- If data missing, state explicitly rather than guessing.
+- Report must stay in clean Markdown.

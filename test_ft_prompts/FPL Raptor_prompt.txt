@@ -1,0 +1,878 @@
+Analyze this FPL influencer's video transcript for gameweek 2.
+
+CHANNEL: FPL Raptor
+VIDEO: MY FPL GW3 TEAM SELECTION 🚨 | SELL PALMER? BRUNO CAPTAIN? 🧢 | Fantasy Premier League Tips 2025/26
+
+TOP FPL PLAYERS BY OWNERSHIP (showing first 75 for context - includes injury status):
+[
+ {
+  "web_name": "Jo\u00e3o Pedro",
+  "team_name": "Chelsea",
+  "position": "FWD",
+  "price": 7.6,
+  "selected_by_percent": 59.1,
+  "total_points": 17,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "M.Salah",
+  "team_name": "Liverpool",
+  "position": "MID",
+  "price": 14.5,
+  "selected_by_percent": 53.3,
+  "total_points": 13,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Palmer",
+  "team_name": "Chelsea",
+  "position": "MID",
+  "price": 10.5,
+  "selected_by_percent": 40.5,
+  "total_points": 3,
+  "status": "i",
+  "news": "Groin Injury - Unknown return date",
+  "chance_of_playing_next_round": 0
+ },
+ {
+  "web_name": "D\u00fabravka",
+  "team_name": "Burnley",
+  "position": "GKP",
+  "price": 4.0,
+  "selected_by_percent": 34.1,
+  "total_points": 8,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": 100
+ },
+ {
+  "web_name": "Reijnders",
+  "team_name": "Man City",
+  "position": "MID",
+  "price": 5.7,
+  "selected_by_percent": 33.3,
+  "total_points": 12,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Haaland",
+  "team_name": "Man City",
+  "position": "FWD",
+  "price": 14.1,
+  "selected_by_percent": 32.0,
+  "total_points": 15,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Kudus",
+  "team_name": "Spurs",
+  "position": "MID",
+  "price": 6.6,
+  "selected_by_percent": 31.8,
+  "total_points": 13,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Van de Ven",
+  "team_name": "Spurs",
+  "position": "DEF",
+  "price": 4.5,
+  "selected_by_percent": 28.7,
+  "total_points": 12,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Cucurella",
+  "team_name": "Chelsea",
+  "position": "DEF",
+  "price": 6.1,
+  "selected_by_percent": 27.2,
+  "total_points": 13,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Ekitik\u00e9",
+  "team_name": "Liverpool",
+  "position": "FWD",
+  "price": 8.7,
+  "selected_by_percent": 26.5,
+  "total_points": 20,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Wood",
+  "team_name": "Nott'm Forest",
+  "position": "FWD",
+  "price": 7.7,
+  "selected_by_percent": 25.7,
+  "total_points": 15,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Pedro Porro",
+  "team_name": "Spurs",
+  "position": "DEF",
+  "price": 5.6,
+  "selected_by_percent": 25.1,
+  "total_points": 11,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Gy\u00f6keres",
+  "team_name": "Arsenal",
+  "position": "FWD",
+  "price": 9.0,
+  "selected_by_percent": 25.0,
+  "total_points": 13,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "S\u00e1nchez",
+  "team_name": "Chelsea",
+  "position": "GKP",
+  "price": 5.0,
+  "selected_by_percent": 24.7,
+  "total_points": 11,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Virgil",
+  "team_name": "Liverpool",
+  "position": "DEF",
+  "price": 6.0,
+  "selected_by_percent": 24.3,
+  "total_points": 6,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Semenyo",
+  "team_name": "Bournemouth",
+  "position": "MID",
+  "price": 7.2,
+  "selected_by_percent": 23.1,
+  "total_points": 21,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Wirtz",
+  "team_name": "Liverpool",
+  "position": "MID",
+  "price": 8.4,
+  "selected_by_percent": 22.8,
+  "total_points": 4,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Raya",
+  "team_name": "Arsenal",
+  "position": "GKP",
+  "price": 5.5,
+  "selected_by_percent": 21.4,
+  "total_points": 16,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "B.Fernandes",
+  "team_name": "Man Utd",
+  "position": "MID",
+  "price": 9.0,
+  "selected_by_percent": 21.1,
+  "total_points": 4,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Watkins",
+  "team_name": "Aston Villa",
+  "position": "FWD",
+  "price": 9.0,
+  "selected_by_percent": 20.7,
+  "total_points": 4,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Gabriel",
+  "team_name": "Arsenal",
+  "position": "DEF",
+  "price": 6.1,
+  "selected_by_percent": 20.4,
+  "total_points": 12,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Est\u00e8ve",
+  "team_name": "Burnley",
+  "position": "DEF",
+  "price": 4.0,
+  "selected_by_percent": 18.7,
+  "total_points": 7,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Sels",
+  "team_name": "Nott'm Forest",
+  "position": "GKP",
+  "price": 5.0,
+  "selected_by_percent": 18.6,
+  "total_points": 4,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Saliba",
+  "team_name": "Arsenal",
+  "position": "DEF",
+  "price": 6.1,
+  "selected_by_percent": 18.1,
+  "total_points": 15,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "A\u00eft-Nouri",
+  "team_name": "Man City",
+  "position": "DEF",
+  "price": 6.1,
+  "selected_by_percent": 17.7,
+  "total_points": 10,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": 100
+ },
+ {
+  "web_name": "Wan-Bissaka",
+  "team_name": "West Ham",
+  "position": "DEF",
+  "price": 4.5,
+  "selected_by_percent": 17.5,
+  "total_points": 1,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Marc Guiu",
+  "team_name": "Sunderland",
+  "position": "FWD",
+  "price": 4.5,
+  "selected_by_percent": 16.2,
+  "total_points": 1,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": 100
+ },
+ {
+  "web_name": "Mbeumo",
+  "team_name": "Man Utd",
+  "position": "MID",
+  "price": 8.0,
+  "selected_by_percent": 15.0,
+  "total_points": 4,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Konsa",
+  "team_name": "Aston Villa",
+  "position": "DEF",
+  "price": 4.5,
+  "selected_by_percent": 14.6,
+  "total_points": 3,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": 100
+ },
+ {
+  "web_name": "Aina",
+  "team_name": "Nott'm Forest",
+  "position": "DEF",
+  "price": 5.0,
+  "selected_by_percent": 14.1,
+  "total_points": 5,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Gu\u00e9hi",
+  "team_name": "Crystal Palace",
+  "position": "DEF",
+  "price": 4.5,
+  "selected_by_percent": 13.1,
+  "total_points": 8,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Cunha",
+  "team_name": "Man Utd",
+  "position": "MID",
+  "price": 8.1,
+  "selected_by_percent": 12.6,
+  "total_points": 4,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Richarlison",
+  "team_name": "Spurs",
+  "position": "FWD",
+  "price": 6.7,
+  "selected_by_percent": 12.5,
+  "total_points": 17,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Gakpo",
+  "team_name": "Liverpool",
+  "position": "MID",
+  "price": 7.6,
+  "selected_by_percent": 12.4,
+  "total_points": 17,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Pickford",
+  "team_name": "Everton",
+  "position": "GKP",
+  "price": 5.5,
+  "selected_by_percent": 12.1,
+  "total_points": 17,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Frimpong",
+  "team_name": "Liverpool",
+  "position": "DEF",
+  "price": 5.9,
+  "selected_by_percent": 11.8,
+  "total_points": 1,
+  "status": "i",
+  "news": "Hamstring injury - Expected back 14 Sep",
+  "chance_of_playing_next_round": 0
+ },
+ {
+  "web_name": "Eze",
+  "team_name": "Arsenal",
+  "position": "MID",
+  "price": 7.5,
+  "selected_by_percent": 10.5,
+  "total_points": 3,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Kelleher",
+  "team_name": "Brentford",
+  "position": "GKP",
+  "price": 4.5,
+  "selected_by_percent": 10.4,
+  "total_points": 6,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": 100
+ },
+ {
+  "web_name": "A.Becker",
+  "team_name": "Liverpool",
+  "position": "GKP",
+  "price": 5.5,
+  "selected_by_percent": 10.2,
+  "total_points": 2,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Saka",
+  "team_name": "Arsenal",
+  "position": "MID",
+  "price": 9.9,
+  "selected_by_percent": 9.8,
+  "total_points": 9,
+  "status": "i",
+  "news": "Hamstring injury - Unknown return date",
+  "chance_of_playing_next_round": 0
+ },
+ {
+  "web_name": "Mu\u00f1oz",
+  "team_name": "Crystal Palace",
+  "position": "DEF",
+  "price": 5.5,
+  "selected_by_percent": 9.6,
+  "total_points": 10,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Milenkovi\u0107",
+  "team_name": "Nott'm Forest",
+  "position": "DEF",
+  "price": 5.5,
+  "selected_by_percent": 9.6,
+  "total_points": 4,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Ndiaye",
+  "team_name": "Everton",
+  "position": "MID",
+  "price": 6.5,
+  "selected_by_percent": 9.4,
+  "total_points": 10,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "N.Williams",
+  "team_name": "Nott'm Forest",
+  "position": "DEF",
+  "price": 5.0,
+  "selected_by_percent": 9.0,
+  "total_points": 3,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Rogers",
+  "team_name": "Aston Villa",
+  "position": "MID",
+  "price": 7.0,
+  "selected_by_percent": 8.9,
+  "total_points": 5,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": 100
+ },
+ {
+  "web_name": "Bowen",
+  "team_name": "West Ham",
+  "position": "FWD",
+  "price": 7.8,
+  "selected_by_percent": 8.8,
+  "total_points": 4,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Johnson",
+  "team_name": "Spurs",
+  "position": "MID",
+  "price": 7.1,
+  "selected_by_percent": 8.7,
+  "total_points": 17,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Rice",
+  "team_name": "Arsenal",
+  "position": "MID",
+  "price": 6.5,
+  "selected_by_percent": 8.6,
+  "total_points": 12,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Elanga",
+  "team_name": "Newcastle",
+  "position": "MID",
+  "price": 7.0,
+  "selected_by_percent": 8.6,
+  "total_points": 5,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Reinildo",
+  "team_name": "Sunderland",
+  "position": "DEF",
+  "price": 4.0,
+  "selected_by_percent": 8.5,
+  "total_points": 9,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Dorgu",
+  "team_name": "Man Utd",
+  "position": "DEF",
+  "price": 4.5,
+  "selected_by_percent": 8.5,
+  "total_points": 3,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Calafiori",
+  "team_name": "Arsenal",
+  "position": "DEF",
+  "price": 5.6,
+  "selected_by_percent": 8.2,
+  "total_points": 26,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Mateta",
+  "team_name": "Crystal Palace",
+  "position": "FWD",
+  "price": 7.5,
+  "selected_by_percent": 7.9,
+  "total_points": 3,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Cherki",
+  "team_name": "Man City",
+  "position": "MID",
+  "price": 6.5,
+  "selected_by_percent": 7.8,
+  "total_points": 7,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Tarkowski",
+  "team_name": "Everton",
+  "position": "DEF",
+  "price": 5.5,
+  "selected_by_percent": 7.6,
+  "total_points": 12,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "\u0160e\u0161ko",
+  "team_name": "Man Utd",
+  "position": "FWD",
+  "price": 7.5,
+  "selected_by_percent": 7.6,
+  "total_points": 2,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "A.Ramsey",
+  "team_name": "Burnley",
+  "position": "MID",
+  "price": 4.5,
+  "selected_by_percent": 7.6,
+  "total_points": 0,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Marmoush",
+  "team_name": "Man City",
+  "position": "MID",
+  "price": 8.4,
+  "selected_by_percent": 7.5,
+  "total_points": 2,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Henderson",
+  "team_name": "Crystal Palace",
+  "position": "GKP",
+  "price": 5.0,
+  "selected_by_percent": 7.2,
+  "total_points": 8,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Alex Moreno",
+  "team_name": "Aston Villa",
+  "position": "DEF",
+  "price": 4.0,
+  "selected_by_percent": 7.2,
+  "total_points": 0,
+  "status": "u",
+  "news": "Has joined Girona permanently.",
+  "chance_of_playing_next_round": 0
+ },
+ {
+  "web_name": "Livramento",
+  "team_name": "Newcastle",
+  "position": "DEF",
+  "price": 5.0,
+  "selected_by_percent": 7.1,
+  "total_points": 13,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Vicario",
+  "team_name": "Spurs",
+  "position": "GKP",
+  "price": 5.0,
+  "selected_by_percent": 6.9,
+  "total_points": 18,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "J.Timber",
+  "team_name": "Arsenal",
+  "position": "DEF",
+  "price": 5.6,
+  "selected_by_percent": 6.8,
+  "total_points": 24,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Caicedo",
+  "team_name": "Chelsea",
+  "position": "MID",
+  "price": 5.5,
+  "selected_by_percent": 6.4,
+  "total_points": 13,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Verbruggen",
+  "team_name": "Brighton",
+  "position": "GKP",
+  "price": 4.5,
+  "selected_by_percent": 6.4,
+  "total_points": 3,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Grealish",
+  "team_name": "Everton",
+  "position": "MID",
+  "price": 6.5,
+  "selected_by_percent": 6.3,
+  "total_points": 12,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Murillo",
+  "team_name": "Nott'm Forest",
+  "position": "DEF",
+  "price": 5.5,
+  "selected_by_percent": 6.3,
+  "total_points": 3,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Anderson",
+  "team_name": "Nott'm Forest",
+  "position": "MID",
+  "price": 5.5,
+  "selected_by_percent": 6.0,
+  "total_points": 8,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Gibbs-White",
+  "team_name": "Nott'm Forest",
+  "position": "MID",
+  "price": 7.5,
+  "selected_by_percent": 6.0,
+  "total_points": 7,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Beto",
+  "team_name": "Everton",
+  "position": "FWD",
+  "price": 5.4,
+  "selected_by_percent": 5.9,
+  "total_points": 2,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "James",
+  "team_name": "Chelsea",
+  "position": "DEF",
+  "price": 5.5,
+  "selected_by_percent": 5.7,
+  "total_points": 6,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Diouf",
+  "team_name": "West Ham",
+  "position": "DEF",
+  "price": 4.5,
+  "selected_by_percent": 5.6,
+  "total_points": 4,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Kerkez",
+  "team_name": "Liverpool",
+  "position": "DEF",
+  "price": 6.0,
+  "selected_by_percent": 5.6,
+  "total_points": 1,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Sarr",
+  "team_name": "Crystal Palace",
+  "position": "MID",
+  "price": 6.5,
+  "selected_by_percent": 5.5,
+  "total_points": 11,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ },
+ {
+  "web_name": "Neto",
+  "team_name": "Chelsea",
+  "position": "MID",
+  "price": 7.0,
+  "selected_by_percent": 5.3,
+  "total_points": 10,
+  "status": "a",
+  "news": "",
+  "chance_of_playing_next_round": null
+ }
+]
+
+PLAYER STATUS CODES:
+- a: available, d: doubtful, i: injured, s: suspended, u: unavailable
+- Pay attention to "status", "news", and "chance_of_playing_next_round" fields
+
+TRANSCRIPT:
+Here is my FPL gameweek 3 team selection. It&#39;s been an absolutely stinking start to the season, so hopefully gameweek 3 is the turning point. In goal, I have Sanchez against Fulham at home. In defense, I have Porro against Bournemouth, Williams against West Ham, and also Richards against Aston Villa away. As you can see on this screenshot, courtesy of Foot Mob, Richards achieved eight defensive contributions last week. So, even if he does concede in gameweek 3, he has a good chance of Defcon points. In midfield, I&#39;ve been very disappointed with both Muhammad Salah and Florian Vert. I don&#39;t think I can sell either of them when they have Burnley and Everton in four and five. Bruno Fernandez was my planned captain against Burnley at home, but after the recent Man United performances, I am slightly wavering on that. Last week, he did manage 13 defensive contributions, and I am very excited to announce that the absolute goat of football apps, Foot Mob, is adding live defensive contribution tracking into their app for this weekend. All you have to do is head to the link in my bio and download Foot Mob for free, click on a player, and their defensive contributions will track live quicker than the FPL app. The rest of my midfield consists of Tjani Riners who will absolutely do a job against Brighton this week and also the injured Cole Palmer. Unless Moresca comes out in the press conference and says that Cole Palmer is fit for gameweek three, I will most likely sell him and I&#39;ll discuss who I&#39;m going to replace him with in a second. The forward line currently consists of Ollie Watkins and Nicholas Fulkrug. Both have been terrible, but don&#39;t worry, I will be selling Fulkrug this week. My plan as of right now is to sell Palmer to Ismaar who&#39;s got great fixtures over the next three weeks and then sell to one of Wood Xiao Pedro or Mateta. Let me know down below in the comments who you prefer from those three. I haven&#39;t actually made my transfers yet and we&#39;ll probably make them very last minute. But here is how the team currently lines up. And again, Fullcrook and Palmer will probably leave the
+
+Extract the following information and return as JSON:
+
+{
+  "channel_name": "FPL Raptor",
+  "formation": "3-5-2",
+  "team_selection": ["Salah (FWD)", "Haaland (FWD)", ...],
+  "transfers_in": ["Player (POS)", ...],
+  "transfers_out": ["Player (POS)", ...], 
+  "captain_choice": "Player (POS)",
+  "vice_captain_choice": "Player (POS)",
+  "key_issues_discussed": [
+    {"issue": "Salah vs Haaland captaincy", "opinion": "On pens, great fixtures in GW5"},
+    {"issue": "Arsenal defensive assets", "opinion": "Avoid due to tough fixtures next 3 weeks"}
+  ],
+  "watchlist": [
+    {"name": "Player (POS)", "priority": "high", "why": "Great fixtures coming up after international break"}
+  ],
+  "bank_itb": "0.5m",
+  "key_reasoning": ["Reason 1", "Reason 2", ...],
+  "confidence": 0.85,
+  "transcript_length": 2155
+}
+
+IMPORTANT:
+- The transcript may have transcription errors for player names
+- Use the top players list to identify correct player names and their injury status
+- ALL PLAYER NAMES must include position in format: "Player (POS)" e.g. "Salah (FWD)", "Robertson (DEF)"
+- Extract their actual team selection, transfers, and reasoning
+- Formation: Look for tactical discussions (3-5-2, 4-4-2, etc.) - set null if not mentioned
+- Key Issues: Extract major talking points with their specific opinions (if any discussed)
+- Watchlist: Players they mention considering but not immediately transferring (high/med/low priority)
+- Bank ITB: If they mention money in the bank or ITB, capture the amount (e.g. "0.5m", "2.1m")
+- Consider player availability (status/news/chance_of_playing_next_round) in analysis
+- Set confidence based on clarity of their decisions and transcript length
+- If information is unclear or missing, use empty arrays for lists and default values
+- FOR SHORT TRANSCRIPTS (<3000 chars): Focus on extracting the most essential information (transfers, captain)
+- ALWAYS return valid JSON even if limited information is available

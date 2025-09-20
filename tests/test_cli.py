@@ -60,7 +60,9 @@ def test_collect_command_writes_destination(tmp_path: Path, monkeypatch) -> None
     assert data["team_id"] == 1
 
 
-def test_pipeline_command_skips_analysis_when_declined(tmp_path: Path, monkeypatch) -> None:
+def test_pipeline_command_skips_analysis_when_declined(
+    tmp_path: Path, monkeypatch
+) -> None:
     outcome = _make_outcome(tmp_path)
     monkeypatch.setattr(cli, "aggregate", lambda **_: outcome)
     monkeypatch.setattr(cli, "_confirm", lambda _: False)

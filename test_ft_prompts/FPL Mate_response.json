@@ -1,0 +1,51 @@
+```json
+{
+  "channel_name": "FPL Mate",
+  "formation": null,
+  "team_selection": [
+    "Sánchez (GKP)",
+    "Pedro Porro (DEF)",
+    "Murillo (DEF)", 
+    "Richards (DEF)",
+    "M.Salah (MID)",
+    "Palmer (MID)",
+    "B.Fernandes (MID)",
+    "Rogers (MID)",
+    "Jbury Hall (MID)",
+    "Watkins (FWD)",
+    "João Pedro (FWD)",
+    "Dúbravka (GKP)",
+    "Estève (DEF)",
+    "Marc Guiu (FWD)",
+    "Jof (DEF)"
+  ],
+  "transfers_in": ["Sarr (MID)"],
+  "transfers_out": ["Palmer (MID)"],
+  "captain_choice": "João Pedro (FWD)",
+  "vice_captain_choice": "B.Fernandes (MID)",
+  "key_issues_discussed": [
+    {"issue": "Palmer injury and replacement", "opinion": "Comfortable selling Palmer due to injury and can free hit him back in GW6"},
+    {"issue": "Bruno Fernandes after Man United's poor form", "opinion": "Still a great player with good underlying stats, bookmakers favor United heavily vs Burnley"},
+    {"issue": "Aston Villa attackers underperforming", "opinion": "Rogers and Watkins failing to deliver, losing patience but giving one more chance"},
+    {"issue": "Richards vs Jof defensive choice", "opinion": "Playing Richards despite having Villa attackers, hedging bets based on form over fixture"},
+    {"issue": "Captain choice between João Pedro and Bruno", "opinion": "Torn between both, João Pedro gets edge due to Palmer being out and penalty potential"}
+  ],
+  "watchlist": [
+    {"name": "Wood (FWD)", "priority": "medium", "why": "Potential upgrade from Marc Guiu but best fixture in free hit week"},
+    {"name": "Barnes (MID)", "priority": "medium", "why": "Potential upgrade from Jbury Hall but may be out of starting XI soon"},
+    {"name": "Muñoz (DEF)", "priority": "high", "why": "Considering for GW4 transfer, good fixtures coming up"},
+    {"name": "Gabriel (DEF)", "priority": "high", "why": "Arsenal defender option for GW4, good long-term fixtures except City"}
+  ],
+  "bank_itb": null,
+  "key_reasoning": [
+    "Palmer injury makes him comfortable to sell and free hit back in GW6",
+    "Sarr has excellent record vs Villa (7 goals, 3 assists in 6 starts, never blanked)",
+    "João Pedro benefits from Palmer being out - plays behind striker and potential penalty taker",
+    "Bruno still has great underlying stats despite United's poor form, bookmakers heavily favor them",
+    "Planning for GW8 bench boost by freeing up funds through Palmer sale",
+    "Saving second transfer to have two free transfers going into GW4 for more flexibility"
+  ],
+  "confidence": 0.88,
+  "transcript_length": 26362
+}
+```

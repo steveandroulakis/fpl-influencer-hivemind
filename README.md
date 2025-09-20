@@ -44,6 +44,8 @@ The command will:
 3. Target the upcoming gameweek (current + 1) for discovery, automatically falling back to the current week if no matches are found
 4. Prompt with a `y/N` confirmation before running the Anthropic-backed analysis
 
+Thanks to the shared discovery module (`src/fpl_influencer_hivemind/youtube/video_picker.py`), video selection now happens inside the pipeline itself, so you'll see channel-by-channel progress immediately on the CLI instead of waiting for silent subprocesses to finish.
+
 If you prefer to collect data only, run:
 
 ```bash

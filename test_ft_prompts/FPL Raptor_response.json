@@ -1,0 +1,74 @@
+```json
+{
+  "channel_name": "FPL Raptor",
+  "formation": null,
+  "team_selection": [
+    "Sánchez (GKP)",
+    "Pedro Porro (DEF)",
+    "N.Williams (DEF)",
+    "Richards (DEF)",
+    "M.Salah (MID)",
+    "Wirtz (MID)",
+    "B.Fernandes (MID)",
+    "Reijnders (MID)",
+    "Palmer (MID)",
+    "Watkins (FWD)",
+    "Ekitiké (FWD)"
+  ],
+  "transfers_in": [
+    "Semenyo (MID)",
+    "Wood (FWD)"
+  ],
+  "transfers_out": [
+    "Palmer (MID)",
+    "Ekitiké (FWD)"
+  ],
+  "captain_choice": "B.Fernandes (MID)",
+  "vice_captain_choice": null,
+  "key_issues_discussed": [
+    {
+      "issue": "Palmer injury concern",
+      "opinion": "Will sell unless Maresca confirms he's fit for GW3"
+    },
+    {
+      "issue": "Bruno Fernandes captaincy",
+      "opinion": "Planned captain vs Burnley at home but wavering due to Man United's poor performances"
+    },
+    {
+      "issue": "Salah and Wirtz disappointment",
+      "opinion": "Both have been disappointing but can't sell with Burnley and Everton fixtures in GW4-5"
+    },
+    {
+      "issue": "Forward line struggles",
+      "opinion": "Both Watkins and Ekitiké have been terrible, planning to sell Ekitiké"
+    }
+  ],
+  "watchlist": [
+    {
+      "name": "Wood (FWD)",
+      "priority": "high",
+      "why": "Considering as replacement for Ekitiké"
+    },
+    {
+      "name": "João Pedro (FWD)",
+      "priority": "high",
+      "why": "Considering as replacement for Ekitiké"
+    },
+    {
+      "name": "Mateta (FWD)",
+      "priority": "high",
+      "why": "Considering as replacement for Ekitiké"
+    }
+  ],
+  "bank_itb": null,
+  "key_reasoning": [
+    "Richards achieved 8 defensive contributions last week, good chance of bonus points even if concedes",
+    "Reijnders will do a job against Brighton this week",
+    "Palmer likely to be sold due to injury unless confirmed fit",
+    "Semenyo has great fixtures over next 3 weeks as Palmer replacement",
+    "Both forwards have underperformed and need changing"
+  ],
+  "confidence": 0.75,
+  "transcript_length": 1455
+}
+```

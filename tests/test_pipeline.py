@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import subprocess
 from collections.abc import Sequence
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -18,6 +19,11 @@ from fpl_influencer_hivemind.pipeline import (
     default_transcript_prompt,
     generate_unique_path,
 )
+from fpl_influencer_hivemind.youtube.video_picker import (
+    ChannelResult,
+    VideoItem,
+    VideoPickerError,
+)
 
 
 class FakeRunner:
@@ -26,6 +32,7 @@ class FakeRunner:
     def __init__(self, tmp_path: Path) -> None:
         self.tmp_path = tmp_path
         self.invocations: list[list[str]] = []
+        self.scripts_called: list[str] = []
 
     def run(
         self, args: Sequence[str], *, cwd: Path | None = None
@@ -33,7 +40,11 @@ class FakeRunner:
         assert isinstance(args, Sequence)
         _ = cwd
         self.invocations.append(list(args))
-        script = Path(args[1]).name
+        script_path = next((Path(part) for part in args if part.endswith(".py")), None)
+        if script_path is None:
+            raise AssertionError(f"Could not locate script path in command: {args}")
+        script = script_path.name
+        self.scripts_called.append(script)
 
         if script == "get_current_gameweek.py":
             output_path = Path(args[args.index("--out") + 1])
@@ -62,24 +73,57 @@ class FakeRunner:
                 "current_picks": [],
             }
             output_path.write_text(json.dumps(payload), encoding="utf-8")
-        elif script == "fpl_video_picker.py":
-            output_path = Path(args[args.index("--out") + 1])
-            payload = {
-                "channel_name": "FPL Test",
-                "video_id": "abc123",
-                "title": "GW5 Team Selection",
-                "url": "https://youtu.be/abc123",
-                "confidence": 0.9,
-                "published_at": "2025-01-01T00:00:00Z",
-            }
-            output_path.write_text(json.dumps(payload), encoding="utf-8")
         elif script == "fpl_transcript.py":
             output_path = Path(args[args.index("--out") + 1])
             output_path.write_text("Line one\nLine two", encoding="utf-8")
         else:  # pragma: no cover - defensive
             raise AssertionError(f"Unexpected script invocation: {script}")
 
-        return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
+        return subprocess.CompletedProcess(
+            args=args, returncode=0, stdout="", stderr=""
+        )
+
+
+def stub_select_single_channel(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    channel_name: str = "FPL Test",
+    channel_url: str = "https://www.youtube.com/@fpltest",
+    title: str = "GW5 Team Selection",
+    fail_gameweeks: Sequence[int] | None = None,
+) -> list[int]:
+    calls: list[int] = []
+    failure_set = {int(item) for item in (fail_gameweeks or [])}
+
+    def fake_select_single_channel(**kwargs: object) -> ChannelResult:
+        gameweek = int(kwargs.get("gameweek", 0))
+        calls.append(gameweek)
+        if gameweek in failure_set:
+            raise VideoPickerError(f"No videos for gameweek {gameweek}")
+
+        video = VideoItem(
+            title=title,
+            url="https://youtu.be/abc123",
+            published_at=datetime(2025, 1, 1, tzinfo=UTC),
+            channel_name=channel_name,
+            description="",
+        )
+        return ChannelResult(
+            channel_name=channel_name,
+            channel_url=channel_url,
+            picked=video,
+            alternatives=[],
+            confidence=0.9,
+            reasoning="Test reasoning",
+            matched_signals=["team selection"],
+            heuristic_score=5.0,
+        )
+
+    monkeypatch.setattr(
+        "fpl_influencer_hivemind.pipeline.select_single_channel",
+        fake_select_single_channel,
+    )
+    return calls
 
 
 def test_generate_unique_path(tmp_path: Path) -> None:
@@ -92,11 +136,15 @@ def test_generate_unique_path(tmp_path: Path) -> None:
     assert second.name == "example-2.json"
 
 
-def test_aggregate_creates_expected_payload(tmp_path: Path) -> None:
+def test_aggregate_creates_expected_payload(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     runner = FakeRunner(tmp_path)
     channels: list[ChannelConfig] = [
         {"name": "FPL Test", "url": "https://www.youtube.com/@fpltest"}
     ]
+
+    select_calls = stub_select_single_channel(monkeypatch)
 
     outcome: AggregationOutcome = aggregate(
         team_id=1178124,
@@ -123,22 +171,26 @@ def test_aggregate_creates_expected_payload(tmp_path: Path) -> None:
     transcript = data["youtube_analysis"]["transcripts"]["FPL Test"]["transcript"]
     assert transcript == "Line one Line two"
 
-    # Ensure command sequencing executed expected scripts
-    invoked_scripts = {Path(call[1]).name for call in runner.invocations}
+    # Ensure command sequencing executed expected scripts and discovery ran
+    invoked_scripts = set(runner.scripts_called)
     assert {
         "get_current_gameweek.py",
         "get_top_ownership.py",
         "get_my_team.py",
-        "fpl_video_picker.py",
         "fpl_transcript.py",
     }.issubset(invoked_scripts)
+    assert select_calls == [6]
 
 
-def test_aggregate_declines_transcripts_when_prompt_returns_false(tmp_path: Path) -> None:
+def test_aggregate_declines_transcripts_when_prompt_returns_false(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     runner = FakeRunner(tmp_path)
     channels: list[ChannelConfig] = [
         {"name": "FPL Test", "url": "https://www.youtube.com/@fpltest"}
     ]
+
+    stub_select_single_channel(monkeypatch)
 
     outcome = aggregate(
         team_id=1178124,
@@ -168,7 +220,10 @@ class FailingRunner(FakeRunner):
     def run(
         self, args: Sequence[str], *, cwd: Path | None = None
     ) -> subprocess.CompletedProcess[str]:
-        script = Path(args[1]).name
+        script_path = next((Path(part) for part in args if part.endswith(".py")), None)
+        if script_path is None:
+            raise AssertionError(f"Could not locate script path in command: {args}")
+        script = script_path.name
         if script == "get_current_gameweek.py":
             raise subprocess.CalledProcessError(returncode=1, cmd=args, stderr="boom")
         return FakeRunner.run(self, args, cwd=cwd)
@@ -181,29 +236,20 @@ def test_collect_fpl_data_failure_surface(tmp_path: Path) -> None:
     ]
 
     with pytest.raises(AggregationError):
-        aggregate(team_id=1178124, runner=runner, channels=channels, artifacts_dir=tmp_path)
+        aggregate(
+            team_id=1178124, runner=runner, channels=channels, artifacts_dir=tmp_path
+        )
 
 
-class NoDiscoveryRunner(FakeRunner):
-    """Runner that skips writing discovery output for coverage."""
-
-    def run(
-        self, args: Sequence[str], *, cwd: Path | None = None
-    ) -> subprocess.CompletedProcess[str]:
-        script = Path(args[1]).name
-        if script == "fpl_video_picker.py":
-            # Skip creating output file to simulate failure
-            return subprocess.CompletedProcess(
-                args=args, returncode=0, stdout="", stderr=""
-            )
-        return FakeRunner.run(self, args, cwd=cwd)
-
-
-def test_aggregate_handles_missing_discovery_output(tmp_path: Path) -> None:
-    runner = NoDiscoveryRunner(tmp_path)
+def test_aggregate_handles_missing_discovery_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    runner = FakeRunner(tmp_path)
     channels: list[ChannelConfig] = [
         {"name": "FPL Test", "url": "https://www.youtube.com/@fpltest"}
     ]
+
+    calls = stub_select_single_channel(monkeypatch, fail_gameweeks=[5, 6])
 
     outcome = aggregate(
         team_id=1178124,
@@ -217,31 +263,18 @@ def test_aggregate_handles_missing_discovery_output(tmp_path: Path) -> None:
     assert outcome.videos_discovered == 0
     data = json.loads(outcome.result_path.read_text(encoding="utf-8"))
     assert data["gameweek"]["fallback_used"] is True
+    assert calls == [6, 5]
 
 
-class FallbackRunner(FakeRunner):
-    """Runner that forces fallback from requested to source gameweek."""
-
-    def run(
-        self, args: Sequence[str], *, cwd: Path | None = None
-    ) -> subprocess.CompletedProcess[str]:
-        script = Path(args[1]).name
-        if script == "fpl_video_picker.py":
-            gameweek_index = args.index("--gameweek") + 1
-            gameweek_value = int(args[gameweek_index])
-            if gameweek_value == 6:
-                # Simulate no results for requested gameweek by omitting output
-                return subprocess.CompletedProcess(
-                    args=args, returncode=0, stdout="", stderr=""
-                )
-        return FakeRunner.run(self, args, cwd=cwd)
-
-
-def test_aggregate_falls_back_to_current_when_no_requested_matches(tmp_path: Path) -> None:
-    runner = FallbackRunner(tmp_path)
+def test_aggregate_falls_back_to_current_when_no_requested_matches(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    runner = FakeRunner(tmp_path)
     channels: list[ChannelConfig] = [
         {"name": "FPL Test", "url": "https://www.youtube.com/@fpltest"}
     ]
+
+    calls = stub_select_single_channel(monkeypatch, fail_gameweeks=[6])
 
     outcome = aggregate(
         team_id=1178124,
@@ -252,11 +285,11 @@ def test_aggregate_falls_back_to_current_when_no_requested_matches(tmp_path: Pat
         transcript_delay=0.0,
     )
 
-    assert outcome.gameweek_id == 5
     data = json.loads(outcome.result_path.read_text(encoding="utf-8"))
     assert data["gameweek"]["requested"] == 6
     assert data["gameweek"]["current"] == 5
     assert data["gameweek"]["fallback_used"] is True
+    assert calls == [6, 5]
 
 
 def test_default_transcript_prompt(monkeypatch) -> None:

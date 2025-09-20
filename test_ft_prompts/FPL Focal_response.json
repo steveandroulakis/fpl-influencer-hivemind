@@ -1,0 +1,79 @@
+```json
+{
+  "channel_name": "FPL Focal",
+  "formation": "3-5-2",
+  "team_selection": [
+    "Sánchez (GKP)",
+    "Porro (DEF)", 
+    "Romero (DEF)",
+    "Milenkovic (DEF)",
+    "Salah (MID)",
+    "Bruno Fernandes (MID)",
+    "Gakpo (MID)",
+    "Rogers (MID)",
+    "Reijnders (MID)",
+    "Gyökeres (FWD)",
+    "Watkins (FWD)"
+  ],
+  "transfers_in": [
+    "Gakpo (MID)",
+    "Gyökeres (FWD)"
+  ],
+  "transfers_out": [
+    "Palmer (MID)",
+    "Strand Larsson (FWD)"
+  ],
+  "captain_choice": "Bruno Fernandes (MID)",
+  "vice_captain_choice": "Salah (MID)",
+  "key_issues_discussed": [
+    {
+      "issue": "Palmer injury situation",
+      "opinion": "Forced to sell due to groin injury and 0% chance of playing"
+    },
+    {
+      "issue": "Bruno Fernandes captaincy despite Man United form",
+      "opinion": "Still backing Bruno home vs Burnley despite poor form and Grimsby defeat"
+    },
+    {
+      "issue": "Strand Larsson injury concerns",
+      "opinion": "Likely to miss gameweek due to Achilles issue, not at team hotel"
+    },
+    {
+      "issue": "Gakpo vs other Palmer replacements",
+      "opinion": "Gakpo preferred as short-term play for next 3 gameweeks, might wildcard GW6"
+    },
+    {
+      "issue": "Gyökeres vs Wood debate",
+      "opinion": "Gyökeres preferred long-term despite difficult fixtures, on penalties with Havertz out"
+    }
+  ],
+  "watchlist": [
+    {
+      "name": "Wood (FWD)",
+      "priority": "high", 
+      "why": "Amazing fixtures next 4 gameweeks, heavily captained this week"
+    },
+    {
+      "name": "Semenyo (MID)",
+      "priority": "high",
+      "why": "Great form, popular Palmer replacement option"
+    },
+    {
+      "name": "Sarr (MID)", 
+      "priority": "medium",
+      "why": "Good 6.5m midfielder option, cheaper than Semenyo"
+    }
+  ],
+  "bank_itb": "0.1m",
+  "key_reasoning": [
+    "Palmer injury forces transfer out with 0% chance of playing",
+    "Strand Larsson likely out with Achilles injury, not at team hotel",
+    "Gakpo chosen over Semenyo as short-term 3-week play before potential wildcard GW6",
+    "Gyökeres preferred over Wood long-term despite fixtures - on penalties with Havertz out",
+    "Bruno captaincy backed despite Man United poor form - home vs Burnley too good to ignore",
+    "Team value dropped to 100.1m after Palmer price fall"
+  ],
+  "confidence": 0.92,
+  "transcript_length": 98683
+}
+```
