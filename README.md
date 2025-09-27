@@ -37,6 +37,7 @@ A comprehensive Fantasy Premier League (FPL) decision support system that aggreg
   2. Channel-by-channel video discovery runs in-process with live CLI updates.
   3. Transcript downloads execute (with progress per channel) and artifacts land in `var/hivemind/`.
   4. Interactive prompt lets you choose whether to run the Anthropic analyzer.
+  Use `--commentary "Wildcard this week; recommend only wildcard route"` (or similar) to inject a user directive the analyzer treats as a primary requirement.
 
 - **Data collection only**
   ```bash
@@ -66,6 +67,7 @@ Latest additions include unit coverage for the discovery helper (`tests/test_vid
 - `./youtube-titles/fpl_video_picker.py --single-channel "FPL Raptor" --gameweek 5 --verbose`
 - `./youtube-transcript/fpl_transcript.py --id VIDEO_ID --format txt`
 - `uv run fpl/get_my_team.py --entry-id 1178124 --show summary,picks`
+- `./fpl_intelligence_analyzer.py --input var/hivemind/gwXX_teamXXXX_*.json --commentary "Triple captain this week"` to force a high-priority directive during analysis.
 
 ## 📁 Output & Logs
 - Temporary working directories live under `var/hivemind/hivemind_*`.

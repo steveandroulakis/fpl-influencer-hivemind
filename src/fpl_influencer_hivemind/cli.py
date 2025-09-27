@@ -78,6 +78,10 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Number of free transfers available when running analysis (0-5)",
     )
     pipeline_parser.add_argument(
+        "--commentary",
+        help="Optional high-priority user directive passed to the analyzer",
+    )
+    pipeline_parser.add_argument(
         "--artifacts-dir",
         type=Path,
         default=None,
@@ -160,6 +164,7 @@ def _run_analyzer(
     output_path: Path,
     free_transfers: int,
     verbose: bool,
+    commentary: str | None = None,
 ) -> int:
     runner = SubprocessRunner()
     args = [
@@ -172,6 +177,8 @@ def _run_analyzer(
         "--free-transfers",
         str(free_transfers),
     ]
+    if commentary and commentary.strip():
+        args.extend(["--commentary", commentary])
     if verbose:
         args.append("--verbose")
     try:
@@ -220,6 +227,7 @@ def _run_pipeline(args: argparse.Namespace) -> int:
         output_path=report_path,
         free_transfers=args.free_transfers,
         verbose=args.verbose,
+        commentary=args.commentary,
     )
     if status == 0:
         print(f"Analysis complete: {report_path}")

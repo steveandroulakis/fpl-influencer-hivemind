@@ -19,6 +19,9 @@ Usage:
     ./fpl_intelligence_analyzer.py --input data.json --output-file analysis.md --verbose
     ./fpl_intelligence_analyzer.py --input data.json --output-file analysis.md --free-transfers 2
     ./fpl_intelligence_analyzer.py --input data.json -o analysis.md -ft 0  # Must take hit or roll
+    ./fpl_intelligence_analyzer.py --input data.json --commentary "Plan to wildcard, recommend only wildcard path"
+
+Use `--commentary` to inject a high-priority user directive that the analysis must follow.
 """
 
 import argparse
@@ -382,6 +385,7 @@ Return valid JSON only. For short transcripts, extract whatever information is a
         condensed_players: list[dict[str, Any]],
         my_team_summary: str,
         gameweek: int,
+        commentary: str | None = None,
     ) -> str:
         """Generate final comparative analysis using Opus-4."""
         try:
@@ -427,6 +431,19 @@ Return valid JSON only. For short transcripts, extract whatever information is a
 
             combined_summaries = "\n".join(summaries)
 
+            directive_section = ""
+            critical_directive_line = ""
+            if commentary:
+                directive_text = commentary.strip()
+                if directive_text:
+                    directive_section = (
+                        "USER PRIMARY DIRECTIVE (DO NOT IGNORE):\n"
+                        f"- {directive_text}\n\n"
+                    )
+                    critical_directive_line = (
+                        f"- PRIMARY USER DIRECTIVE (NON-NEGOTIABLE): {directive_text}\n"
+                    )
+
             # Create comprehensive prompt for Opus-4
             prompt = f"""Generate a comprehensive FPL analysis report for gameweek {gameweek}.
 
@@ -445,7 +462,7 @@ INFLUENCER ANALYSES:
 
 You are an analyst that turns influencer summaries/transcripts + my FPL squad data into a concise, actionable gameweek report.
 
-CRITICAL ANALYSIS REQUIREMENT:
+{directive_section}CRITICAL ANALYSIS REQUIREMENT:
 - ALWAYS check if universal/majority captain choices are in my squad
 - If influencers are captaining a player I don't own, this is the #1 gap to highlight and fix!
 
@@ -546,6 +563,7 @@ Start with 1-3 **clear recommended paths** (transfers, captaincy, XI) for what t
 
 --------------------------------------------------
 CRITICAL REQUIREMENTS
+- {critical_directive_line}
 - Always attribute influencer opinions by name.
 - Factor injuries/rotation into every rec.
 - Enforce budget and per-club limits.
@@ -576,7 +594,11 @@ specific, well-reasoned, and tailored to the user's current team situation."""
             return f"# Analysis Error\n\nFailed to generate comparative analysis: {e!s}"
 
     def run_analysis(
-        self, input_file: str, output_file: str | None = None, free_transfers: int = 1
+        self,
+        input_file: str,
+        output_file: str | None = None,
+        free_transfers: int = 1,
+        commentary: str | None = None,
     ) -> None:
         """Run the complete FPL intelligence analysis pipeline.
 
@@ -584,6 +606,7 @@ specific, well-reasoned, and tailored to the user's current team situation."""
             input_file: Path to FPL aggregated data JSON file
             output_file: Optional path to write markdown analysis report
             free_transfers: Number of free transfers available (default: 1)
+            commentary: Optional user directive to prioritise within the analysis
         """
         try:
             # Set up prompts directory if output file is specified
@@ -640,19 +663,26 @@ specific, well-reasoned, and tailored to the user's current team situation."""
             my_team_summary = self.format_my_team(my_team_data, free_transfers)
 
             final_report = self.generate_comparative_analysis(
-                channel_analyses, condensed_players, my_team_summary, gameweek
+                channel_analyses,
+                condensed_players,
+                my_team_summary,
+                gameweek,
+                commentary=commentary,
             )
 
             # Add header with metadata
-            report_header = f"""# FPL Intelligence Analysis - Gameweek {gameweek}
+            directive_line = ""
+            if commentary and commentary.strip():
+                directive_line = f"**User Directive:** {commentary.strip()}\n\n"
 
-**Generated:** {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}  
-**Channels Analyzed:** {len(channel_analyses)}  
-**Data Source:** {Path(input_file).name}
-
----
-
-"""
+            report_header = (
+                f"# FPL Intelligence Analysis - Gameweek {gameweek}\n\n"
+                f"**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}  \n"
+                f"**Channels Analyzed:** {len(channel_analyses)}  \n"
+                f"**Data Source:** {Path(input_file).name}\n\n"
+                f"{directive_line}"
+                "---\n\n"
+            )
 
             complete_report = report_header + final_report
 
@@ -709,6 +739,10 @@ Examples:
         choices=range(0, 6),
         help="Number of free transfers available (0-5, default: 1)",
     )
+    parser.add_argument(
+        "--commentary",
+        help="Optional high-priority user directive for the analysis",
+    )
 
     args = parser.parse_args()
 
@@ -716,7 +750,12 @@ Examples:
         analyzer = FPLIntelligenceAnalyzer(
             verbose=args.verbose, save_prompts=not args.no_save_prompts
         )
-        analyzer.run_analysis(args.input, args.output_file, args.free_transfers)
+        analyzer.run_analysis(
+            args.input,
+            args.output_file,
+            args.free_transfers,
+            commentary=args.commentary,
+        )
         return 0
 
     except KeyboardInterrupt:
