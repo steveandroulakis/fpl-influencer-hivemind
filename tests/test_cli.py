@@ -77,7 +77,7 @@ def test_pipeline_command_auto_runs_analysis(tmp_path: Path, monkeypatch) -> Non
     monkeypatch.setattr(cli, "_run_analyzer", lambda **_: 0)
 
     status = cli.main(
-        ["pipeline", "--team-id", "1", "--auto-run-analysis", "--free-transfers", "2"]
+        ["pipeline", "--team-id", "1", "--auto-run-analysis", "--free-transfers", "5"]
     )
     assert status == 0
 

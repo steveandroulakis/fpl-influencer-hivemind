@@ -74,7 +74,8 @@ def _build_parser() -> argparse.ArgumentParser:
         "--free-transfers",
         type=int,
         default=1,
-        help="Number of free transfers available when running analysis",
+        choices=range(0, 6),
+        help="Number of free transfers available when running analysis (0-5)",
     )
     pipeline_parser.add_argument(
         "--artifacts-dir",

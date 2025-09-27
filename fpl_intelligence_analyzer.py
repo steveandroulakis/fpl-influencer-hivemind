@@ -146,7 +146,9 @@ class FPLIntelligenceAnalyzer:
         )
         return condensed_players
 
-    def format_my_team(self, my_team_data: dict[str, Any], free_transfers: int = 1) -> str:
+    def format_my_team(
+        self, my_team_data: dict[str, Any], free_transfers: int = 1
+    ) -> str:
         """Format my team data into a readable description using LLM."""
         try:
             current_picks = my_team_data.get("current_picks", [])
@@ -234,11 +236,15 @@ Format it as clear prose, not JSON."""
             video_title = channel_data.get("title", "Unknown")
             transcript_length = len(transcript)
 
-            self.logger.info(f"Analyzing channel: {channel_name} (transcript: {transcript_length} chars)")
-            
+            self.logger.info(
+                f"Analyzing channel: {channel_name} (transcript: {transcript_length} chars)"
+            )
+
             # Warn if transcript is unusually short
             if transcript_length < 3000:
-                self.logger.warning(f"Short transcript for {channel_name}: only {transcript_length} characters")
+                self.logger.warning(
+                    f"Short transcript for {channel_name}: only {transcript_length} characters"
+                )
 
             # Create structured prompt for channel analysis
             prompt = f"""Analyze this FPL influencer's video transcript for gameweek {gameweek}.
@@ -322,17 +328,17 @@ Return valid JSON only. For short transcripts, extract whatever information is a
                         response = json_match.group(1)
 
                 analysis_data = json.loads(response)
-                
+
                 # Ensure transcript_length is set
                 if "transcript_length" not in analysis_data:
                     analysis_data["transcript_length"] = transcript_length
-                
+
                 # Handle null values for required string fields
                 if analysis_data.get("captain_choice") is None:
                     analysis_data["captain_choice"] = "Not specified"
                 if analysis_data.get("vice_captain_choice") is None:
                     analysis_data["vice_captain_choice"] = "Not specified"
-                
+
                 analysis = ChannelAnalysis(**analysis_data)
 
                 self.logger.info(
@@ -350,14 +356,16 @@ Return valid JSON only. For short transcripts, extract whatever information is a
                         channel_name=channel_name,
                         transcript_length=transcript_length,
                         confidence=0.3,
-                        key_reasoning=[f"Failed to parse full analysis - transcript too short or unclear ({transcript_length} chars)"]
+                        key_reasoning=[
+                            f"Failed to parse full analysis - transcript too short or unclear ({transcript_length} chars)"
+                        ],
                     )
                     self.logger.warning(f"Using minimal analysis for {channel_name}")
                     return minimal_analysis
                 except Exception as fallback_error:
                     self.logger.error(f"Even minimal analysis failed: {fallback_error}")
                     return None
-                    
+
             except ValidationError as e:
                 self.logger.error(
                     f"Validation failed for {channel_name}: {e}\nData: {json.dumps(analysis_data, indent=2)[:500]}..."
@@ -385,17 +393,25 @@ Return valid JSON only. For short transcripts, extract whatever information is a
                 # Format key issues
                 key_issues = ""
                 if analysis.key_issues_discussed:
-                    issues_list = [f"'{issue['issue']}': {issue['opinion']}" for issue in analysis.key_issues_discussed]
+                    issues_list = [
+                        f"'{issue['issue']}': {issue['opinion']}"
+                        for issue in analysis.key_issues_discussed
+                    ]
                     key_issues = f"\n- Key Issues: {'; '.join(issues_list)}"
-                
+
                 # Format watchlist
                 watchlist = ""
                 if analysis.watchlist:
-                    watch_items = [f"{item['name']} ({item['priority']}: {item['why']})" for item in analysis.watchlist]
+                    watch_items = [
+                        f"{item['name']} ({item['priority']}: {item['why']})"
+                        for item in analysis.watchlist
+                    ]
                     watchlist = f"\n- Watchlist: {'; '.join(watch_items)}"
-                
+
                 # Format formation and bank
-                formation = f"\n- Formation: {analysis.formation}" if analysis.formation else ""
+                formation = (
+                    f"\n- Formation: {analysis.formation}" if analysis.formation else ""
+                )
                 bank = f"\n- Bank ITB: {analysis.bank_itb}" if analysis.bank_itb else ""
 
                 summary = f"""
@@ -559,9 +575,11 @@ specific, well-reasoned, and tailored to the user's current team situation."""
             self.logger.error(f"Error generating comparative analysis: {e}")
             return f"# Analysis Error\n\nFailed to generate comparative analysis: {e!s}"
 
-    def run_analysis(self, input_file: str, output_file: str | None = None, free_transfers: int = 1) -> None:
+    def run_analysis(
+        self, input_file: str, output_file: str | None = None, free_transfers: int = 1
+    ) -> None:
         """Run the complete FPL intelligence analysis pipeline.
-        
+
         Args:
             input_file: Path to FPL aggregated data JSON file
             output_file: Optional path to write markdown analysis report
@@ -574,7 +592,7 @@ specific, well-reasoned, and tailored to the user's current team situation."""
                 self.prompts_dir = output_path.parent / f"{output_path.stem}_prompts"
                 self.prompts_dir.mkdir(exist_ok=True)
                 self.logger.info(f"Debug prompts will be saved to {self.prompts_dir}")
-            
+
             # Load aggregated data
             self.logger.info("Starting FPL Intelligence Analysis")
             data = self.load_aggregated_data(input_file)
@@ -679,25 +697,24 @@ Examples:
         "--verbose", "-v", action="store_true", help="Enable verbose logging"
     )
     parser.add_argument(
-        "--no-save-prompts", 
-        action="store_true", 
-        help="Disable saving prompts and responses to debug files"
+        "--no-save-prompts",
+        action="store_true",
+        help="Disable saving prompts and responses to debug files",
     )
     parser.add_argument(
         "--free-transfers",
         "-ft",
         type=int,
         default=1,
-        choices=[0, 1, 2],
-        help="Number of free transfers available (default: 1)"
+        choices=range(0, 6),
+        help="Number of free transfers available (0-5, default: 1)",
     )
 
     args = parser.parse_args()
 
     try:
         analyzer = FPLIntelligenceAnalyzer(
-            verbose=args.verbose, 
-            save_prompts=not args.no_save_prompts
+            verbose=args.verbose, save_prompts=not args.no_save_prompts
         )
         analyzer.run_analysis(args.input, args.output_file, args.free_transfers)
         return 0
