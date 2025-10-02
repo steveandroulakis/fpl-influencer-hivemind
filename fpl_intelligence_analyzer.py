@@ -77,7 +77,7 @@ class FPLIntelligenceAnalyzer:
             raise ValueError("ANTHROPIC_API_KEY environment variable is required")
 
         self.client = anthropic.Anthropic(api_key=api_key)
-        self.sonnet_model = "claude-sonnet-4-20250514"
+        self.sonnet_model = "claude-sonnet-4-5-20250929"  # "claude-sonnet-4-20250514"
         self.opus_model = "claude-opus-4-1-20250805"
 
     def setup_logging(self, verbose: bool) -> None:
