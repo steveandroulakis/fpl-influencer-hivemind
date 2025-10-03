@@ -78,7 +78,7 @@ class FPLIntelligenceAnalyzer:
 
         self.client = anthropic.Anthropic(api_key=api_key)
         self.sonnet_model = "claude-sonnet-4-5-20250929"  # "claude-sonnet-4-20250514"
-        self.opus_model = "claude-opus-4-1-20250805"
+        self.opus_model = "claude-sonnet-4-5-20250929"  # "claude-opus-4-1-20250805"
 
     def setup_logging(self, verbose: bool) -> None:
         """Setup logging configuration."""
@@ -465,8 +465,12 @@ You are an analyst that turns influencer summaries/transcripts + my FPL squad da
 {directive_section}CRITICAL ANALYSIS REQUIREMENT:
 - ALWAYS check if universal/majority captain choices are in my squad
 - If influencers are captaining a player I don't own, this is the #1 gap to highlight and fix!
+- If I'm likely bench boosting then my starting XI doesn't matter
+- If I'm likely wildcarding then my current squad doesn't matter
+- If I'm likely free hitting then my future team or transfers don't matter
 
 STYLE
+- MAXIMUM 2000 words or 12000 characters over 250 lines. You can't exceed this output.
 - Keep it terse and practical. Use bullets and compact tables. No fluff.
 - Cite influencers inline like: (FPL Harry), (Let's Talk FPL, FPL Raptor). Never invent citations.
 - Only use the four section headers below. Do not add others.
@@ -508,7 +512,7 @@ For each influencer name:
 - Key transfers + one-line rationale (who OUT → who IN, est. cost)
 - Captain (and vice if stated) + rationale
 - Watchlist highlights (1-3)
-- Key issues discussed (their main talking points)
+- Top 3 issues discussed
 - Chip talk (if any)
 Keep this section concise; use bullets. Always cite this influencer after their opinions.
 
@@ -546,15 +550,9 @@ Start with 1-3 **clear recommended paths** (transfers, captaincy, XI) for what t
 - Show hit cost calculation.
 - If upside is marginal, recommend avoiding the hit or rolling.
 
-### Captain & Vice
-- Recommend captain and vice, with Safe vs Upside tags and citations.
-
 ### Starting XI & Bench Order
 - List recommended XI by position.
 - Show bench order (1/2/3) and highlight any 50/50 calls, with reasoning.
-
-### Chips
-- Only recommend chip use if influencers strongly advocate or if gameweek context demands it (e.g., doubles/blanks). Otherwise: “No chip recommended.” Cite any mentions.
 
 ### Future Planning (GW+1 to GW+3)
 - Suggest 2-4 priority future targets with reasoning (fixtures, form, price).
@@ -564,6 +562,7 @@ Start with 1-3 **clear recommended paths** (transfers, captaincy, XI) for what t
 --------------------------------------------------
 CRITICAL REQUIREMENTS
 - {critical_directive_line}
+- MAXIMUM 2000 words or 12000 characters over 200 lines. You can't exceed this output.
 - Always attribute influencer opinions by name.
 - Factor injuries/rotation into every rec.
 - Enforce budget and per-club limits.
