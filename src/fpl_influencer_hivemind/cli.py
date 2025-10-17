@@ -154,6 +154,16 @@ def _print_collect_summary(outcome: AggregationOutcome, path: Path) -> None:
 
 
 def _confirm(prompt: str) -> bool:
+    """Prompt for confirmation, flushing any buffered stdin first."""
+    # Flush any buffered input that may have accumulated during subprocess execution
+    import termios
+    import sys
+    try:
+        termios.tcflush(sys.stdin, termios.TCIFLUSH)
+    except (ImportError, OSError):
+        # Not a terminal or Windows - skip flush
+        pass
+
     response = input(prompt).strip().lower()
     return response in {"y", "yes"}
 

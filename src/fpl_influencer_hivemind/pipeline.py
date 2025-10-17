@@ -41,6 +41,7 @@ class SubprocessRunner:
             check=True,
             text=True,
             capture_output=True,
+            stdin=subprocess.DEVNULL,  # Prevent subprocesses from consuming stdin
         )
 
 
@@ -278,16 +279,21 @@ def _collect_fpl_data(
     ownership_path = temp_dir / "top_players.json"
     my_team_path = temp_dir / "my_team.json"
 
+    print("  ↳ Fetching current gameweek info...", flush=True)
     _run_python_script(
         runner,
         FPL_DIR / "get_current_gameweek.py",
         ["--out", str(gameweek_path)],
     )
+
+    print("  ↳ Fetching top 150 players by ownership...", flush=True)
     _run_python_script(
         runner,
         FPL_DIR / "get_top_ownership.py",
         ["--limit", "150", "--format", "json", "--out", str(ownership_path)],
     )
+
+    print(f"  ↳ Fetching your team data (entry {team_id})...", flush=True)
     _run_python_script(
         runner,
         FPL_DIR / "get_my_team.py",
@@ -304,6 +310,7 @@ def _collect_fpl_data(
     gameweek = cast("GameweekInfo", _read_json(gameweek_path))
     top_players = _read_json_list(ownership_path)
     my_team = cast("MyTeamPayload", _read_json(my_team_path))
+    print("  ✅ FPL data collected\n", flush=True)
     return gameweek, top_players, my_team
 
 
@@ -359,6 +366,9 @@ def _discover_videos(
         except VideoPickerError as exc:
             error = str(exc)
             print(f"❌ {channel_name}: {error}", flush=True)
+            if verbose:
+                import traceback
+                print(f"   Traceback: {traceback.format_exc()}", flush=True)
             discoveries.append(
                 ChannelDiscovery(channel=channel, result=None, error=error)
             )
@@ -366,6 +376,9 @@ def _discover_videos(
         except Exception as exc:  # pragma: no cover - defensive
             error = f"Video discovery failed: {exc}"
             print(f"❌ {channel_name}: {error}", flush=True)
+            if verbose:
+                import traceback
+                print(f"   Traceback: {traceback.format_exc()}", flush=True)
             discoveries.append(
                 ChannelDiscovery(channel=channel, result=None, error=error)
             )
@@ -398,6 +411,13 @@ def _discover_videos(
         }
 
         print(f"✅ {channel_name}: {video.title}", flush=True)
+
+        # Show alternatives if verbose
+        if verbose and selection.alternatives:
+            print(f"   📋 Alternatives considered:", flush=True)
+            for alt in selection.alternatives[:3]:
+                print(f"      • {alt.title[:80]}", flush=True)
+
         discoveries.append(
             ChannelDiscovery(channel=channel, result=payload, error=None)
         )
@@ -435,11 +455,16 @@ def default_transcript_prompt(discoveries: Sequence[ChannelDiscovery]) -> bool:
 
     _print_discoveries(discoveries)
 
+    successful_count = sum(1 for d in discoveries if d.result)
+    print(f"\n📥 Ready to fetch {successful_count} transcripts", flush=True)
+
     while True:
         response = input("Proceed with transcript fetching? [y/N]: ").strip().lower()
         if response in {"y", "yes"}:
+            print("✓ Starting transcript fetch...\n", flush=True)
             return True
         if response in {"", "n", "no"}:
+            print("✗ Skipping transcript fetch\n", flush=True)
             return False
         print("Please enter 'y' or 'n'.")
 
@@ -458,7 +483,8 @@ def _fetch_transcripts(
 ) -> dict[str, TranscriptEntry]:
     transcripts: dict[str, TranscriptEntry] = {}
     delay_applied = False
-    for item in discoveries:
+    discoveries_list = list(discoveries)
+    for item in discoveries_list:
         if not item.result:
             continue
         video_id = item.result["video_id"]
@@ -472,6 +498,8 @@ def _fetch_transcripts(
             "txt",
             "--out",
             str(output_path),
+            "--timeout",
+            "120",  # Increased from 60s - allows for retries and slow downloads
             "--delay",
             "5",
             "--random-delay",
@@ -484,7 +512,7 @@ def _fetch_transcripts(
         delay_applied = True
 
         channel_label = channel_name or item.channel.get("name", "Channel")
-        print(f"Fetching transcript for {channel_label} ({video_id})...")
+        print(f"Fetching transcript for {channel_label} ({video_id})...", flush=True)
 
         try:
             _run_python_script(
@@ -493,15 +521,16 @@ def _fetch_transcripts(
                 args,
             )
         except AggregationError as exc:
-            print(f"Failed to fetch transcript for {channel_label}: {exc!s}")
+            error_msg = str(exc).split("\n")[0]  # Show first line of error
+            print(f"❌ Failed to fetch transcript for {channel_label}: {error_msg}", flush=True)
             transcripts[channel_name] = {
                 "video_id": video_id,
-                "transcript": f"Transcript fetch failed: {exc!s}",
+                "transcript": f"Transcript fetch failed: {error_msg}",
             }
             continue
 
         if not output_path.exists():
-            print(f"Transcript file missing for {channel_label}; skipping.")
+            print(f"⚠️  Transcript file missing for {channel_label}; skipping.", flush=True)
             transcripts[channel_name] = {
                 "video_id": video_id,
                 "transcript": "Transcript not available",
@@ -509,7 +538,7 @@ def _fetch_transcripts(
             continue
 
         raw_text = output_path.read_text(encoding="utf-8")
-        print(f"Transcript fetched for {channel_label}.")
+        print(f"✅ Transcript fetched for {channel_label}.", flush=True)
         transcripts[channel_name] = {
             "video_id": video_id,
             "transcript": _normalize_transcript(raw_text),
@@ -534,6 +563,8 @@ def aggregate(
 ) -> AggregationOutcome:
     """Run the aggregation pipeline and return metadata about the results."""
 
+    print("🚀 Starting FPL Influencer Hivemind pipeline...", flush=True)
+
     _ensure_env_loaded()
     _ensure_scripts_present()
 
@@ -546,6 +577,7 @@ def aggregate(
     if not channels_list:
         raise AggregationError("Channel configuration did not yield any channels")
 
+    print(f"📊 Fetching FPL data for team {team_id}...", flush=True)
     timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     with TemporaryDirectory(prefix="hivemind_", dir=str(artifacts_dir)) as temp_dir_str:
         temp_dir = Path(temp_dir_str)
@@ -561,6 +593,7 @@ def aggregate(
 
         if requested_gameweek_id == source_gameweek_id:
             active_gameweek_id = source_gameweek_id
+            print(f"🎬 Discovering videos for GW{active_gameweek_id} from {len(channels_list)} channels...\n", flush=True)
             discoveries = _discover_videos(
                 channels_list,
                 gameweek_id=active_gameweek_id,
@@ -571,6 +604,7 @@ def aggregate(
             successful_discoveries = [item for item in discoveries if item.result]
             fallback_used = False
         else:
+            print(f"🎬 Discovering videos for GW{requested_gameweek_id} from {len(channels_list)} channels...\n", flush=True)
             discoveries = _discover_videos(
                 channels_list,
                 gameweek_id=requested_gameweek_id,
@@ -584,10 +618,11 @@ def aggregate(
                 fallback_used = False
             else:
                 print(
-                    "No matching videos found for requested gameweek "
-                    f"{requested_gameweek_id}; falling back to current week {source_gameweek_id}."
+                    f"⚠️  No matching videos found for requested gameweek "
+                    f"{requested_gameweek_id}; falling back to current week {source_gameweek_id}.\n", flush=True
                 )
                 active_gameweek_id = source_gameweek_id
+                print(f"🎬 Discovering videos for GW{active_gameweek_id} from {len(channels_list)} channels...\n", flush=True)
                 discoveries = _discover_videos(
                     channels_list,
                     gameweek_id=active_gameweek_id,
@@ -608,6 +643,7 @@ def aggregate(
                 proceed = prompt_cb(discoveries)
 
             if proceed:
+                print(f"\n📥 Starting transcript fetch for {len(successful_discoveries)} videos...", flush=True)
                 transcripts = _fetch_transcripts(
                     runner,
                     temp_dir,
@@ -615,6 +651,7 @@ def aggregate(
                     delay_seconds=transcript_delay,
                     verbose=verbose,
                 )
+                print(f"✅ Transcript fetch complete. Retrieved {len(transcripts)} transcripts.", flush=True)
 
         gameweek_entry = {
             "current": active_gameweek_id,

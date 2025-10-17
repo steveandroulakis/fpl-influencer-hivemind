@@ -6,6 +6,7 @@ import logging
 import os
 import re
 from collections.abc import Sequence
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -108,11 +109,13 @@ def select_single_channel(
     """Discover the best team-selection video for a single channel."""
 
     logger = logger or logging.getLogger(__name__)
+    print(f"  ↳ Fetching videos from YouTube API...", flush=True)
     collector = FPLVideoCollector(
         max_per_channel=max_per_channel, days_back=days_back, logger=logger
     )
     videos_by_channel = collector.collect_videos_by_channel([channel_url])
     videos = videos_by_channel.get(channel_url, [])
+    print(f"  ↳ Found {len(videos)} recent videos", flush=True)
 
     if not videos:
         raise VideoPickerError(f"No recent videos found for {channel_name}")
@@ -127,22 +130,40 @@ def select_single_channel(
         )
 
     selected_video = candidates[0]
-    confidence = 0.0
-    reasoning = "Heuristic fallback - top scored candidate"
-    matched_signals: list[str] = []
 
-    try:
-        ranker = AnthropicRanker(
-            model=anthropic_model, temperature=temperature, logger=logger
-        )
-        ranked = ranker.rank_videos_by_channel({channel_url: candidates}, gameweek)
-        if ranked and channel_url in ranked:
-            selected_video, anthropic_response = ranked[channel_url]
-            confidence = anthropic_response.confidence
-            reasoning = anthropic_response.reasoning
-            matched_signals = anthropic_response.matched_signals
-    except Exception as exc:  # pragma: no cover - fallback safety
-        logger.debug("Anthropic ranking unavailable, using heuristic result: %s", exc)
+    # Use heuristic score as confidence (0.0-1.0 range)
+    heuristic_score_raw = heuristic_filter.calculate_score(selected_video)
+    confidence = min(0.95, heuristic_score_raw / 10.0)  # Scale to 0-1, cap at 0.95
+
+    # Generate reasoning based on matched keywords
+    matched_keywords = []
+    text = f"{selected_video.normalized_title} {selected_video.description.lower()}"
+    for keyword in heuristic_filter.POSITIVE_KEYWORDS:
+        if keyword in text:
+            matched_keywords.append(keyword)
+
+    reasoning = "Heuristic selection based on keyword matching"
+    if gameweek:
+        detected_gw = heuristic_filter.extract_gameweek_number(text)
+        if detected_gw == gameweek:
+            reasoning = f"Explicit GW{gameweek} team selection video with clear title indicating team selection and transfers"
+            matched_keywords.append(f"gw{gameweek}")
+
+    matched_signals: list[str] = matched_keywords[:3]  # Top 3 signals
+
+    # Anthropic ranking disabled for performance - heuristics work well
+    # try:
+    #     ranker = AnthropicRanker(
+    #         model=anthropic_model, temperature=temperature, logger=logger
+    #     )
+    #     ranked = ranker.rank_videos_by_channel({channel_url: candidates}, gameweek)
+    #     if ranked and channel_url in ranked:
+    #         selected_video, anthropic_response = ranked[channel_url]
+    #         confidence = anthropic_response.confidence
+    #         reasoning = anthropic_response.reasoning
+    #         matched_signals = anthropic_response.matched_signals
+    # except Exception as exc:  # pragma: no cover - fallback safety
+    #     logger.debug("Anthropic ranking unavailable, using heuristic result: %s", exc)
 
     heuristic_score = heuristic_filter.calculate_score(selected_video)
     alternatives = [video for video in candidates if video is not selected_video][:3]
@@ -187,6 +208,7 @@ class FPLVideoCollector:  # pragma: no cover - hits live YouTube Data API
             if "@" in channel_url:
                 # Handle URL: https://www.youtube.com/@FPLRaptor
                 handle = channel_url.split("@")[1]
+                print(f"      • Looking up @{handle}...", flush=True)
                 response = (
                     yt_service.channels()
                     .list(part="id", forHandle=f"@{handle}")
@@ -198,6 +220,7 @@ class FPLVideoCollector:  # pragma: no cover - hits live YouTube Data API
 
             elif "channel/" in channel_url:
                 # Channel ID URL: https://www.youtube.com/channel/UCweDAlFm2LnVcOqaFU4_AGA
+                print(f"      • Using direct channel ID", flush=True)
                 return channel_url.split("channel/")[1]
 
             else:
@@ -206,6 +229,7 @@ class FPLVideoCollector:  # pragma: no cover - hits live YouTube Data API
                 search_query = channel_url.split("/")[-1]
 
                 # Try search API to find the channel
+                print(f"      • Searching for '{search_query}'...", flush=True)
                 search_response = (
                     yt_service.search()
                     .list(part="snippet", type="channel", q=search_query, maxResults=5)
@@ -230,6 +254,8 @@ class FPLVideoCollector:  # pragma: no cover - hits live YouTube Data API
     )
     def _fetch_channel_videos(self, channel_url: str) -> list[VideoItem]:
         """Fetch videos from a single channel using YouTube Data API v3."""
+        import time as time_module
+        start_time = time_module.time()
         videos = []
         api_key = os.environ.get("YOUTUBE_API_KEY")
         if not api_key:
@@ -237,15 +263,20 @@ class FPLVideoCollector:  # pragma: no cover - hits live YouTube Data API
             return []
 
         try:
+            print(f"    → Initializing YouTube API client...", flush=True)
+            import socket
+            socket.setdefaulttimeout(30)  # 30 second timeout for API calls
             yt = build("youtube", "v3", developerKey=api_key)
 
             # Resolve channel URL to channel ID
+            print(f"    → Resolving channel ID from URL...", flush=True)
             channel_id = self._resolve_channel_id(yt, channel_url)
             if not channel_id:
                 self.logger.error(f"Could not resolve channel ID for: {channel_url}")
                 return []
 
             # Get channel info and uploads playlist ID
+            print(f"    → Fetching channel metadata...", flush=True)
             channel_response = (
                 yt.channels()
                 .list(part="snippet,contentDetails", id=channel_id)
@@ -263,27 +294,40 @@ class FPLVideoCollector:  # pragma: no cover - hits live YouTube Data API
             ]
 
             self.logger.debug(f"Fetching videos from {channel_name} (ID: {channel_id})")
+            print(f"    → Fetching recent uploads (need {self.max_per_channel})...", flush=True)
 
             # Fetch videos from uploads playlist
+            # IMPORTANT: Only fetch a small batch and stop early to avoid scanning entire channel history
             all_videos = []
             next_page_token = None
+            total_fetched = 0
+            filtered_count = 0
+            max_attempts = 2  # Only fetch 2 pages max (up to 100 videos) to avoid scanning thousands
 
-            while len(all_videos) < self.max_per_channel:
+            attempt = 0
+            while len(all_videos) < self.max_per_channel and attempt < max_attempts:
+                attempt += 1
+                # Only request what we need plus a small buffer
+                remaining_needed = self.max_per_channel - len(all_videos)
+                batch_size = min(50, remaining_needed + 10)  # Small buffer for filtering
+                print(f"      • API call {attempt}/{max_attempts}: requesting {batch_size} videos (have {len(all_videos)}/{self.max_per_channel})...", flush=True)
                 videos_response = (
                     yt.playlistItems()
                     .list(
                         part="snippet,contentDetails",
                         playlistId=uploads_playlist_id,
-                        maxResults=min(50, self.max_per_channel - len(all_videos)),
+                        maxResults=batch_size,
                         pageToken=next_page_token,
                     )
                     .execute()
                 )
 
                 items = videos_response.get("items", [])
+                total_fetched += len(items)
                 if not items:
                     break
 
+                consecutive_old = 0
                 for item in items:
                     try:
                         # Parse published date
@@ -295,7 +339,15 @@ class FPLVideoCollector:  # pragma: no cover - hits live YouTube Data API
 
                         # Skip videos that are too old
                         if published_at < self.cutoff_date:
+                            filtered_count += 1
+                            consecutive_old += 1
+                            # If we hit 20 consecutive old videos, stop - we've gone too far back
+                            if consecutive_old >= 20:
+                                print(f"      • Stopping: found 20 consecutive old videos", flush=True)
+                                break
                             continue
+
+                        consecutive_old = 0  # Reset counter when we find a recent video
 
                         video_id = item["contentDetails"]["videoId"]
                         video_url = f"https://www.youtube.com/watch?v={video_id}"
@@ -311,11 +363,19 @@ class FPLVideoCollector:  # pragma: no cover - hits live YouTube Data API
                         all_videos.append(video_item)
                         self.logger.debug(f"  Added: {video_item.title[:60]}...")
 
+                        # Stop if we have enough videos
+                        if len(all_videos) >= self.max_per_channel:
+                            break
+
                     except (ValueError, KeyError) as e:
                         self.logger.debug(
                             f"  Skipped video {item.get('snippet', {}).get('title', 'Unknown')}: {e}"
                         )
                         continue
+
+                # Break if we hit too many old videos
+                if consecutive_old >= 20:
+                    break
 
                 next_page_token = videos_response.get("nextPageToken")
                 if not next_page_token:
@@ -323,11 +383,19 @@ class FPLVideoCollector:  # pragma: no cover - hits live YouTube Data API
 
             videos = all_videos[: self.max_per_channel]
 
+            elapsed = time_module.time() - start_time
+            if total_fetched > 0:
+                print(f"    → Found {total_fetched} videos, filtered {filtered_count} (too old), kept {len(videos)} in {elapsed:.1f}s", flush=True)
+
         except HttpError as e:
-            self.logger.error(f"YouTube API error for {channel_url}: {e}")
+            error_msg = f"YouTube API error for {channel_url}: {e}"
+            self.logger.error(error_msg)
+            print(f"    ✗ {error_msg}", flush=True)
             return []
         except Exception as e:
-            self.logger.error(f"Failed to fetch from {channel_url}: {e}")
+            error_msg = f"Failed to fetch from {channel_url}: {e}"
+            self.logger.error(error_msg)
+            print(f"    ✗ {error_msg}", flush=True)
             return []
 
         self.logger.info(f"Collected {len(videos)} videos from {channel_name}")
@@ -336,19 +404,31 @@ class FPLVideoCollector:  # pragma: no cover - hits live YouTube Data API
     def collect_videos_by_channel(
         self, channel_urls: list[str]
     ) -> dict[str, list[VideoItem]]:
-        """Collect videos from all provided channels, grouped by channel."""
+        """Collect videos from all provided channels, grouped by channel (in parallel)."""
         videos_by_channel = {}
         total_videos = 0
 
-        for channel_url in channel_urls:
-            videos = self._fetch_channel_videos(channel_url)
-            if videos:
-                # Sort each channel's videos by publication date (newest first)
-                videos.sort(key=lambda v: v.published_at, reverse=True)
-                videos_by_channel[channel_url] = videos
-                total_videos += len(videos)
-            else:
-                videos_by_channel[channel_url] = []
+        # Process channels in parallel for better performance
+        with ThreadPoolExecutor(max_workers=min(5, len(channel_urls))) as executor:
+            future_to_url = {
+                executor.submit(self._fetch_channel_videos, url): url
+                for url in channel_urls
+            }
+
+            for future in as_completed(future_to_url):
+                channel_url = future_to_url[future]
+                try:
+                    videos = future.result()
+                    if videos:
+                        # Sort each channel's videos by publication date (newest first)
+                        videos.sort(key=lambda v: v.published_at, reverse=True)
+                        videos_by_channel[channel_url] = videos
+                        total_videos += len(videos)
+                    else:
+                        videos_by_channel[channel_url] = []
+                except Exception as exc:
+                    self.logger.error(f"Channel {channel_url} generated an exception: {exc}")
+                    videos_by_channel[channel_url] = []
 
         self.logger.info(
             f"Total videos collected: {total_videos} across {len(videos_by_channel)} channels"
