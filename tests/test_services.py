@@ -6,6 +6,9 @@ from typing import TYPE_CHECKING, Any
 
 from fpl_influencer_hivemind.services import fpl as fpl_service
 from fpl_influencer_hivemind.services import transcripts as transcript_service
+from fpl_influencer_hivemind.transcripts.youtube_transcript_io_fetcher import (
+    YouTubeTranscriptIOError,
+)
 
 if TYPE_CHECKING:
     from pytest import MonkeyPatch
@@ -77,3 +80,74 @@ def test_transcripts_fetch_transcript_text(monkeypatch: MonkeyPatch) -> None:
 
     text = transcript_service.fetch_transcript_text("abc123", verbose=False)
     assert text == "Line one\nLine two"
+
+
+def test_transcripts_prefers_youtube_transcript_io(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setenv("YOUTUBE_TRANSCRIPT_IO_KEY", "secret-key")
+    monkeypatch.setattr(transcript_service, "_YOUTUBE_IO_CACHE", None)
+
+    class DummyYouTubeFetcher:
+        def fetch_transcript(self, video_id: str, languages, translate_to: str):
+            assert video_id == "abc123"
+            assert next(iter(languages)) == "en"
+            assert translate_to == "en"
+            return (
+                [{"start": "0", "duration": "1.0", "text": "Primary"}],
+                "en",
+                False,
+            )
+
+    def fake_make_fetcher(api_key: str, *, timeout: float):
+        assert api_key == "secret-key"
+        assert timeout == 300.0
+        return DummyYouTubeFetcher()
+
+    def fail_legacy_loader():  # pragma: no cover - defensive
+        raise AssertionError("Legacy fetcher should not run when YouTube IO succeeds")
+
+    monkeypatch.setattr(transcript_service, "_make_youtube_fetcher", fake_make_fetcher)
+    monkeypatch.setattr(transcript_service, "_load_fetcher", fail_legacy_loader)
+
+    transcript = transcript_service.fetch_transcript("abc123", verbose=False)
+    assert transcript["text"] == "Primary"
+    assert transcript["segments"][0]["start"] == 0.0
+    assert transcript["translated"] is False
+
+
+def test_transcripts_falls_back_when_youtube_fails(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setenv("YOUTUBE_TRANSCRIPT_IO_KEY", "secret-key")
+    monkeypatch.setattr(transcript_service, "_YOUTUBE_IO_CACHE", None)
+
+    class FailingFetcher:
+        def fetch_transcript(self, *_args, **_kwargs):
+            raise YouTubeTranscriptIOError("boom")
+
+    def fake_make_fetcher(*_args, **_kwargs):
+        return FailingFetcher()
+
+    class LegacyFetcher:
+        def fetch_transcript(self, video_id: str, _languages, _translate_to):
+            assert video_id == "abc123"
+            return (
+                [{"start": 0.0, "duration": 1.0, "text": "Fallback"}],
+                "en",
+                False,
+            )
+
+    def legacy_factory(**_kwargs):
+        return LegacyFetcher()
+
+    def legacy_formatter(data, *, include_timestamps: bool):
+        assert include_timestamps is False
+        return "\n".join(item["text"] for item in data)
+
+    monkeypatch.setattr(transcript_service, "_make_youtube_fetcher", fake_make_fetcher)
+    monkeypatch.setattr(
+        transcript_service,
+        "_load_fetcher",
+        lambda: (legacy_factory, legacy_formatter),
+    )
+
+    transcript = transcript_service.fetch_transcript("abc123", verbose=False)
+    assert transcript["text"] == "Fallback"
+    assert transcript["segments"][0]["text"] == "Fallback"

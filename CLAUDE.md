@@ -9,7 +9,7 @@
 ## Core Flow
 1. **FPL data** (`fpl/` scripts) – fetched in-process, no manual steps.
 2. **YouTube discovery** (`src/fpl_influencer_hivemind/services/discovery.py`) – pluggable strategies that wrap the heuristic `video_picker` helper.
-3. **Transcript fetch** (`src/fpl_influencer_hivemind/services/transcripts.py`) – yields newline-preserving text plus segment timing metadata (yt-dlp/EasySubAPI under the hood).
+3. **Transcript fetch** (`src/fpl_influencer_hivemind/services/transcripts.py`) – yields newline-preserving text plus segment timing metadata (YouTube Transcript IO by default, yt-dlp/EasySubAPI fallback).
 4. **Analysis** (`fpl_intelligence_analyzer.py`) – optional, requires `ANTHROPIC_API_KEY`.
 
 Artifacts are written under `var/hivemind/` with timestamped filenames.
@@ -17,13 +17,16 @@ Artifacts are written under `var/hivemind/` with timestamped filenames.
 ## Required Environment
 Use `.env` (auto sourced) based on `.env.example`:
 - `YOUTUBE_API_KEY` – YouTube Data API v3 key (needed for video discovery).
+- `YOUTUBE_TRANSCRIPT_IO_KEY` – API token for youtube-transcript.io (primary transcript provider).
 - `ANTHROPIC_API_KEY` – Claude API key (needed for analyzer, optional otherwise).
 - Optional: `RAPIDAPI_EASYSUB_API_KEY`, `YOUTUBE_COOKIES_PATH` for transcript fallbacks.
+- Optional: `TRANSCRIPT_FETCHER_PREFERENCE` (set to `existing` to bypass youtube-transcript.io or `auto` for default).
 - `PATH` additions for local `uv`/scripts are appended automatically.
 
 ### Credential Tips
 - **YouTube API Key**: create a Google Cloud project → enable YouTube Data API v3 → generate an API key (10k default quota is sufficient).
-- **RapidAPI EasySubAPI**: sign up at RapidAPI → subscribe to EasySubAPI → copy the key for reliable transcripts.
+- **YouTube Transcript IO**: sign up at youtube-transcript.io → generate an API key → store as `YOUTUBE_TRANSCRIPT_IO_KEY`.
+- **RapidAPI EasySubAPI**: sign up at RapidAPI → subscribe to EasySubAPI → copy the key to keep the legacy fallback available.
 - **YouTube cookies**: install “Get cookies.txt LOCALLY”, export cookies while logged into YouTube, save to `~/youtube_cookies.txt`, and set `YOUTUBE_COOKIES_PATH`.
 
 ## Everyday Commands

@@ -11,15 +11,18 @@ A comprehensive Fantasy Premier League (FPL) decision support system that aggreg
    ```bash
    export YOUTUBE_API_KEY="your-youtube-data-api-v3-key"     # Required for video discovery
    export ANTHROPIC_API_KEY="your-anthropic-api-key"        # Required for LLM analysis
+   export YOUTUBE_TRANSCRIPT_IO_KEY="your-youtube-transcript-io-key"  # Primary transcript provider
 
-   # Optional: Alternative transcript fetching (bypasses IP blocking)
-   export RAPIDAPI_EASYSUB_API_KEY="your-rapidapi-key"      # Optional for EasySubAPI transcript access
-   export YOUTUBE_COOKIES_PATH="$HOME/youtube_cookies.txt"   # Optional for yt-dlp transcript access
+   # Optional: fine-tune transcript behaviour
+   export TRANSCRIPT_FETCHER_PREFERENCE="auto"               # Use "existing" to skip youtube-transcript.io
+   export RAPIDAPI_EASYSUB_API_KEY="your-rapidapi-key"       # Optional fallback (EasySubAPI)
+   export YOUTUBE_COOKIES_PATH="$HOME/youtube_cookies.txt"    # Optional fallback (yt-dlp + cookies)
    ```
 
 ### Getting API Keys
 - **YouTube API Key**: Create a Google Cloud project, enable the YouTube Data API v3, and generate an API key from the **Credentials** section. The default daily quota (10,000 units) is plenty for routine runs.
-- **RapidAPI EasySubAPI Key**: Sign up at [RapidAPI](https://rapidapi.com/), subscribe to the [EasySubAPI](https://rapidapi.com/belchiorarkad-FqvHs2EDOtP/api/easysubapi) service, and copy the provided key for transcript fetching.
+- **YouTube Transcript IO Key**: Sign up at [youtube-transcript.io](https://www.youtube-transcript.io/), generate an API token, and set `YOUTUBE_TRANSCRIPT_IO_KEY`. This is now the default transcript provider (≈97× faster than the legacy flow).
+- **RapidAPI EasySubAPI Key**: Optional fallback. Sign up at [RapidAPI](https://rapidapi.com/), subscribe to the [EasySubAPI](https://rapidapi.com/belchiorarkad-FqvHs2EDOtP/api/easysubapi) service, and copy the provided key if you want the legacy provider available.
 
 ### Optional: YouTube Cookies for yt-dlp
 1. Install the Chrome extension [“Get cookies.txt LOCALLY”](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc).
@@ -50,11 +53,11 @@ Artifacts are timestamped (e.g. `var/hivemind/gw05_team1178124_20250920T104530Z_
 ## 🧩 Architecture Essentials
 - `src/fpl_influencer_hivemind/pipeline.py` – orchestration, CLI UX, transcript prompts, and logging callbacks.
 - `src/fpl_influencer_hivemind/services/discovery.py` – pluggable channel discovery strategies (heuristics today, easy to extend).
-- `src/fpl_influencer_hivemind/services/transcripts.py` – transcript gateway returning text plus per-segment timing metadata.
+- `src/fpl_influencer_hivemind/services/transcripts.py` – transcript gateway (YouTube Transcript IO by default, EasySubAPI/yt-dlp as fallback) returning text plus per-segment timing metadata.
 - `src/fpl_influencer_hivemind/types.py` – shared TypedDict/dataclass models used across the pipeline, discovery, and CLI layers.
 - `src/fpl_influencer_hivemind/youtube/video_picker.py` – reusable video discovery logic (also powers `youtube-titles/fpl_video_picker.py`).
 - `fpl/` – standalone scripts for FPL API data.
-- `youtube-transcript/` – transcript downloader invoked by the pipeline.
+- `youtube-transcript/` – legacy transcript downloader retained for fallback and CLI experimentation.
 
 All discovery now happens inside the main process, so the CLI remains responsive—no more silent subprocess wait.
 

@@ -5,15 +5,21 @@ from __future__ import annotations
 import importlib
 import logging
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterable
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from ..types import TranscriptEntry, TranscriptSegment
 
+from ..transcripts.youtube_transcript_io_fetcher import (
+    YouTubeTranscriptIOError,
+    YouTubeTranscriptIOFetcher,
+)
+
 _FETCHER_MODULE = "fpl_influencer_hivemind.transcripts.fetcher"
 _FETCHER_CACHE: tuple[object, object] | None = None
+_YOUTUBE_IO_CACHE: tuple[str, float, YouTubeTranscriptIOFetcher] | None = None
 
 
 class TranscriptServiceError(RuntimeError):
@@ -49,6 +55,30 @@ def _coerce_segments(raw_segments: list[dict]) -> list[TranscriptSegment]:
     return segments
 
 
+def _segments_to_text(segments: Iterable[TranscriptSegment]) -> str:
+    return "\n".join(segment["text"] for segment in segments if segment["text"])
+
+
+def _make_youtube_fetcher(api_key: str, *, timeout: float) -> YouTubeTranscriptIOFetcher:
+    global _YOUTUBE_IO_CACHE
+    if _YOUTUBE_IO_CACHE and _YOUTUBE_IO_CACHE[0] == api_key:
+        cached_timeout = _YOUTUBE_IO_CACHE[1]
+        fetcher = _YOUTUBE_IO_CACHE[2]
+        if abs(cached_timeout - timeout) < 1e-6:
+            return fetcher
+    fetcher = YouTubeTranscriptIOFetcher(api_key, timeout=timeout)
+    _YOUTUBE_IO_CACHE = (api_key, timeout, fetcher)
+    return fetcher
+
+
+def _should_use_youtube_io(api_key: str | None, preference: str) -> bool:
+    if preference in {"existing", "legacy"}:
+        return False
+    if preference in {"youtube", "youtube-transcript-io", "youtube_transcript_io"}:
+        return bool(api_key)
+    return bool(api_key)
+
+
 def fetch_transcript(
     video_id: str,
     *,
@@ -76,6 +106,64 @@ def fetch_transcript(
         for handler in logger.handlers:
             handler.setLevel(log_level)
 
+    preference_raw = os.environ.get("TRANSCRIPT_FETCHER_PREFERENCE", "auto")
+    preference = preference_raw.strip().lower()
+    if preference not in {
+        "auto",
+        "existing",
+        "legacy",
+        "youtube",
+        "youtube-transcript-io",
+        "youtube_transcript_io",
+        "",
+    }:
+        logger.warning(
+            "Unknown TRANSCRIPT_FETCHER_PREFERENCE '%s'; falling back to auto", preference_raw
+        )
+        preference = "auto"
+
+    yt_api_key = os.environ.get("YOUTUBE_TRANSCRIPT_IO_KEY")
+    errors: list[str] = []
+
+    if _should_use_youtube_io(yt_api_key, preference):
+        try:
+            if not yt_api_key:
+                raise YouTubeTranscriptIOError(
+                    "YOUTUBE_TRANSCRIPT_IO_KEY is not configured"
+                )
+            logger.info("Fetching transcript via YouTube Transcript IO")
+            yt_fetcher = _make_youtube_fetcher(yt_api_key, timeout=timeout)
+            transcript_data, _language, _translated = yt_fetcher.fetch_transcript(
+                video_id, language_prefs, translate_to
+            )
+            segments = _coerce_segments(transcript_data)
+            if not segments:
+                raise YouTubeTranscriptIOError("No segments returned from YouTube Transcript IO")
+            formatted_text = _segments_to_text(segments)
+            return {
+                "video_id": video_id,
+                "text": formatted_text,
+                "language": _language,
+                "translated": _translated,
+                "segments": segments,
+            }
+        except YouTubeTranscriptIOError as exc:
+            message = f"YouTube Transcript IO failed: {exc}"
+            logger.warning("%s; falling back to legacy fetcher", message)
+            errors.append(message)
+        except Exception as exc:  # pragma: no cover - defensive catch for unexpected issues
+            message = f"Unexpected YouTube Transcript IO error: {exc}"
+            logger.warning("%s; falling back to legacy fetcher", message)
+            errors.append(message)
+    elif preference in {
+        "youtube",
+        "youtube-transcript-io",
+        "youtube_transcript_io",
+    } and not yt_api_key:
+        logger.warning(
+            "YouTube Transcript IO preference is set but YOUTUBE_TRANSCRIPT_IO_KEY is missing"
+        )
+
     try:
         factory, formatter = _load_fetcher()
         fetcher = factory(
@@ -93,7 +181,12 @@ def fetch_transcript(
             video_id, language_prefs, translate_to
         )
     except Exception as exc:  # pragma: no cover - relies on networked services
-        raise TranscriptServiceError(f"Failed to fetch transcript for {video_id}: {exc}") from exc
+        context = "; ".join(errors)
+        if context:
+            message = f"Failed to fetch transcript for {video_id}: {exc} (primary: {context})"
+        else:
+            message = f"Failed to fetch transcript for {video_id}: {exc}"
+        raise TranscriptServiceError(message) from exc
 
     segments = _coerce_segments(transcript_data)
     formatted_text = formatter(transcript_data, include_timestamps=False)

@@ -184,11 +184,16 @@ Create a concise summary including:
 
 Format it as clear prose, not JSON."""
 
-            response = self._make_anthropic_call(
+            response, stop_reason = self._make_anthropic_call(
                 model=self.sonnet_model,
                 prompt=prompt,
                 system="You are an FPL analyst. Format team data clearly and concisely.",
             )
+
+            if stop_reason and stop_reason not in {"end_turn", "stop_sequence"}:
+                self.logger.warning(
+                    "Anthropic call for team formatting ended with stop_reason='%s'", stop_reason
+                )
 
             return response.strip()
 
@@ -202,8 +207,8 @@ Format it as clear prose, not JSON."""
         wait=wait_exponential(multiplier=1, min=1, max=10),
     )
     def _make_anthropic_call(
-        self, model: str, prompt: str, system: str, max_tokens: int = 4000
-    ) -> str:
+        self, model: str, prompt: str, system: str, max_tokens: int = 3500
+    ) -> tuple[str, str]:
         """Make a call to the Anthropic API with retry logic."""
         try:
             self.logger.debug(f"Making API call to {model}")
@@ -216,11 +221,31 @@ Format it as clear prose, not JSON."""
                 messages=[{"role": "user", "content": prompt}],
             )
 
-            response_text = message.content[0].text.strip()
+            parts: list[str] = []
+            for block in message.content:
+                text = getattr(block, "text", None)
+                if text:
+                    parts.append(text)
+            response_text = "".join(parts).strip()
+
+            stop_reason = getattr(message, "stop_reason", "") or ""
+            usage = getattr(message, "usage", None)
+            output_tokens = getattr(usage, "output_tokens", None) if usage else None
             self.logger.debug(
-                f"API call successful, response length: {len(response_text)}"
+                "API call successful (stop_reason=%s, output_tokens=%s, response_length=%s)",
+                stop_reason,
+                output_tokens,
+                len(response_text),
             )
-            return response_text
+
+            if stop_reason and stop_reason not in {"end_turn", "stop_sequence"}:
+                self.logger.warning(
+                    "Anthropic message returned stop_reason='%s' (response chars=%s)",
+                    stop_reason,
+                    len(response_text),
+                )
+
+            return response_text, stop_reason
 
         except Exception as e:
             self.logger.error(f"Anthropic API error: {e}")
@@ -311,8 +336,8 @@ Return valid JSON only. For short transcripts, extract whatever information is a
             # Save prompt if debug mode is on
             self.save_debug_content(f"{channel_name}_prompt.txt", prompt)
 
-            response = self._make_anthropic_call(
-                model=self.sonnet_model, prompt=prompt, system=system, max_tokens=2000
+            response, stop_reason = self._make_anthropic_call(
+                model=self.sonnet_model, prompt=prompt, system=system, max_tokens=3500
             )
 
             # Save response if debug mode is on
@@ -351,7 +376,11 @@ Return valid JSON only. For short transcripts, extract whatever information is a
 
             except json.JSONDecodeError as e:
                 self.logger.error(
-                    f"JSON parsing failed for {channel_name}: {e}\nResponse: {response[:500]}..."
+                    "JSON parsing failed for %s: %s (stop_reason=%s)\nResponse: %s...",
+                    channel_name,
+                    e,
+                    stop_reason or "unknown",
+                    response[:500],
                 )
                 # Try to create a minimal analysis with defaults
                 try:
@@ -578,9 +607,15 @@ specific, well-reasoned, and tailored to the user's current team situation."""
             # Save final prompt if debug mode is on
             self.save_debug_content("final_analysis_prompt.txt", prompt)
 
-            response = self._make_anthropic_call(
+            response, stop_reason = self._make_anthropic_call(
                 model=self.opus_model, prompt=prompt, system=system, max_tokens=6000
             )
+
+            if stop_reason and stop_reason not in {"end_turn", "stop_sequence"}:
+                self.logger.warning(
+                    "Anthropic comparative analysis ended with stop_reason='%s'",
+                    stop_reason,
+                )
 
             # Save final response if debug mode is on
             self.save_debug_content("final_analysis_response.md", response)
