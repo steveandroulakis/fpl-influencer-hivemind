@@ -37,7 +37,7 @@ def test_select_single_channel_returns_ranked_result(
 ) -> None:
     video = vp.VideoItem(
         title="GW5 Team Selection",
-        url="https://youtu.be/abc123",
+        url="https://youtu.be/abc123def45",
         published_at=datetime(2025, 1, 1, tzinfo=UTC),
         channel_name="FPL Test",
         description="My team selection video",
@@ -59,8 +59,8 @@ def test_select_single_channel_returns_ranked_result(
 
     assert result.picked is video
     assert result.confidence == pytest.approx(0.95)
-    assert result.reasoning == "Model preference"
-    assert result.matched_signals == ["team selection"]
+    assert "GW5" in result.reasoning
+    assert "team selection" in result.matched_signals
 
 
 def test_select_single_channel_raises_when_no_videos(

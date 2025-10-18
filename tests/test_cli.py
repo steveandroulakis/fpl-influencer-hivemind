@@ -8,6 +8,7 @@ from pathlib import Path
 
 from fpl_influencer_hivemind import cli
 from fpl_influencer_hivemind.pipeline import AggregationError, AggregationOutcome
+from fpl_influencer_hivemind.types import ChannelDiscovery
 
 
 def _make_outcome(tmp_path: Path) -> AggregationOutcome:
@@ -93,11 +94,11 @@ def test_collect_handles_aggregation_error(monkeypatch) -> None:
 
 
 def test_run_analyzer_handles_failure(monkeypatch, tmp_path: Path) -> None:
-    def raise_error(_self, args, *, cwd=None):  # type: ignore[no-redef]
-        _ = cwd
+    def raise_error(args, *, check, text, cwd=None):  # type: ignore[no-redef]
+        _ = (check, text, cwd)
         raise subprocess.CalledProcessError(returncode=1, cmd=args, stderr="fail")
 
-    monkeypatch.setattr(cli.SubprocessRunner, "run", raise_error, raising=False)
+    monkeypatch.setattr(cli.subprocess, "run", raise_error)
     status = cli._run_analyzer(
         input_path=Path(tmp_path) / "in.json",
         output_path=Path(tmp_path) / "out.md",
@@ -112,3 +113,18 @@ def test_confirm(monkeypatch) -> None:
     assert cli._confirm("?") is True
     monkeypatch.setattr("builtins.input", lambda _: "")
     assert cli._confirm("?") is False
+
+
+def test_default_transcript_prompt(monkeypatch) -> None:
+    discoveries = [
+        ChannelDiscovery(
+            channel={"name": "FPL Test", "url": "https://example.com"},
+            result={"channel_name": "FPL Test", "video_id": "abc", "title": "Title"},
+        )
+    ]
+
+    monkeypatch.setattr("builtins.input", lambda _: "y")
+    assert cli.default_transcript_prompt(discoveries) is True
+
+    monkeypatch.setattr("builtins.input", lambda _: "n")
+    assert cli.default_transcript_prompt(discoveries) is False

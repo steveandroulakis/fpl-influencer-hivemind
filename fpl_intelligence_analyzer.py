@@ -483,12 +483,12 @@ DEFINITIONS
 
 DATA YOU CAN USE (may be partially provided)
 - influencers[]: [channel name, formation_strategy?, key_transfers?, captain?, vice?, watchlist[], key_issues_discussed[], chip_talk?, starting_xi?, bench?, notable_rationale?]
-- my_team: [squad[15] with positions/teams/prices/sell_prices, starting_xi?, bench_order?, captain?, vice?, itb, free_transfers (IMPORTANT: consider this number (and the number of hits beyond that number) when making transfer recommendations), planned_hits?, team_value, chips_available, risk_tolerance?]
+- my_team: [squad[15] with positions/teams/prices/sell_prices, IGNORE CURRENT STARTING XI ASSUMING I WILL CHANGE IT BY GW START, free_transfers (IMPORTANT: consider this number (and the number of hits beyond that number) when making transfer recommendations), planned_hits?, team_value, chips_available, risk_tolerance?]
 - context (optional): [gw, deadline_utc, fixture_difficulty, minutes/injury flags, projections, blank/double indicators, price_change_risk]
 
 FPL VALIDATION RULES FOR ALL RECOMMENDATIONS
 - Obey budget (use sell_prices if provided; otherwise use current prices and label as estimate).
-- Max 3 players per real club.
+- Max 3 players per real club. E.g. can't recommend transferring in more than 3 players.
 - Legal starting XI formation (GK x1, DEF 3-5, MID 2-5, FWD 1-3; 11 players total).
 - Always provide bench order (1/2/3) and GK decision.
 - Show remaining ITB after any proposed moves and the hit cost if applicable.
@@ -640,7 +640,16 @@ specific, well-reasoned, and tailored to the user's current team situation."""
                 channel_name = video_data.get("channel_name")
                 if channel_name and channel_name in transcripts:
                     transcript_data = transcripts[channel_name]
-                    transcript = transcript_data.get("transcript", "")
+                    transcript = transcript_data.get("text") or transcript_data.get(
+                        "transcript", ""
+                    )
+                    if not transcript and transcript_data.get("segments"):
+                        # Join segment text as a last resort to keep backwards compatibility.
+                        transcript = "\n".join(
+                            segment.get("text", "")
+                            for segment in transcript_data["segments"]
+                            if segment.get("text")
+                        )
                     analysis = self.analyze_channel(
                         video_data, condensed_players, transcript, gameweek
                     )

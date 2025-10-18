@@ -7,17 +7,22 @@ import json
 import subprocess
 import sys
 from collections.abc import Sequence
+from contextlib import suppress
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from .pipeline import (
     PROJECT_ROOT,
     AggregationError,
     AggregationOutcome,
-    SubprocessRunner,
+    LogCallback,
+    LogLevel,
     aggregate,
-    default_transcript_prompt,
     generate_unique_path,
 )
+
+if TYPE_CHECKING:
+    from .types import ChannelDiscovery
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -111,7 +116,67 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _make_console_logger(verbose: bool) -> LogCallback:
+    """Create a logging callback that writes pipeline events to the console."""
+
+    prefixes: dict[LogLevel, str] = {
+        "success": "✅ ",
+        "warning": "⚠️ ",
+        "error": "❌ ",
+        "debug": "[debug] ",
+    }
+
+    def _log(message: str, level: LogLevel) -> None:
+        if level == "debug" and not verbose:
+            return
+        prefix = prefixes.get(level, "")
+        stream = sys.stderr if level == "error" else sys.stdout
+        print(f"{prefix}{message}", file=stream)
+
+    return _log
+
+
+def _summarize_discoveries(discoveries: Sequence[ChannelDiscovery]) -> str:
+    lines: list[str] = []
+    for item in discoveries:
+        channel_name = item.channel.get("name", "Unknown channel")
+        if item.result:
+            title = item.result.get("title", "Unknown title")
+            confidence = item.result.get("confidence", "?")
+            lines.append(
+                f"✅ {channel_name}: {title} (confidence {confidence})"
+            )
+        else:
+            reason = item.error or "No match"
+            lines.append(f"❌ {channel_name}: {reason}")
+    return "\n".join(lines)
+
+
+def default_transcript_prompt(discoveries: Sequence[ChannelDiscovery]) -> bool:
+    """Prompt the user to confirm transcript fetching."""
+
+    summary = _summarize_discoveries(discoveries)
+    if summary:
+        print("\n=== Selected Videos ===")
+        print(summary)
+        print("")
+
+    successful_count = sum(1 for item in discoveries if item.result)
+    print(f"\n📥 Ready to fetch {successful_count} transcripts")
+
+    while True:
+        response = input("Proceed with transcript fetching? [y/N]: ").strip().lower()
+        if response in {"y", "yes"}:
+            print("✓ Starting transcript fetch...\n")
+            return True
+        if response in {"", "n", "no"}:
+            print("✗ Skipping transcript fetch\n")
+            return False
+        print("Please enter 'y' or 'n'.")
+
+
 def _run_collect(args: argparse.Namespace) -> int:
+    log = _make_console_logger(verbose=args.verbose)
     try:
         outcome = aggregate(
             team_id=args.team_id,
@@ -120,6 +185,7 @@ def _run_collect(args: argparse.Namespace) -> int:
             fetch_transcripts=not args.skip_transcripts,
             verbose=args.verbose,
             prompt=None if args.auto_approve_transcripts else default_transcript_prompt,
+            log=log,
         )
     except AggregationError as exc:
         print(f"Aggregation failed: {exc}", file=sys.stderr)
@@ -155,14 +221,11 @@ def _print_collect_summary(outcome: AggregationOutcome, path: Path) -> None:
 
 def _confirm(prompt: str) -> bool:
     """Prompt for confirmation, flushing any buffered stdin first."""
-    # Flush any buffered input that may have accumulated during subprocess execution
-    import termios
-    import sys
-    try:
+
+    with suppress(ImportError, OSError):
+        import termios  # type: ignore
+
         termios.tcflush(sys.stdin, termios.TCIFLUSH)
-    except (ImportError, OSError):
-        # Not a terminal or Windows - skip flush
-        pass
 
     response = input(prompt).strip().lower()
     return response in {"y", "yes"}
@@ -176,7 +239,6 @@ def _run_analyzer(
     verbose: bool,
     commentary: str | None = None,
 ) -> int:
-    runner = SubprocessRunner()
     args = [
         sys.executable,
         str(PROJECT_ROOT / "fpl_intelligence_analyzer.py"),
@@ -192,7 +254,7 @@ def _run_analyzer(
     if verbose:
         args.append("--verbose")
     try:
-        runner.run(args, cwd=PROJECT_ROOT)
+        subprocess.run(args, check=True, text=True, cwd=PROJECT_ROOT)
     except subprocess.CalledProcessError as exc:  # pragma: no cover - defensive
         print(f"Analysis failed: {exc.stderr}", file=sys.stderr)
         return 1
@@ -200,6 +262,7 @@ def _run_analyzer(
 
 
 def _run_pipeline(args: argparse.Namespace) -> int:
+    log = _make_console_logger(verbose=args.verbose)
     try:
         outcome = aggregate(
             team_id=args.team_id,
@@ -208,6 +271,7 @@ def _run_pipeline(args: argparse.Namespace) -> int:
             fetch_transcripts=not args.skip_transcripts,
             verbose=args.verbose,
             prompt=None if args.auto_approve_transcripts else default_transcript_prompt,
+            log=log,
         )
     except AggregationError as exc:
         print(f"Aggregation failed: {exc}", file=sys.stderr)

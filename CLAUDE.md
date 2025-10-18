@@ -8,8 +8,8 @@
 
 ## Core Flow
 1. **FPL data** (`fpl/` scripts) – fetched in-process, no manual steps.
-2. **YouTube discovery** (`src/fpl_influencer_hivemind/youtube/video_picker.py`) – in-process logging, Anthropic ranking fallback to heuristics.
-3. **Transcript fetch** (`youtube-transcript/fpl_transcript.py`) – still invoked as a subprocess, now with progress logs per channel.
+2. **YouTube discovery** (`src/fpl_influencer_hivemind/services/discovery.py`) – pluggable strategies that wrap the heuristic `video_picker` helper.
+3. **Transcript fetch** (`src/fpl_influencer_hivemind/services/transcripts.py`) – yields newline-preserving text plus segment timing metadata (yt-dlp/EasySubAPI under the hood).
 4. **Analysis** (`fpl_intelligence_analyzer.py`) – optional, requires `ANTHROPIC_API_KEY`.
 
 Artifacts are written under `var/hivemind/` with timestamped filenames.
@@ -40,7 +40,10 @@ Use `.env` (auto sourced) based on `.env.example`:
 - When editing docs, keep README and CLAUDE aligned with the “pipeline-first” architecture.
 
 ## File Guide
-- `src/fpl_influencer_hivemind/pipeline.py` – orchestrator and CLI UX (progress prints, transcript prompts).
+- `src/fpl_influencer_hivemind/pipeline.py` – orchestrator + logging callbacks + transcript prompts.
+- `src/fpl_influencer_hivemind/services/discovery.py` – strategy layer for channel discovery (heuristic default).
+- `src/fpl_influencer_hivemind/services/transcripts.py` – transcript wrapper returning `{text, language, translated, segments[]}`.
+- `src/fpl_influencer_hivemind/types.py` – shared TypedDict/dataclass definitions for discovery/transcripts/gameweek data.
 - `src/fpl_influencer_hivemind/youtube/video_picker.py` – reusable discovery logic + CLI shim (`youtube-titles/fpl_video_picker.py`).
 - `tests/test_video_picker.py` – unit tests for discovery module.
 - `tests/test_pipeline.py` – end-to-end aggregation behaviour under stubs.

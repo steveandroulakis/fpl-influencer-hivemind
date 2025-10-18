@@ -48,7 +48,10 @@ A comprehensive Fantasy Premier League (FPL) decision support system that aggreg
 Artifacts are timestamped (e.g. `var/hivemind/gw05_team1178124_20250920T104530Z_aggregation.json`). Analyzer reports are written alongside the JSON when executed.
 
 ## 🧩 Architecture Essentials
-- `src/fpl_influencer_hivemind/pipeline.py` – orchestration, CLI UX, transcript prompts.
+- `src/fpl_influencer_hivemind/pipeline.py` – orchestration, CLI UX, transcript prompts, and logging callbacks.
+- `src/fpl_influencer_hivemind/services/discovery.py` – pluggable channel discovery strategies (heuristics today, easy to extend).
+- `src/fpl_influencer_hivemind/services/transcripts.py` – transcript gateway returning text plus per-segment timing metadata.
+- `src/fpl_influencer_hivemind/types.py` – shared TypedDict/dataclass models used across the pipeline, discovery, and CLI layers.
 - `src/fpl_influencer_hivemind/youtube/video_picker.py` – reusable video discovery logic (also powers `youtube-titles/fpl_video_picker.py`).
 - `fpl/` – standalone scripts for FPL API data.
 - `youtube-transcript/` – transcript downloader invoked by the pipeline.
@@ -73,5 +76,6 @@ Latest additions include unit coverage for the discovery helper (`tests/test_vid
 - Temporary working directories live under `var/hivemind/hivemind_*`.
 - Final aggregation JSON and optional markdown reports are written to `var/hivemind/`.
 - The pipeline prints emojis (`🔍`, `✅`, `❌`) to reflect per-channel discovery status.
+- Aggregated transcripts now capture `{text, language, translated, segments[]}` so downstream tooling can preserve newline formatting and precise timing metadata.
 
 The project is opinionated about a single entry ID but can target others by changing `--team-id`. Contributions should preserve the interactive CLI experience and the pipeline-first architecture described above.

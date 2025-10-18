@@ -3,86 +3,29 @@
 from __future__ import annotations
 
 import json
-import subprocess
-from collections.abc import Sequence
 from datetime import UTC, datetime
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
 from fpl_influencer_hivemind.pipeline import (
     AggregationError,
     AggregationOutcome,
-    ChannelConfig,
-    ChannelDiscovery,
     aggregate,
-    default_transcript_prompt,
     generate_unique_path,
 )
+from fpl_influencer_hivemind.services.discovery import DiscoveryStrategy
+from fpl_influencer_hivemind.services.fpl import FPLServiceError
+from fpl_influencer_hivemind.types import ChannelConfig, ChannelDiscovery
 from fpl_influencer_hivemind.youtube.video_picker import (
     ChannelResult,
     VideoItem,
     VideoPickerError,
 )
 
-
-class FakeRunner:
-    """Deterministic stand-in for :class:`SubprocessRunner` used in tests."""
-
-    def __init__(self, tmp_path: Path) -> None:
-        self.tmp_path = tmp_path
-        self.invocations: list[list[str]] = []
-        self.scripts_called: list[str] = []
-
-    def run(
-        self, args: Sequence[str], *, cwd: Path | None = None
-    ) -> subprocess.CompletedProcess[str]:
-        assert isinstance(args, Sequence)
-        _ = cwd
-        self.invocations.append(list(args))
-        script_path = next((Path(part) for part in args if part.endswith(".py")), None)
-        if script_path is None:
-            raise AssertionError(f"Could not locate script path in command: {args}")
-        script = script_path.name
-        self.scripts_called.append(script)
-
-        if script == "get_current_gameweek.py":
-            output_path = Path(args[args.index("--out") + 1])
-            payload = {
-                "id": 5,
-                "name": "Gameweek 5",
-                "is_current": True,
-                "now_utc": "2025-01-01T00:00:00+00:00",
-                "now_local": "2024-12-31T16:00:00-08:00",
-            }
-            output_path.write_text(json.dumps(payload), encoding="utf-8")
-        elif script == "get_top_ownership.py":
-            output_path = Path(args[args.index("--out") + 1])
-            players = [
-                {
-                    "web_name": "Player A",
-                    "team_name": "Team",
-                    "selected_by_percent": 75.0,
-                }
-            ]
-            output_path.write_text(json.dumps(players), encoding="utf-8")
-        elif script == "get_my_team.py":
-            output_path = Path(args[args.index("--out") + 1])
-            payload = {
-                "summary": {"team_name": "Test XI", "total_points": 42},
-                "current_picks": [],
-            }
-            output_path.write_text(json.dumps(payload), encoding="utf-8")
-        elif script == "fpl_transcript.py":
-            output_path = Path(args[args.index("--out") + 1])
-            output_path.write_text("Line one\nLine two", encoding="utf-8")
-        else:  # pragma: no cover - defensive
-            raise AssertionError(f"Unexpected script invocation: {script}")
-
-        return subprocess.CompletedProcess(
-            args=args, returncode=0, stdout="", stderr=""
-        )
-
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+    from pathlib import Path
 
 def stub_select_single_channel(
     monkeypatch: pytest.MonkeyPatch,
@@ -103,7 +46,7 @@ def stub_select_single_channel(
 
         video = VideoItem(
             title=title,
-            url="https://youtu.be/abc123",
+            url="https://youtu.be/abc123def45",
             published_at=datetime(2025, 1, 1, tzinfo=UTC),
             channel_name=channel_name,
             description="",
@@ -120,10 +63,79 @@ def stub_select_single_channel(
         )
 
     monkeypatch.setattr(
-        "fpl_influencer_hivemind.pipeline.select_single_channel",
+        "fpl_influencer_hivemind.services.discovery.select_single_channel",
         fake_select_single_channel,
     )
     return calls
+
+
+def setup_default_services(
+    monkeypatch: pytest.MonkeyPatch,
+) -> tuple[list[str], list[str]]:
+    fpl_calls: list[str] = []
+
+    def fake_current_gameweek_info() -> dict[str, object]:
+        fpl_calls.append("current_gameweek")
+        return {
+            "id": 5,
+            "name": "Gameweek 5",
+            "is_current": True,
+            "now_utc": "2025-01-01T00:00:00+00:00",
+            "now_local": "2024-12-31T16:00:00-08:00",
+        }
+
+    def fake_top_ownership(limit: int = 150) -> list[dict[str, object]]:
+        fpl_calls.append(f"top_ownership_{limit}")
+        return [
+            {
+                "web_name": "Player A",
+                "team_name": "Team",
+                "selected_by_percent": 75.0,
+            }
+        ]
+
+    def fake_my_team(entry_id: int) -> dict[str, object]:
+        fpl_calls.append(f"my_team_{entry_id}")
+        return {
+            "summary": {"team_name": "Test XI", "total_points": 42, "current_event": 5},
+            "current_picks": [],
+            "team_value": {"team_value": 100.0, "bank_balance": 1.0},
+        }
+
+    monkeypatch.setattr(
+        "fpl_influencer_hivemind.pipeline.fpl_service.get_current_gameweek_info",
+        fake_current_gameweek_info,
+    )
+    monkeypatch.setattr(
+        "fpl_influencer_hivemind.pipeline.fpl_service.get_top_ownership",
+        fake_top_ownership,
+    )
+    monkeypatch.setattr(
+        "fpl_influencer_hivemind.pipeline.fpl_service.get_my_team",
+        fake_my_team,
+    )
+
+    transcript_calls: list[str] = []
+
+    def fake_fetch_transcript(video_id: str, **_: object) -> dict[str, object]:
+        transcript_calls.append(video_id)
+        return {
+            "video_id": video_id,
+            "text": "Line one\nLine two",
+            "language": "en",
+            "translated": False,
+            "segments": [
+                {"start": 0.0, "duration": 1.0, "text": "Line one"},
+                {"start": 1.0, "duration": 1.0, "text": "Line two"},
+            ],
+        }
+
+    monkeypatch.setattr(
+        "fpl_influencer_hivemind.pipeline.transcript_service.fetch_transcript",
+        fake_fetch_transcript,
+    )
+
+    return fpl_calls, transcript_calls
 
 
 def test_generate_unique_path(tmp_path: Path) -> None:
@@ -139,16 +151,15 @@ def test_generate_unique_path(tmp_path: Path) -> None:
 def test_aggregate_creates_expected_payload(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    runner = FakeRunner(tmp_path)
     channels: list[ChannelConfig] = [
         {"name": "FPL Test", "url": "https://www.youtube.com/@fpltest"}
     ]
 
     select_calls = stub_select_single_channel(monkeypatch)
+    fpl_calls, transcript_calls = setup_default_services(monkeypatch)
 
     outcome: AggregationOutcome = aggregate(
         team_id=1178124,
-        runner=runner,
         channels=channels,
         artifacts_dir=tmp_path,
         auto_approve_transcripts=True,
@@ -168,33 +179,41 @@ def test_aggregate_creates_expected_payload(
     assert data["gameweek"]["fallback_used"] is False
     assert data["youtube_analysis"]["videos_discovered"] == 1
     assert data["youtube_analysis"]["transcripts_retrieved"] == 1
-    transcript = data["youtube_analysis"]["transcripts"]["FPL Test"]["transcript"]
-    assert transcript == "Line one Line two"
+    transcript_payload = data["youtube_analysis"]["transcripts"]["FPL Test"]
+    assert transcript_payload["text"] == "Line one\nLine two"
+    assert transcript_payload["language"] == "en"
+    assert transcript_payload["translated"] is False
+    assert transcript_payload["segments"][0]["text"] == "Line one"
 
-    # Ensure command sequencing executed expected scripts and discovery ran
-    invoked_scripts = set(runner.scripts_called)
-    assert {
-        "get_current_gameweek.py",
-        "get_top_ownership.py",
-        "get_my_team.py",
-        "fpl_transcript.py",
-    }.issubset(invoked_scripts)
+    assert fpl_calls == [
+        "current_gameweek",
+        "top_ownership_150",
+        "my_team_1178124",
+    ]
+    assert transcript_calls == ["abc123def45"]
     assert select_calls == [6]
 
 
 def test_aggregate_declines_transcripts_when_prompt_returns_false(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    runner = FakeRunner(tmp_path)
     channels: list[ChannelConfig] = [
         {"name": "FPL Test", "url": "https://www.youtube.com/@fpltest"}
     ]
 
     stub_select_single_channel(monkeypatch)
+    setup_default_services(monkeypatch)
+
+    def fail_fetch(*_: object, **__: object) -> str:  # pragma: no cover - defensive
+        pytest.fail("Transcript fetch should not be invoked when prompt declines")
+
+    monkeypatch.setattr(
+        "fpl_influencer_hivemind.pipeline.transcript_service.fetch_transcript",
+        fail_fetch,
+    )
 
     outcome = aggregate(
         team_id=1178124,
-        runner=runner,
         channels=channels,
         artifacts_dir=tmp_path,
         auto_approve_transcripts=False,
@@ -203,10 +222,36 @@ def test_aggregate_declines_transcripts_when_prompt_returns_false(
     )
 
     assert outcome.transcripts_retrieved == 0
-    transcript_scripts = [
-        Path(call[1]).name for call in runner.invocations if len(call) > 1
+
+
+def test_aggregate_skips_transcripts_without_prompt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    channels: list[ChannelConfig] = [
+        {"name": "FPL Test", "url": "https://www.youtube.com/@fpltest"}
     ]
-    assert "fpl_transcript.py" not in transcript_scripts
+
+    stub_select_single_channel(monkeypatch)
+    setup_default_services(monkeypatch)
+
+    def fail_fetch(*_: object, **__: object) -> str:  # pragma: no cover - defensive
+        pytest.fail("Transcript fetch should not be invoked without a prompt")
+
+    monkeypatch.setattr(
+        "fpl_influencer_hivemind.pipeline.transcript_service.fetch_transcript",
+        fail_fetch,
+    )
+
+    outcome = aggregate(
+        team_id=1178124,
+        channels=channels,
+        artifacts_dir=tmp_path,
+        auto_approve_transcripts=False,
+        transcript_delay=0.0,
+        prompt=None,
+    )
+
+    assert outcome.transcripts_retrieved == 0
 
 
 def test_aggregate_invalid_team_id_raises() -> None:
@@ -214,46 +259,37 @@ def test_aggregate_invalid_team_id_raises() -> None:
         aggregate(team_id=0)
 
 
-class FailingRunner(FakeRunner):
-    """Runner that simulates a subprocess failure."""
-
-    def run(
-        self, args: Sequence[str], *, cwd: Path | None = None
-    ) -> subprocess.CompletedProcess[str]:
-        script_path = next((Path(part) for part in args if part.endswith(".py")), None)
-        if script_path is None:
-            raise AssertionError(f"Could not locate script path in command: {args}")
-        script = script_path.name
-        if script == "get_current_gameweek.py":
-            raise subprocess.CalledProcessError(returncode=1, cmd=args, stderr="boom")
-        return FakeRunner.run(self, args, cwd=cwd)
-
-
-def test_collect_fpl_data_failure_surface(tmp_path: Path) -> None:
-    runner = FailingRunner(tmp_path)
+def test_collect_fpl_data_failure_surface(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     channels: list[ChannelConfig] = [
         {"name": "FPL Test", "url": "https://www.youtube.com/@fpltest"}
     ]
 
+    def boom() -> dict[str, object]:
+        raise FPLServiceError("boom")
+
+    monkeypatch.setattr(
+        "fpl_influencer_hivemind.pipeline.fpl_service.get_current_gameweek_info",
+        boom,
+    )
+
     with pytest.raises(AggregationError):
-        aggregate(
-            team_id=1178124, runner=runner, channels=channels, artifacts_dir=tmp_path
-        )
+        aggregate(team_id=1178124, channels=channels, artifacts_dir=tmp_path)
 
 
 def test_aggregate_handles_missing_discovery_output(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    runner = FakeRunner(tmp_path)
     channels: list[ChannelConfig] = [
         {"name": "FPL Test", "url": "https://www.youtube.com/@fpltest"}
     ]
 
     calls = stub_select_single_channel(monkeypatch, fail_gameweeks=[5, 6])
+    setup_default_services(monkeypatch)
 
     outcome = aggregate(
         team_id=1178124,
-        runner=runner,
         channels=channels,
         artifacts_dir=tmp_path,
         auto_approve_transcripts=True,
@@ -269,16 +305,15 @@ def test_aggregate_handles_missing_discovery_output(
 def test_aggregate_falls_back_to_current_when_no_requested_matches(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    runner = FakeRunner(tmp_path)
     channels: list[ChannelConfig] = [
         {"name": "FPL Test", "url": "https://www.youtube.com/@fpltest"}
     ]
 
     calls = stub_select_single_channel(monkeypatch, fail_gameweeks=[6])
+    setup_default_services(monkeypatch)
 
     outcome = aggregate(
         team_id=1178124,
-        runner=runner,
         channels=channels,
         artifacts_dir=tmp_path,
         auto_approve_transcripts=True,
@@ -292,16 +327,72 @@ def test_aggregate_falls_back_to_current_when_no_requested_matches(
     assert calls == [6, 5]
 
 
-def test_default_transcript_prompt(monkeypatch) -> None:
-    discoveries = [
-        ChannelDiscovery(
-            channel={"name": "FPL Test", "url": "https://example.com"},
-            result={"channel_name": "FPL Test", "video_id": "abc", "title": "Title"},
-        )
+def test_aggregate_emits_log_messages(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    channels: list[ChannelConfig] = [
+        {"name": "FPL Test", "url": "https://www.youtube.com/@fpltest"}
     ]
 
-    monkeypatch.setattr("builtins.input", lambda _: "y")
-    assert default_transcript_prompt(discoveries) is True
+    stub_select_single_channel(monkeypatch)
+    setup_default_services(monkeypatch)
 
-    monkeypatch.setattr("builtins.input", lambda _: "n")
-    assert default_transcript_prompt(discoveries) is False
+    messages: list[tuple[str, str]] = []
+
+    aggregate(
+        team_id=1178124,
+        channels=channels,
+        artifacts_dir=tmp_path,
+        auto_approve_transcripts=True,
+        transcript_delay=0.0,
+        verbose=False,
+        log=lambda message, level: messages.append((level, message)),
+    )
+
+    assert any("Starting FPL Influencer Hivemind pipeline" in msg for _, msg in messages)
+    assert any("Transcript fetch complete" in msg for _, msg in messages)
+
+
+class DummyStrategy(DiscoveryStrategy):
+    """Deterministic discovery strategy for testing injection."""
+
+    def __init__(self) -> None:
+        self.invocations: list[ChannelConfig] = []
+
+    def discover(
+        self,
+        *,
+        channel: ChannelConfig,
+        gameweek_id: int,
+        days: int,
+        max_per_channel: int,
+        verbose: bool,
+    ) -> ChannelDiscovery:
+        _ = (gameweek_id, days, max_per_channel, verbose)
+        self.invocations.append(channel)
+        return ChannelDiscovery(channel=channel, result=None, error="No match")
+
+
+def test_aggregate_allows_custom_discovery_strategy(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    channels: list[ChannelConfig] = [
+        {"name": "FPL Test", "url": "https://www.youtube.com/@fpltest"}
+    ]
+
+    setup_default_services(monkeypatch)
+
+    strategy = DummyStrategy()
+
+    outcome = aggregate(
+        team_id=1178124,
+        channels=channels,
+        artifacts_dir=tmp_path,
+        auto_approve_transcripts=True,
+        transcript_delay=0.0,
+        discovery_strategy=strategy,
+    )
+
+    assert not outcome.video_results
+    assert strategy.invocations
+    assert all(call == channels[0] for call in strategy.invocations)
