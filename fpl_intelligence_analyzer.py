@@ -78,7 +78,7 @@ class FPLIntelligenceAnalyzer:
 
         self.client = anthropic.Anthropic(api_key=api_key)
         self.sonnet_model = "claude-sonnet-4-5-20250929"  # "claude-sonnet-4-20250514"
-        self.opus_model = "claude-sonnet-4-5-20250929"  # "claude-opus-4-1-20250805"
+        self.opus_model = "claude-opus-4-1-20250805"  # "claude-opus-4-1-20250805"
 
     def setup_logging(self, verbose: bool) -> None:
         """Setup logging configuration."""
@@ -192,7 +192,8 @@ Format it as clear prose, not JSON."""
 
             if stop_reason and stop_reason not in {"end_turn", "stop_sequence"}:
                 self.logger.warning(
-                    "Anthropic call for team formatting ended with stop_reason='%s'", stop_reason
+                    "Anthropic call for team formatting ended with stop_reason='%s'",
+                    stop_reason,
                 )
 
             return response.strip()
@@ -512,14 +513,14 @@ DEFINITIONS
 
 DATA YOU CAN USE (may be partially provided)
 - influencers[]: [channel name, formation_strategy?, key_transfers?, captain?, vice?, watchlist[], key_issues_discussed[], chip_talk?, starting_xi?, bench?, notable_rationale?]
-- my_team: [squad[15] with positions/teams/prices/sell_prices, IGNORE CURRENT STARTING XI ASSUMING I WILL CHANGE IT BY GW START, free_transfers (IMPORTANT: consider this number (and the number of hits beyond that number) when making transfer recommendations), planned_hits?, team_value, chips_available, risk_tolerance?]
+- my_team: [squad[15] with positions/teams/prices/sell_prices, IGNORE CURRENT STARTING XI AND MY CURRENT BENCH. ASSUME I WILL CHANGE IT BY GW START, free_transfers (IMPORTANT: consider this number (and the number of hits beyond that number) when making transfer recommendations), planned_hits?, team_value, chips_available, risk_tolerance?]
 - context (optional): [gw, deadline_utc, fixture_difficulty, minutes/injury flags, projections, blank/double indicators, price_change_risk]
 
 FPL VALIDATION RULES FOR ALL RECOMMENDATIONS
 - Obey budget (use sell_prices if provided; otherwise use current prices and label as estimate).
 - Max 3 players per real club. E.g. can't recommend transferring in more than 3 players.
 - Legal starting XI formation (GK x1, DEF 3-5, MID 2-5, FWD 1-3; 11 players total).
-- Always provide bench order (1/2/3) and GK decision.
+- Always provide bench order (1/2/3) and GK decision. Do NOT comment on current bench, assume I will be open to changing it. e.g. do NOT tell me "you have this critical player benched!" it is NOT relevant.
 - Show remaining ITB after any proposed moves and the hit cost if applicable.
 - If required info is missing, say “not stated” rather than guessing.
 
@@ -547,7 +548,7 @@ Keep this section concise; use bullets. Always cite this influencer after their 
 
 ## 3) My Team vs Influencers (Gap Analysis)
 - **Ensure you list every single player in my starting XI if known (with position), and bench**
-- **Players I have that are being benched/sold by influencers**: list with citations.
+- **Players I have (in starting xi or bench, doesn't matter) that are being benched/sold by influencers**: list with citations.
 - **Popular picks I'm missing**: list by PRIORITY with brief why and names of backers.
   CRITICAL: If influencers are captaining a player you don't own, that's #1 priority!
   Order: 1) Universal/majority captains not in squad, 2) High ownership/selected players, 3) Differentials
@@ -581,6 +582,7 @@ Start with 1-3 **clear recommended paths** (transfers, captaincy, XI) for what t
 
 ### Starting XI & Bench Order
 - List recommended XI by position.
+- Do NOT pay attention to my current starting XI and bench order, ONLY the players I have in total. You can recommend whatever XI and bench you see fit.
 - Show bench order (1/2/3) and highlight any 50/50 calls, with reasoning.
 
 ### Future Planning (GW+1 to GW+3)
