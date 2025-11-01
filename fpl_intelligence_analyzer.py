@@ -519,6 +519,7 @@ DATA YOU CAN USE (may be partially provided)
 FPL VALIDATION RULES FOR ALL RECOMMENDATIONS
 - Obey budget (use sell_prices if provided; otherwise use current prices and label as estimate).
 - Max 3 players per real club. E.g. can't recommend transferring in more than 3 players.
+- Transfers must be the same position. E.g. you CAN'T transfer a MID for a FWD, you can only transfer a FWD for a FWD.
 - Legal starting XI formation (GK x1, DEF 3-5, MID 2-5, FWD 1-3; 11 players total).
 - Always provide bench order (1/2/3) and GK decision. Do NOT comment on current bench, assume I will be open to changing it. e.g. do NOT tell me "you have this critical player benched!" it is NOT relevant.
 - Show remaining ITB after any proposed moves and the hit cost if applicable.
