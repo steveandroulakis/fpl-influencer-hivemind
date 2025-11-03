@@ -40,7 +40,80 @@ Use `.env` (auto sourced) based on `.env.example`:
 - Prefer importing modules (`select_single_channel`, etc.) instead of shelling out.
 - Tests use helper stubs (`stub_select_single_channel`) to avoid real API calls; keep them in sync with pipeline behaviour.
 - Coverage pragmas exist for API-heavy classes—only add new ones when external services are unavoidable.
-- When editing docs, keep README and CLAUDE aligned with the “pipeline-first” architecture.
+- When editing docs, keep README and CLAUDE aligned with the "pipeline-first" architecture.
+
+## Type Safety Rules
+Write code that passes mypy strict mode, Pylance, and Ruff. Follow these patterns:
+
+### Import Type Annotations
+- Always import `Any` from `typing` when needed for dynamic/external data.
+- Use `# type: ignore[import-untyped]` for third-party libraries without stubs (e.g., `yt_dlp`, `googleapiclient`).
+- Install stub packages when available (e.g., `types-requests` for `requests`).
+- Import specific exception types from untyped libraries with type ignore comments.
+
+### Function Signatures
+- **All functions must have complete type annotations** for parameters and return types.
+- Use `-> None` explicitly for functions that don't return values.
+- Annotate callback/mock parameters in tests with proper signatures.
+- Use `noqa: ARG001` for intentionally unused arguments (e.g., in stubs or interface implementations).
+
+### Type Definitions
+- **TypedDict with mixed required/optional fields**: split into base required class, then inherit with `total=False`:
+  ```python
+  class _MyTypeRequired(TypedDict):
+      required_field: str
+  
+  class MyType(_MyTypeRequired, total=False):
+      optional_field: NotRequired[str]
+  ```
+- Use modern union syntax: `str | int | None` instead of `Union[str, int, None]` or `Optional[str]`.
+- Use `type[Any]` instead of `Type[Any]` (PEP 585).
+
+### Variable Annotations
+- **Always annotate empty containers** and variables with non-obvious types:
+  ```python
+  results: dict[str, tuple[VideoItem, Response]] = {}
+  subtitle_files: list[tuple[str, str, bool]] = []
+  last_exception: Exception | None = None
+  ```
+- Annotate variables when type inference may be ambiguous (e.g., `handler: logging.Handler = logging.StreamHandler()`).
+
+### Type Narrowing & Assertions
+- **Global variables**: type checkers can't narrow globals after None checks—use `cast()`:
+  ```python
+  if _FPL_CLASS is None:
+      _FPL_CLASS = module.FPL
+  return cast(type[Any], _FPL_CLASS)
+  ```
+- **API response validation**: check structure and narrow types explicitly before use:
+  ```python
+  if not message.content or not hasattr(message.content[0], "text"):
+      raise ValueError("Expected text response")
+  if isinstance(message.content[0], TextBlock):
+      response_text = message.content[0].text
+  ```
+- **Parser return types**: validate that parsers return expected types (e.g., `dateutil.parser.parse` can return `date` or `datetime`).
+
+### Collections & Paths
+- Use `Path` from `pathlib` for file operations instead of string paths and `os.path`.
+- Use `.exists()`, `.glob()`, etc. on `Path` objects instead of `os.path.exists()` and `glob.glob()`.
+- Prefer `isinstance(obj, str | int | float | bool | type(None))` over multiple `isinstance` calls.
+
+### External Data
+- Use `dict[str, Any]` for JSON/API responses with unknown structure.
+- Use `list[dict[str, Any]]` for collections of unstructured data.
+- Add `# type: ignore[no-any-return]` when returning `Any` from typed functions (only when unavoidable).
+
+### Test Fixtures
+- Mock objects and test doubles need full type signatures matching real implementations.
+- Use `TYPE_CHECKING` guard for test-only type imports to avoid runtime dependencies.
+- Annotate fixture return types explicitly.
+
+### Configuration
+The project uses strict mypy settings in `pyproject.toml`:
+- `strict = true` with `warn_return_any` and `warn_unused_configs`.
+- `mypy_path = "src"` and `explicit_package_bases = true` for proper package resolution.
+- `ignore_missing_imports = false` to catch all import issues (add type ignore comments as needed).
 
 ## File Guide
 - `src/fpl_influencer_hivemind/pipeline.py` – orchestrator + logging callbacks + transcript prompts.
