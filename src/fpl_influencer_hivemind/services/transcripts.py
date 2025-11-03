@@ -5,10 +5,10 @@ from __future__ import annotations
 import importlib
 import logging
 import os
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Iterable, Sequence
 
     from ..types import TranscriptEntry, TranscriptSegment
 
@@ -18,7 +18,7 @@ from ..transcripts.youtube_transcript_io_fetcher import (
 )
 
 _FETCHER_MODULE = "fpl_influencer_hivemind.transcripts.fetcher"
-_FETCHER_CACHE: tuple[object, object] | None = None
+_FETCHER_CACHE: tuple[Any, Any] | None = None
 _YOUTUBE_IO_CACHE: tuple[str, float, YouTubeTranscriptIOFetcher] | None = None
 
 
@@ -26,7 +26,7 @@ class TranscriptServiceError(RuntimeError):
     """Raised when transcript retrieval fails."""
 
 
-def _load_fetcher() -> tuple[object, object]:
+def _load_fetcher() -> tuple[Any, Any]:
     global _FETCHER_CACHE
     if _FETCHER_CACHE is not None:
         return _FETCHER_CACHE
@@ -40,7 +40,7 @@ def _load_fetcher() -> tuple[object, object]:
     return _FETCHER_CACHE
 
 
-def _coerce_segments(raw_segments: list[dict]) -> list[TranscriptSegment]:
+def _coerce_segments(raw_segments: list[dict[str, Any]]) -> list[TranscriptSegment]:
     segments: list[TranscriptSegment] = []
     for item in raw_segments:
         try:
@@ -59,7 +59,9 @@ def _segments_to_text(segments: Iterable[TranscriptSegment]) -> str:
     return "\n".join(segment["text"] for segment in segments if segment["text"])
 
 
-def _make_youtube_fetcher(api_key: str, *, timeout: float) -> YouTubeTranscriptIOFetcher:
+def _make_youtube_fetcher(
+    api_key: str, *, timeout: float
+) -> YouTubeTranscriptIOFetcher:
     global _YOUTUBE_IO_CACHE
     if _YOUTUBE_IO_CACHE and _YOUTUBE_IO_CACHE[0] == api_key:
         cached_timeout = _YOUTUBE_IO_CACHE[1]
@@ -97,7 +99,7 @@ def fetch_transcript(
     logger = logging.getLogger("fpl_influencer_hivemind.transcripts")
     logger.setLevel(log_level)
     if not logger.handlers:
-        handler = logging.StreamHandler()
+        handler: logging.Handler = logging.StreamHandler()
         handler.setLevel(log_level)
         formatter = logging.Formatter("%(levelname)s: %(message)s")
         handler.setFormatter(formatter)
@@ -118,7 +120,8 @@ def fetch_transcript(
         "",
     }:
         logger.warning(
-            "Unknown TRANSCRIPT_FETCHER_PREFERENCE '%s'; falling back to auto", preference_raw
+            "Unknown TRANSCRIPT_FETCHER_PREFERENCE '%s'; falling back to auto",
+            preference_raw,
         )
         preference = "auto"
 
@@ -138,11 +141,13 @@ def fetch_transcript(
             )
             segments = _coerce_segments(transcript_data)
             if not segments:
-                raise YouTubeTranscriptIOError("No segments returned from YouTube Transcript IO")
-            formatted_text = _segments_to_text(segments)
+                raise YouTubeTranscriptIOError(
+                    "No segments returned from YouTube Transcript IO"
+                )
+            transcript_text = _segments_to_text(segments)
             return {
                 "video_id": video_id,
-                "text": formatted_text,
+                "text": transcript_text,
                 "language": _language,
                 "translated": _translated,
                 "segments": segments,
@@ -151,15 +156,21 @@ def fetch_transcript(
             message = f"YouTube Transcript IO failed: {exc}"
             logger.warning("%s; falling back to legacy fetcher", message)
             errors.append(message)
-        except Exception as exc:  # pragma: no cover - defensive catch for unexpected issues
+        except (
+            Exception
+        ) as exc:  # pragma: no cover - defensive catch for unexpected issues
             message = f"Unexpected YouTube Transcript IO error: {exc}"
             logger.warning("%s; falling back to legacy fetcher", message)
             errors.append(message)
-    elif preference in {
-        "youtube",
-        "youtube-transcript-io",
-        "youtube_transcript_io",
-    } and not yt_api_key:
+    elif (
+        preference
+        in {
+            "youtube",
+            "youtube-transcript-io",
+            "youtube_transcript_io",
+        }
+        and not yt_api_key
+    ):
         logger.warning(
             "YouTube Transcript IO preference is set but YOUTUBE_TRANSCRIPT_IO_KEY is missing"
         )
@@ -183,17 +194,19 @@ def fetch_transcript(
     except Exception as exc:  # pragma: no cover - relies on networked services
         context = "; ".join(errors)
         if context:
-            message = f"Failed to fetch transcript for {video_id}: {exc} (primary: {context})"
+            message = (
+                f"Failed to fetch transcript for {video_id}: {exc} (primary: {context})"
+            )
         else:
             message = f"Failed to fetch transcript for {video_id}: {exc}"
         raise TranscriptServiceError(message) from exc
 
     segments = _coerce_segments(transcript_data)
-    formatted_text = formatter(transcript_data, include_timestamps=False)
+    legacy_formatted_text = formatter(transcript_data, include_timestamps=False)
 
     return {
         "video_id": video_id,
-        "text": formatted_text,
+        "text": legacy_formatted_text,
         "language": _language,
         "translated": _translated,
         "segments": segments,
@@ -226,13 +239,18 @@ def fetch_transcript_text(
     if include_timestamps:
         factory, formatter = _load_fetcher()
         _ = factory  # pragma: no cover - formatter import side effect for consistency
+        transcript_segments = transcript.get("segments", [])
         segments = [
-            {"start": segment["start"], "duration": segment["duration"], "text": segment["text"]}
-            for segment in transcript["segments"]
+            {
+                "start": segment["start"],
+                "duration": segment["duration"],
+                "text": segment["text"],
+            }
+            for segment in transcript_segments
         ]
-        return formatter(segments, include_timestamps=True)
+        return formatter(segments, include_timestamps=True)  # type: ignore[no-any-return]
 
-    return transcript["text"]
+    return transcript.get("text", "")
 
 
 __all__ = ["TranscriptServiceError", "fetch_transcript", "fetch_transcript_text"]

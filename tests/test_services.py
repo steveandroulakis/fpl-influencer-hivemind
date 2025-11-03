@@ -65,13 +65,11 @@ def test_transcripts_fetch_transcript_text(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setattr(
         transcript_service,
         "_load_fetcher",
-                lambda: (
-                    lambda **_: DummyFetcher(),
-                    lambda data, **_: "\n".join(
-                        segment["text"] for segment in data
-                    ),
-                ),
-        )
+        lambda: (
+            lambda **_: DummyFetcher(),
+            lambda data, **_: "\n".join(segment["text"] for segment in data),
+        ),
+    )
 
     transcript = transcript_service.fetch_transcript("abc123", verbose=False)
     assert transcript["language"] == "en"

@@ -13,7 +13,9 @@ from .utils import (
 )
 
 
-async def _get_current_picks(user, bootstrap_data: dict[str, Any]) -> list[dict[str, Any]]:
+async def _get_current_picks(
+    user: Any, bootstrap_data: dict[str, Any]
+) -> list[dict[str, Any]]:
     picks_by_gameweek = await user.get_picks()
     current_event = user.current_event
     current_picks = picks_by_gameweek.get(current_event, [])
@@ -47,7 +49,7 @@ async def _get_current_picks(user, bootstrap_data: dict[str, Any]) -> list[dict[
     return detailed
 
 
-async def _get_team_value(user) -> dict[str, Any]:
+async def _get_team_value(user: Any) -> dict[str, Any]:
     return {
         "team_value": normalize_price(user.last_deadline_value * 10),
         "bank_balance": normalize_price(user.last_deadline_bank * 10),
@@ -58,7 +60,7 @@ async def _get_team_value(user) -> dict[str, Any]:
     }
 
 
-def _format_summary(user) -> dict[str, Any]:
+def _format_summary(user: Any) -> dict[str, Any]:
     return {
         "entry_id": user.id,
         "manager_name": f"{user.player_first_name} {user.player_last_name}",

@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     from pathlib import Path
 
+
 def stub_select_single_channel(
     monkeypatch: pytest.MonkeyPatch,
     *,
@@ -349,7 +350,9 @@ def test_aggregate_emits_log_messages(
         log=lambda message, level: messages.append((level, message)),
     )
 
-    assert any("Starting FPL Influencer Hivemind pipeline" in msg for _, msg in messages)
+    assert any(
+        "Starting FPL Influencer Hivemind pipeline" in msg for _, msg in messages
+    )
     assert any("Transcript fetch complete" in msg for _, msg in messages)
 
 

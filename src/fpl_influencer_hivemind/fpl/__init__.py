@@ -1,4 +1,4 @@
-"""In-process FPL data helpers previously implemented as standalone scripts."""
+"""FPL API integration modules for gameweek, team, and ownership data."""
 
 from .get_current_gameweek import get_current_gameweek_info
 from .get_my_team import get_my_team_info

@@ -13,8 +13,8 @@ from pathlib import Path
 from typing import Any, ClassVar
 
 import anthropic
-from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
+from googleapiclient.discovery import build  # type: ignore[import-untyped]
+from googleapiclient.errors import HttpError  # type: ignore[import-untyped]
 from pydantic import BaseModel, ValidationError
 from tenacity import (
     retry,
@@ -102,14 +102,14 @@ def select_single_channel(
     gameweek: int | None,
     days_back: int,
     max_per_channel: int,
-    anthropic_model: str = DEFAULT_ANTHROPIC_MODEL,
-    temperature: float = DEFAULT_TEMPERATURE,
+    anthropic_model: str = DEFAULT_ANTHROPIC_MODEL,  # noqa: ARG001
+    temperature: float = DEFAULT_TEMPERATURE,  # noqa: ARG001
     logger: logging.Logger | None = None,
 ) -> ChannelResult:
     """Discover the best team-selection video for a single channel."""
 
     logger = logger or logging.getLogger(__name__)
-    print(f"  ↳ Fetching videos from YouTube API...", flush=True)
+    print("  ↳ Fetching videos from YouTube API...", flush=True)
     collector = FPLVideoCollector(
         max_per_channel=max_per_channel, days_back=days_back, logger=logger
     )
@@ -202,7 +202,7 @@ class FPLVideoCollector:  # pragma: no cover - hits live YouTube Data API
         self.logger = logger or logging.getLogger(__name__)
         self.cutoff_date = datetime.now(UTC) - timedelta(days=days_back)
 
-    def _resolve_channel_id(self, yt_service, channel_url: str) -> str | None:
+    def _resolve_channel_id(self, yt_service: Any, channel_url: str) -> str | None:
         """Resolve various YouTube channel URL formats to channel ID."""
         try:
             if "@" in channel_url:
@@ -216,11 +216,11 @@ class FPLVideoCollector:  # pragma: no cover - hits live YouTube Data API
                 )
 
                 if response.get("items"):
-                    return response["items"][0]["id"]
+                    return response["items"][0]["id"]  # type: ignore[no-any-return]
 
             elif "channel/" in channel_url:
                 # Channel ID URL: https://www.youtube.com/channel/UCweDAlFm2LnVcOqaFU4_AGA
-                print(f"      • Using direct channel ID", flush=True)
+                print("      • Using direct channel ID", flush=True)
                 return channel_url.split("channel/")[1]
 
             else:
@@ -238,7 +238,7 @@ class FPLVideoCollector:  # pragma: no cover - hits live YouTube Data API
 
                 if search_response.get("items"):
                     # Return the first result's channel ID
-                    return search_response["items"][0]["snippet"]["channelId"]
+                    return search_response["items"][0]["snippet"]["channelId"]  # type: ignore[no-any-return]
 
         except HttpError as e:
             self.logger.error(f"API error resolving channel ID for {channel_url}: {e}")
@@ -255,6 +255,7 @@ class FPLVideoCollector:  # pragma: no cover - hits live YouTube Data API
     def _fetch_channel_videos(self, channel_url: str) -> list[VideoItem]:
         """Fetch videos from a single channel using YouTube Data API v3."""
         import time as time_module
+
         start_time = time_module.time()
         videos = []
         api_key = os.environ.get("YOUTUBE_API_KEY")
@@ -263,20 +264,21 @@ class FPLVideoCollector:  # pragma: no cover - hits live YouTube Data API
             return []
 
         try:
-            print(f"    → Initializing YouTube API client...", flush=True)
+            print("    → Initializing YouTube API client...", flush=True)
             import socket
+
             socket.setdefaulttimeout(30)  # 30 second timeout for API calls
             yt = build("youtube", "v3", developerKey=api_key)
 
             # Resolve channel URL to channel ID
-            print(f"    → Resolving channel ID from URL...", flush=True)
+            print("    → Resolving channel ID from URL...", flush=True)
             channel_id = self._resolve_channel_id(yt, channel_url)
             if not channel_id:
                 self.logger.error(f"Could not resolve channel ID for: {channel_url}")
                 return []
 
             # Get channel info and uploads playlist ID
-            print(f"    → Fetching channel metadata...", flush=True)
+            print("    → Fetching channel metadata...", flush=True)
             channel_response = (
                 yt.channels()
                 .list(part="snippet,contentDetails", id=channel_id)
@@ -294,11 +296,14 @@ class FPLVideoCollector:  # pragma: no cover - hits live YouTube Data API
             ]
 
             self.logger.debug(f"Fetching videos from {channel_name} (ID: {channel_id})")
-            print(f"    → Fetching recent uploads (need {self.max_per_channel})...", flush=True)
+            print(
+                f"    → Fetching recent uploads (need {self.max_per_channel})...",
+                flush=True,
+            )
 
             # Fetch videos from uploads playlist
             # IMPORTANT: Only fetch a small batch and stop early to avoid scanning entire channel history
-            all_videos = []
+            all_videos: list[VideoItem] = []
             next_page_token = None
             total_fetched = 0
             filtered_count = 0
@@ -309,8 +314,13 @@ class FPLVideoCollector:  # pragma: no cover - hits live YouTube Data API
                 attempt += 1
                 # Only request what we need plus a small buffer
                 remaining_needed = self.max_per_channel - len(all_videos)
-                batch_size = min(50, remaining_needed + 10)  # Small buffer for filtering
-                print(f"      • API call {attempt}/{max_attempts}: requesting {batch_size} videos (have {len(all_videos)}/{self.max_per_channel})...", flush=True)
+                batch_size = min(
+                    50, remaining_needed + 10
+                )  # Small buffer for filtering
+                print(
+                    f"      • API call {attempt}/{max_attempts}: requesting {batch_size} videos (have {len(all_videos)}/{self.max_per_channel})...",
+                    flush=True,
+                )
                 videos_response = (
                     yt.playlistItems()
                     .list(
@@ -343,7 +353,10 @@ class FPLVideoCollector:  # pragma: no cover - hits live YouTube Data API
                             consecutive_old += 1
                             # If we hit 20 consecutive old videos, stop - we've gone too far back
                             if consecutive_old >= 20:
-                                print(f"      • Stopping: found 20 consecutive old videos", flush=True)
+                                print(
+                                    "      • Stopping: found 20 consecutive old videos",
+                                    flush=True,
+                                )
                                 break
                             continue
 
@@ -385,7 +398,10 @@ class FPLVideoCollector:  # pragma: no cover - hits live YouTube Data API
 
             elapsed = time_module.time() - start_time
             if total_fetched > 0:
-                print(f"    → Found {total_fetched} videos, filtered {filtered_count} (too old), kept {len(videos)} in {elapsed:.1f}s", flush=True)
+                print(
+                    f"    → Found {total_fetched} videos, filtered {filtered_count} (too old), kept {len(videos)} in {elapsed:.1f}s",
+                    flush=True,
+                )
 
         except HttpError as e:
             error_msg = f"YouTube API error for {channel_url}: {e}"
@@ -427,7 +443,9 @@ class FPLVideoCollector:  # pragma: no cover - hits live YouTube Data API
                     else:
                         videos_by_channel[channel_url] = []
                 except Exception as exc:
-                    self.logger.error(f"Channel {channel_url} generated an exception: {exc}")
+                    self.logger.error(
+                        f"Channel {channel_url} generated an exception: {exc}"
+                    )
                     videos_by_channel[channel_url] = []
 
         self.logger.info(
@@ -641,7 +659,7 @@ Analyze each channel separately and choose the best team selection video for eac
         gameweek: int | None = None,
     ) -> dict[str, tuple[VideoItem, AnthropicChannelResponse] | None]:
         """Use Claude to rank videos for each channel and return the best choices."""
-        results = {}
+        results: dict[str, tuple[VideoItem, AnthropicChannelResponse]] = {}
 
         # Filter out channels with no candidates
         valid_channels = {
@@ -671,7 +689,16 @@ Analyze each channel separately and choose the best team selection video for eac
                 messages=[{"role": "user", "content": prompt}],
             )
 
-            response_text = message.content[0].text.strip()
+            # Type narrowing: Anthropic should return TextBlock for text content
+            if not message.content or not hasattr(message.content[0], "text"):
+                raise ValueError("Expected text response from Anthropic API")
+            # Anthropic API returns TextBlock for text messages
+            from anthropic.types import TextBlock
+
+            if isinstance(message.content[0], TextBlock):
+                response_text = message.content[0].text.strip()
+            else:
+                raise ValueError(f"Unexpected content type: {type(message.content[0])}")
             self.logger.debug(f"Raw API response: {response_text}")
 
             # Parse JSON response
@@ -706,7 +733,8 @@ Analyze each channel separately and choose the best team selection video for eac
                         f"Could not map response for channel: {channel_response.channel_name}"
                     )
 
-            return results
+            # Convert to expected return type (values can be None)
+            return dict(results)
 
         except Exception as e:
             self.logger.error(f"Anthropic API error: {e}")
@@ -811,7 +839,9 @@ def load_channels_config(
         return {}
 
 
-def setup_logging(verbose: bool = False) -> logging.Logger:  # pragma: no cover - CLI helper
+def setup_logging(
+    verbose: bool = False,
+) -> logging.Logger:  # pragma: no cover - CLI helper
     """Setup logging configuration."""
     level = logging.DEBUG if verbose else logging.INFO
     logging.basicConfig(
@@ -822,7 +852,9 @@ def setup_logging(verbose: bool = False) -> logging.Logger:  # pragma: no cover 
     return logging.getLogger(__name__)
 
 
-def cli_main(argv: Sequence[str] | None = None) -> int:  # pragma: no cover - CLI wrapper
+def cli_main(
+    argv: Sequence[str] | None = None,
+) -> int:  # pragma: no cover - CLI wrapper
     """Main entry point for the FPL video picker script."""
     parser = argparse.ArgumentParser(
         description="Find the most likely FPL team selection video from YouTube channels",
@@ -968,7 +1000,7 @@ Use --single-channel for parallel processing in shell scripts.
             logger.warning(f"Anthropic ranking failed: {e}, using heuristic fallback")
 
         # Create channel results
-        for _channel_url, candidates in channels_candidates.items():
+        for channel_url, candidates in channels_candidates.items():
             if not candidates:
                 continue
 
@@ -976,7 +1008,10 @@ Use --single-channel for parallel processing in shell scripts.
 
             # Check if we have Anthropic results for this channel
             if channel_url in anthropic_results:
-                selected_video, anthropic_response = anthropic_results[channel_url]
+                anthropic_result = anthropic_results[channel_url]
+                if anthropic_result is None:
+                    continue
+                selected_video, anthropic_response = anthropic_result
                 confidence = anthropic_response.confidence
                 reasoning = anthropic_response.reasoning
                 matched_signals = anthropic_response.matched_signals

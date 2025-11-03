@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from typing import Any
-from zoneinfo import ZoneInfo
 
 from .utils import (
     DEFAULT_TIMEZONE,
@@ -85,7 +84,7 @@ def find_current_gameweek(
 def format_gameweek_info(
     gameweek: dict[str, Any],
     reference_time: datetime,
-    local_tz: ZoneInfo = DEFAULT_TIMEZONE,
+    local_tz: Any = DEFAULT_TIMEZONE,
 ) -> dict[str, Any]:
     result = {
         "id": gameweek["id"],

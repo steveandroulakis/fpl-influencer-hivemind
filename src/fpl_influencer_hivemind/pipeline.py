@@ -135,9 +135,11 @@ def _safe_channel_name(name: str) -> str:
 
 def _load_channels(path: Path | None = None) -> list[ChannelConfig]:
     if path is None:
-        with resources.files(DEFAULT_CHANNELS_RESOURCE).joinpath(
-            DEFAULT_CHANNELS_FILENAME
-        ).open("r", encoding="utf-8") as handle:
+        with (
+            resources.files(DEFAULT_CHANNELS_RESOURCE)
+            .joinpath(DEFAULT_CHANNELS_FILENAME)
+            .open("r", encoding="utf-8") as handle
+        ):
             payload = cast("ChannelsFile", json.load(handle))
     else:
         if not path.exists():
@@ -446,9 +448,7 @@ def aggregate(
         "fallback_used": fallback_used,
     }
     video_results: list[VideoResult] = [
-        cast("VideoResult", item.result)
-        for item in discoveries
-        if item.result is not None
+        item.result for item in discoveries if item.result is not None
     ]
 
     aggregate_payload: dict[str, object] = {
@@ -485,9 +485,7 @@ def aggregate(
         f"gw{active_gameweek_id:02d}_team{team_id}_{timestamp}_aggregation.json"
     )
     result_path = generate_unique_path(artifacts_dir / default_filename)
-    result_path.write_text(
-        json.dumps(aggregate_payload, indent=2), encoding="utf-8"
-    )
+    result_path.write_text(json.dumps(aggregate_payload, indent=2), encoding="utf-8")
 
     return AggregationOutcome(
         team_id=team_id,

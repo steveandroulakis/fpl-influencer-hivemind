@@ -143,9 +143,7 @@ def _summarize_discoveries(discoveries: Sequence[ChannelDiscovery]) -> str:
         if item.result:
             title = item.result.get("title", "Unknown title")
             confidence = item.result.get("confidence", "?")
-            lines.append(
-                f"✅ {channel_name}: {title} (confidence {confidence})"
-            )
+            lines.append(f"✅ {channel_name}: {title} (confidence {confidence})")
         else:
             reason = item.error or "No match"
             lines.append(f"❌ {channel_name}: {reason}")
@@ -223,7 +221,7 @@ def _confirm(prompt: str) -> bool:
     """Prompt for confirmation, flushing any buffered stdin first."""
 
     with suppress(ImportError, OSError):
-        import termios  # type: ignore
+        import termios  # type: ignore[import-untyped, unused-ignore]
 
         termios.tcflush(sys.stdin, termios.TCIFLUSH)
 

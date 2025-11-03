@@ -56,7 +56,7 @@ Artifacts are timestamped (e.g. `var/hivemind/gw05_team1178124_20250920T104530Z_
 - `src/fpl_influencer_hivemind/services/transcripts.py` – transcript gateway (YouTube Transcript IO by default, EasySubAPI/yt-dlp as fallback) returning text plus per-segment timing metadata.
 - `src/fpl_influencer_hivemind/types.py` – shared TypedDict/dataclass models used across the pipeline, discovery, and CLI layers.
 - `src/fpl_influencer_hivemind/youtube/video_picker.py` – reusable video discovery logic (also powers `youtube-titles/fpl_video_picker.py`).
-- `fpl/` – standalone scripts for FPL API data.
+- `src/fpl_influencer_hivemind/fpl/` – FPL API integration modules (gameweek, team, ownership data).
 - `youtube-transcript/` – legacy transcript downloader retained for fallback and CLI experimentation.
 
 All discovery now happens inside the main process, so the CLI remains responsive—no more silent subprocess wait.
@@ -72,7 +72,6 @@ Latest additions include unit coverage for the discovery helper (`tests/test_vid
 ## 🔧 Useful Utilities
 - `./youtube-titles/fpl_video_picker.py --single-channel "FPL Raptor" --gameweek 5 --verbose`
 - `./youtube-transcript/fpl_transcript.py --id VIDEO_ID --format txt`
-- `uv run fpl/get_my_team.py --entry-id 1178124 --show summary,picks`
 - `./fpl_intelligence_analyzer.py --input var/hivemind/gwXX_teamXXXX_*.json --commentary "Triple captain this week"` to force a high-priority directive during analysis.
 
 ## 📁 Output & Logs

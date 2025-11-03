@@ -6,6 +6,7 @@ transcript-related scripts in the future.
 """
 
 import re
+from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 
@@ -83,8 +84,10 @@ def clean_transcript_text(text: str) -> str:
 
 
 def filter_transcript_by_keywords(
-    transcript_data: list[dict], keywords: list[str], case_sensitive: bool = False
-) -> list[dict]:
+    transcript_data: list[dict[str, Any]],
+    keywords: list[str],
+    case_sensitive: bool = False,
+) -> list[dict[str, Any]]:
     """
     Filter transcript segments containing specific keywords.
 
@@ -116,7 +119,7 @@ def filter_transcript_by_keywords(
     return filtered_segments
 
 
-def get_transcript_duration(transcript_data: list[dict]) -> float:
+def get_transcript_duration(transcript_data: list[dict[str, Any]]) -> float:
     """
     Calculate total duration of transcript.
 
@@ -131,10 +134,12 @@ def get_transcript_duration(transcript_data: list[dict]) -> float:
 
     # Find the end time of the last segment
     last_segment = transcript_data[-1]
-    return last_segment["start"] + last_segment["duration"]
+    start = float(last_segment.get("start", 0.0))
+    duration = float(last_segment.get("duration", 0.0))
+    return start + duration
 
 
-def summarize_transcript_stats(transcript_data: list[dict]) -> dict:
+def summarize_transcript_stats(transcript_data: list[dict[str, Any]]) -> dict[str, Any]:
     """
     Generate basic statistics about a transcript.
 

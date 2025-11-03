@@ -14,8 +14,11 @@ from .utils import (
 )
 
 
-def _create_player_record(player: dict[str, Any], teams: dict[int, str]) -> dict[str, Any]:
-    team_name = teams.get(player.get("team"), "Unknown")
+def _create_player_record(
+    player: dict[str, Any], teams: dict[int, str]
+) -> dict[str, Any]:
+    team_id: int | None = player.get("team")
+    team_name = teams.get(team_id, "Unknown") if team_id is not None else "Unknown"
     return {
         "id": player.get("id"),
         "web_name": player.get("web_name", ""),
@@ -53,7 +56,9 @@ async def get_top_players_by_ownership(limit: int = 150) -> list[dict[str, Any]]
     fpl, session = await create_fpl_session()
     try:
         bootstrap = await get_bootstrap_data(fpl)
-        teams = {team.get("id"): team.get("name") for team in bootstrap.get("teams", [])}
+        teams = {
+            team.get("id"): team.get("name") for team in bootstrap.get("teams", [])
+        }
         players = bootstrap.get("elements", [])
         records = [_create_player_record(player, teams) for player in players]
         records.sort(

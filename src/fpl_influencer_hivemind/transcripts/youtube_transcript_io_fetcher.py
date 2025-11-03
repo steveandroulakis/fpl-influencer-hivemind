@@ -10,9 +10,12 @@ from __future__ import annotations
 
 import logging
 import time
-from collections.abc import Iterable, Sequence
+from typing import TYPE_CHECKING, Any
 
-import requests
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Sequence
+
+import requests  # type: ignore[import-untyped]
 
 _logger = logging.getLogger("fpl_influencer_hivemind.transcripts.youtube_transcript_io")
 
@@ -43,7 +46,7 @@ class YouTubeTranscriptIOFetcher:
 
     def fetch_transcript(
         self, video_id: str, languages: Sequence[str], _translate_to: str = "en"
-    ) -> tuple[list[dict], str, bool]:
+    ) -> tuple[list[dict[str, Any]], str, bool]:
         """Return segments, language, translated flag for ``video_id``.
 
         ``translate_to`` is accepted for API compatibility but the service does
@@ -68,7 +71,11 @@ class YouTubeTranscriptIOFetcher:
                 data = response.json()
                 segments, language = self._parse_response(data, languages)
                 return segments, language, False
-            except (requests.RequestException, ValueError, YouTubeTranscriptIOError) as exc:
+            except (
+                requests.RequestException,
+                ValueError,
+                YouTubeTranscriptIOError,
+            ) as exc:
                 last_error = exc
                 if attempt < self._max_retries - 1:
                     self._sleep(attempt)
@@ -79,13 +86,13 @@ class YouTubeTranscriptIOFetcher:
         raise YouTubeTranscriptIOError(message) from last_error
 
     def _sleep(self, attempt: int) -> None:
-        delay = self._retry_backoff ** attempt
+        delay = self._retry_backoff**attempt
         _logger.warning("Retrying youtube-transcript.io request in %.2fs", delay)
         time.sleep(delay)
 
     def _parse_response(
         self, response: object, languages: Sequence[str]
-    ) -> tuple[list[dict], str]:
+    ) -> tuple[list[dict[str, Any]], str]:
         if not isinstance(response, list) or not response:
             raise YouTubeTranscriptIOError("Empty or malformed API response")
 
@@ -110,8 +117,8 @@ class YouTubeTranscriptIOFetcher:
         return segments, language
 
     def _select_track(
-        self, tracks: Iterable[dict], languages: Sequence[str]
-    ) -> dict:
+        self, tracks: Iterable[dict[str, Any]], languages: Sequence[str]
+    ) -> dict[str, Any]:
         normalised_prefs = [lang.lower() for lang in languages if lang]
         for preferred in normalised_prefs:
             for track in tracks:
@@ -130,8 +137,10 @@ class YouTubeTranscriptIOFetcher:
                 return track
         raise YouTubeTranscriptIOError("No usable transcript tracks found")
 
-    def _normalise_segments(self, raw_segments: Iterable[dict]) -> list[dict]:
-        segments: list[dict] = []
+    def _normalise_segments(
+        self, raw_segments: Iterable[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        segments: list[dict[str, Any]] = []
         for item in raw_segments:
             if not isinstance(item, dict):
                 continue
@@ -149,7 +158,7 @@ class YouTubeTranscriptIOFetcher:
         return segments
 
     @staticmethod
-    def _extract_language(track: dict) -> str:
+    def _extract_language(track: dict[str, Any]) -> str:
         language = track.get("language") or track.get("languageCode")
         if isinstance(language, str) and language:
             return language

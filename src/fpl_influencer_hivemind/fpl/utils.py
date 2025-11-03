@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 import importlib
 import importlib.util
+from datetime import datetime
 from pathlib import Path
-from typing import Any, Type
+from typing import Any, cast
 from zoneinfo import ZoneInfo
 
 import aiohttp
-from dateutil.parser import parse as parse_datetime
+from dateutil.parser import parse as parse_datetime  # type: ignore[import-untyped]
 
 POSITION_MAPPING = {1: "GKP", 2: "DEF", 3: "MID", 4: "FWD"}
 DEFAULT_TIMEZONE = ZoneInfo("America/Los_Angeles")
@@ -19,7 +19,7 @@ FPL_TIMEZONE = ZoneInfo("UTC")
 FPLClient = Any
 
 _bootstrap_cache: dict[str, Any] | None = None
-_FPL_CLASS: Type[Any] | None = None
+_FPL_CLASS: type[Any] | None = None
 
 
 def _load_external_fpl() -> Any:
@@ -55,19 +55,23 @@ def _load_external_fpl() -> Any:
 
     module = importlib.import_module("fpl")
     if not hasattr(module, "FPL"):
-        raise ImportError("Imported 'fpl' module does not expose the expected 'FPL' client")
+        raise ImportError(
+            "Imported 'fpl' module does not expose the expected 'FPL' client"
+        )
 
     return module
 
 
-def _ensure_fpl_class() -> Type[Any]:
+def _ensure_fpl_class() -> type[Any]:
     """Return and cache the external ``FPL`` client class."""
 
     global _FPL_CLASS
     if _FPL_CLASS is None:
         module = _load_external_fpl()
-        _FPL_CLASS = getattr(module, "FPL")
-    return _FPL_CLASS
+        _FPL_CLASS = module.FPL
+    
+    # Type checker cannot narrow global variables, but we've guaranteed it's not None above
+    return cast(type[Any], _FPL_CLASS)
 
 
 async def create_fpl_session() -> tuple[FPLClient, aiohttp.ClientSession]:
@@ -77,7 +81,7 @@ async def create_fpl_session() -> tuple[FPLClient, aiohttp.ClientSession]:
 
 
 def _to_plain(obj: Any, _seen: set[int] | None = None) -> Any:
-    if isinstance(obj, (str, int, float, bool)) or obj is None:
+    if isinstance(obj, str | int | float | bool | type(None)):
         return obj
 
     if _seen is None:
@@ -142,6 +146,8 @@ def normalize_ownership(selected_by_percent: str | float | None) -> float:
 
 def parse_fpl_datetime(value: str) -> datetime:
     parsed = parse_datetime(value)
+    if not isinstance(parsed, datetime):
+        raise ValueError(f"Expected datetime, got {type(parsed)}")
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=FPL_TIMEZONE)
     return parsed.astimezone(FPL_TIMEZONE)
@@ -158,9 +164,9 @@ __all__ = [
     "create_fpl_session",
     "get_bootstrap_data",
     "map_position",
-    "normalize_price",
     "normalize_ownership",
+    "normalize_price",
     "parse_fpl_datetime",
-    "safe_close_session",
     "reset_bootstrap_cache",
+    "safe_close_session",
 ]

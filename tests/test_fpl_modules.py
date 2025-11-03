@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import importlib
 from datetime import UTC, datetime
 from pathlib import Path
@@ -150,7 +149,18 @@ async def test_get_my_team_info(monkeypatch: pytest.MonkeyPatch) -> None:
         started_event = 1
 
         async def get_picks(self):
-            return {5: [{"element": 10, "position": 1, "is_captain": True, "is_vice_captain": False, "multiplier": 2, "selling_price": 55}]}
+            return {
+                5: [
+                    {
+                        "element": 10,
+                        "position": 1,
+                        "is_captain": True,
+                        "is_vice_captain": False,
+                        "multiplier": 2,
+                        "selling_price": 55,
+                    }
+                ]
+            }
 
         async def get_gameweek_history(self):
             return []
@@ -168,7 +178,16 @@ async def test_get_my_team_info(monkeypatch: pytest.MonkeyPatch) -> None:
 
     async def fake_get_bootstrap_data(_client):
         return {
-            "elements": [{"id": 10, "web_name": "Player", "team": 1, "element_type": 2, "now_cost": 55, "total_points": 100}],
+            "elements": [
+                {
+                    "id": 10,
+                    "web_name": "Player",
+                    "team": 1,
+                    "element_type": 2,
+                    "now_cost": 55,
+                    "total_points": 100,
+                }
+            ],
             "teams": [{"id": 1, "name": "Team"}],
         }
 
@@ -192,13 +211,17 @@ def test_utils_helpers() -> None:
     assert parsed.tzinfo is not None
 
 
-def test_load_external_fpl_detects_shadowed_package(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_load_external_fpl_detects_shadowed_package(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     shadow_origin = Path(utils.__file__).resolve().parents[3] / "fpl" / "__init__.py"
 
     class DummySpec:
         origin = str(shadow_origin)
 
-    monkeypatch.setattr(importlib.util, "find_spec", lambda name: DummySpec() if name == "fpl" else None)
+    monkeypatch.setattr(
+        importlib.util, "find_spec", lambda name: DummySpec() if name == "fpl" else None
+    )
 
     import_called = False
 

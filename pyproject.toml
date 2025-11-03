@@ -69,6 +69,15 @@ strict = true
 warn_return_any = true
 warn_unused_configs = true
 show_error_codes = true
+# Add src to Python path for package imports
+mypy_path = "src"
+files = ["src", "compare_transcript_methods.py", "test_youtube_transcript_io.py", "fpl_data_aggregator.py", "fpl_intelligence_analyzer.py"]
+# Use explicit package bases to avoid module name conflicts
+explicit_package_bases = true
+# Follow imports even when they fail to resolve (so we can see the errors)
+follow_imports = "normal"
+# Allow checking files even when imports fail
+ignore_missing_imports = false
 
 [tool.pytest.ini_options]
 minversion = "8.0"
@@ -101,4 +110,5 @@ dev = [
     "pytest>=8.4.1",
     "pytest-cov>=6.2.1",
     "ruff>=0.12.10",
+    "types-requests>=2.32.4.20250913",
 ]
