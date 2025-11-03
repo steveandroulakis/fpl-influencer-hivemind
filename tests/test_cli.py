@@ -5,10 +5,14 @@ from __future__ import annotations
 import json
 import subprocess
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from fpl_influencer_hivemind import cli
 from fpl_influencer_hivemind.pipeline import AggregationError, AggregationOutcome
 from fpl_influencer_hivemind.types import ChannelDiscovery
+
+if TYPE_CHECKING:
+    from pytest import MonkeyPatch
 
 
 def _make_outcome(tmp_path: Path) -> AggregationOutcome:
@@ -40,7 +44,7 @@ def _make_outcome(tmp_path: Path) -> AggregationOutcome:
     )
 
 
-def test_collect_command_writes_destination(tmp_path: Path, monkeypatch) -> None:
+def test_collect_command_writes_destination(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
     outcome = _make_outcome(tmp_path)
     monkeypatch.setattr(cli, "aggregate", lambda **_: outcome)
     destination = Path(tmp_path) / "custom.json"
@@ -62,7 +66,7 @@ def test_collect_command_writes_destination(tmp_path: Path, monkeypatch) -> None
 
 
 def test_pipeline_command_skips_analysis_when_declined(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
     outcome = _make_outcome(tmp_path)
     monkeypatch.setattr(cli, "aggregate", lambda **_: outcome)
@@ -72,7 +76,7 @@ def test_pipeline_command_skips_analysis_when_declined(
     assert status == 0
 
 
-def test_pipeline_command_auto_runs_analysis(tmp_path: Path, monkeypatch) -> None:
+def test_pipeline_command_auto_runs_analysis(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
     outcome = _make_outcome(tmp_path)
     monkeypatch.setattr(cli, "aggregate", lambda **_: outcome)
     monkeypatch.setattr(cli, "_run_analyzer", lambda **_: 0)
@@ -83,7 +87,7 @@ def test_pipeline_command_auto_runs_analysis(tmp_path: Path, monkeypatch) -> Non
     assert status == 0
 
 
-def test_collect_handles_aggregation_error(monkeypatch) -> None:
+def test_collect_handles_aggregation_error(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setattr(
         cli,
         "aggregate",
@@ -93,12 +97,12 @@ def test_collect_handles_aggregation_error(monkeypatch) -> None:
     assert status == 1
 
 
-def test_run_analyzer_handles_failure(monkeypatch, tmp_path: Path) -> None:
-    def raise_error(args, *, check, text, cwd=None):  # type: ignore[no-redef]
+def test_run_analyzer_handles_failure(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    def raise_error(args: object, *, check: object, text: object, cwd: object = None) -> None:
         _ = (check, text, cwd)
-        raise subprocess.CalledProcessError(returncode=1, cmd=args, stderr="fail")
+        raise subprocess.CalledProcessError(returncode=1, cmd=args, stderr="fail")  # type: ignore[arg-type]
 
-    monkeypatch.setattr(cli.subprocess, "run", raise_error)
+    monkeypatch.setattr("fpl_influencer_hivemind.cli.subprocess.run", raise_error)
     status = cli._run_analyzer(
         input_path=Path(tmp_path) / "in.json",
         output_path=Path(tmp_path) / "out.md",
@@ -108,18 +112,25 @@ def test_run_analyzer_handles_failure(monkeypatch, tmp_path: Path) -> None:
     assert status == 1
 
 
-def test_confirm(monkeypatch) -> None:
+def test_confirm(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setattr("builtins.input", lambda _: "yes")
     assert cli._confirm("?") is True
     monkeypatch.setattr("builtins.input", lambda _: "")
     assert cli._confirm("?") is False
 
 
-def test_default_transcript_prompt(monkeypatch) -> None:
+def test_default_transcript_prompt(monkeypatch: MonkeyPatch) -> None:
     discoveries = [
         ChannelDiscovery(
             channel={"name": "FPL Test", "url": "https://example.com"},
-            result={"channel_name": "FPL Test", "video_id": "abc", "title": "Title"},
+            result={
+                "channel_name": "FPL Test",
+                "video_id": "abc",
+                "title": "Title",
+                "url": "https://youtu.be/abc",
+                "confidence": 0.9,
+                "published_at": "2025-01-01T00:00:00Z",
+            },
         )
     ]
 

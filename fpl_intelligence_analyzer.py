@@ -31,7 +31,7 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import anthropic
 from pydantic import BaseModel, ValidationError
@@ -69,7 +69,7 @@ class FPLIntelligenceAnalyzer:
         self.setup_logging(verbose)
         self.logger = logging.getLogger(__name__)
         self.save_prompts = save_prompts
-        self.prompts_dir = None
+        self.prompts_dir: Path | None = None
 
         # Initialize Anthropic client
         api_key = os.environ.get("ANTHROPIC_API_KEY")
@@ -100,7 +100,12 @@ class FPLIntelligenceAnalyzer:
         """Load and parse the FPL aggregated data JSON file."""
         try:
             with Path(input_file).open() as f:
-                data = json.load(f)
+                data_raw = json.load(f)
+
+            if not isinstance(data_raw, dict):
+                raise ValueError("Aggregated data must be a JSON object")
+
+            data = cast("dict[str, Any]", data_raw)
 
             self.logger.info(f"Loaded aggregated data from {input_file}")
 
@@ -260,8 +265,8 @@ Format it as clear prose, not JSON."""
         gameweek: int,
     ) -> ChannelAnalysis | None:
         """Analyze a single channel's transcript using Sonnet-4."""
+        channel_name = channel_data.get("channel_name", "Unknown")
         try:
-            channel_name = channel_data.get("channel_name", "Unknown")
             video_title = channel_data.get("title", "Unknown")
             transcript_length = len(transcript)
 
@@ -298,7 +303,7 @@ Extract the following information and return as JSON:
   "formation": "3-5-2",
   "team_selection": ["Salah (FWD)", "Haaland (FWD)", ...],
   "transfers_in": ["Player (POS)", ...],
-  "transfers_out": ["Player (POS)", ...], 
+  "transfers_out": ["Player (POS)", ...],
   "captain_choice": "Player (POS)",
   "vice_captain_choice": "Player (POS)",
   "key_issues_discussed": [
@@ -345,6 +350,8 @@ Return valid JSON only. For short transcripts, extract whatever information is a
             self.save_debug_content(f"{channel_name}_response.json", response)
 
             # Parse JSON response
+            analysis_data: dict[str, Any] | None = None
+
             try:
                 # Clean up response if it has code fences
                 if "```" in response:
@@ -356,7 +363,10 @@ Return valid JSON only. For short transcripts, extract whatever information is a
                     if json_match:
                         response = json_match.group(1)
 
-                analysis_data = json.loads(response)
+                parsed = json.loads(response)
+                if not isinstance(parsed, dict):
+                    raise json.JSONDecodeError("Expected JSON object", response, 0)
+                analysis_data = cast("dict[str, Any]", parsed)
 
                 # Ensure transcript_length is set
                 if "transcript_length" not in analysis_data:
@@ -400,8 +410,9 @@ Return valid JSON only. For short transcripts, extract whatever information is a
                     return None
 
             except ValidationError as e:
+                formatted_data = json.dumps(analysis_data or {}, indent=2)[:500]
                 self.logger.error(
-                    f"Validation failed for {channel_name}: {e}\nData: {json.dumps(analysis_data, indent=2)[:500]}..."
+                    f"Validation failed for {channel_name}: {e}\nData: {formatted_data}..."
                 )
                 return None
 
@@ -566,7 +577,7 @@ Start with 1-3 **clear recommended paths** (transfers, captaincy, XI) for what t
 - Use my current number of free transfers (FTs) from the MY TEAM data.
 - Always consider:
   - Rolling transfers (now up to 5 can be banked).
-  - Impact of taking hits: (extra transfers beyond free) × 4 points.
+  - Impact of taking hits: (extra transfers beyond free) x 4 points.
   - Budget, ITB, per-club limits, and position requirements.
 - If missing a **universal captain choice**, prioritise bringing them in.
 - Recommendations should include: OUT → IN, est. cost, new ITB, and which influencers back the move.
@@ -603,8 +614,8 @@ CRITICAL REQUIREMENTS
 - Report must stay in clean Markdown.
 """
 
-            system = """You are an expert FPL strategist and analyst. Generate comprehensive, actionable FPL advice 
-by analyzing multiple influencer perspectives alongside detailed player data. Your recommendations should be 
+            system = """You are an expert FPL strategist and analyst. Generate comprehensive, actionable FPL advice
+by analyzing multiple influencer perspectives alongside detailed player data. Your recommendations should be
 specific, well-reasoned, and tailored to the user's current team situation."""
 
             # Save final prompt if debug mode is on

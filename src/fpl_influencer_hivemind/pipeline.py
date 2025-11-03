@@ -499,12 +499,10 @@ def aggregate(
     )
 
 
-__all__ = sorted(
-    [
-        "AggregationError",
-        "AggregationOutcome",
-        "PROJECT_ROOT",
-        "aggregate",
-        "generate_unique_path",
-    ]
-)
+__all__ = [
+    "PROJECT_ROOT",
+    "AggregationError",
+    "AggregationOutcome",
+    "aggregate",
+    "generate_unique_path",
+]

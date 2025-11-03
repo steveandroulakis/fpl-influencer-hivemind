@@ -6,15 +6,18 @@ from dataclasses import dataclass, field
 from typing import NotRequired, TypedDict
 
 
-class VideoResult(TypedDict, total=False):
-    """Partial schema emitted by discovery helpers."""
-
+class _VideoResultRequired(TypedDict):
     channel_name: str
     video_id: str
     title: str
     url: str
     confidence: float
     published_at: str
+
+
+class VideoResult(_VideoResultRequired, total=False):
+    """Partial schema emitted by discovery helpers."""
+
     published_at_formatted: NotRequired[str]
     reasoning: NotRequired[str]
     matched_signals: NotRequired[list[str]]
@@ -30,14 +33,16 @@ class TranscriptSegment(TypedDict):
     text: str
 
 
-class TranscriptEntry(TypedDict, total=False):
-    """Transcript payload stored in aggregation artifacts."""
-
+class _TranscriptEntryRequired(TypedDict):
     video_id: str
     text: str
     language: str
     translated: bool
     segments: list[TranscriptSegment]
+
+
+class TranscriptEntry(_TranscriptEntryRequired, total=False):
+    """Transcript payload stored in aggregation artifacts."""
 
 
 class GameweekInfo(TypedDict, total=False):

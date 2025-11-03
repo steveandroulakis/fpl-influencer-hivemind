@@ -69,9 +69,9 @@ def _ensure_fpl_class() -> type[Any]:
     if _FPL_CLASS is None:
         module = _load_external_fpl()
         _FPL_CLASS = module.FPL
-    
+
     # Type checker cannot narrow global variables, but we've guaranteed it's not None above
-    return cast(type[Any], _FPL_CLASS)
+    return cast("type[Any]", _FPL_CLASS)
 
 
 async def create_fpl_session() -> tuple[FPLClient, aiohttp.ClientSession]:

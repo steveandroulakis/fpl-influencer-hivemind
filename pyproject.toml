@@ -16,6 +16,8 @@ dependencies = [
     "pydantic>=2.7.0",
     "tenacity>=8.2.3",
     "yt-dlp>=2025.10.14",
+    "python-dotenv>=1.0.0",
+    "rich>=13.9.0",
 ]
 
 [project.optional-dependencies]
@@ -71,7 +73,7 @@ warn_unused_configs = true
 show_error_codes = true
 # Add src to Python path for package imports
 mypy_path = "src"
-files = ["src", "compare_transcript_methods.py", "test_youtube_transcript_io.py", "fpl_data_aggregator.py", "fpl_intelligence_analyzer.py"]
+files = ["src", "fpl_data_aggregator.py", "fpl_intelligence_analyzer.py"]
 # Use explicit package bases to avoid module name conflicts
 explicit_package_bases = true
 # Follow imports even when they fail to resolve (so we can see the errors)

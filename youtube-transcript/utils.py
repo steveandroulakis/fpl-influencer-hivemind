@@ -6,7 +6,20 @@ transcript-related scripts in the future.
 """
 
 import re
+from typing import TypedDict
 from urllib.parse import parse_qs, urlparse
+
+from fpl_influencer_hivemind.types import TranscriptSegment
+
+
+class TranscriptStats(TypedDict):
+    """Basic statistics derived from transcript metadata."""
+
+    total_segments: int
+    total_words: int
+    total_duration: float
+    average_segment_duration: float
+    words_per_minute: float
 
 
 def parse_video_id_from_url(url_or_id: str) -> str:
@@ -83,8 +96,10 @@ def clean_transcript_text(text: str) -> str:
 
 
 def filter_transcript_by_keywords(
-    transcript_data: list[dict], keywords: list[str], case_sensitive: bool = False
-) -> list[dict]:
+    transcript_data: list[TranscriptSegment],
+    keywords: list[str],
+    case_sensitive: bool = False,
+) -> list[TranscriptSegment]:
     """
     Filter transcript segments containing specific keywords.
 
@@ -99,7 +114,7 @@ def filter_transcript_by_keywords(
     if not keywords:
         return transcript_data
 
-    filtered_segments = []
+    filtered_segments: list[TranscriptSegment] = []
 
     for segment in transcript_data:
         text = segment["text"]
@@ -116,7 +131,7 @@ def filter_transcript_by_keywords(
     return filtered_segments
 
 
-def get_transcript_duration(transcript_data: list[dict]) -> float:
+def get_transcript_duration(transcript_data: list[TranscriptSegment]) -> float:
     """
     Calculate total duration of transcript.
 
@@ -130,11 +145,11 @@ def get_transcript_duration(transcript_data: list[dict]) -> float:
         return 0.0
 
     # Find the end time of the last segment
-    last_segment = transcript_data[-1]
+    last_segment: TranscriptSegment = transcript_data[-1]
     return last_segment["start"] + last_segment["duration"]
 
 
-def summarize_transcript_stats(transcript_data: list[dict]) -> dict:
+def summarize_transcript_stats(transcript_data: list[TranscriptSegment]) -> TranscriptStats:
     """
     Generate basic statistics about a transcript.
 

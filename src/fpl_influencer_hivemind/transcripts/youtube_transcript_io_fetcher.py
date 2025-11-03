@@ -10,13 +10,23 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
+
+import requests
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
-import requests  # type: ignore[import-untyped]
 
+class SessionLike(Protocol):
+    def post(
+        self,
+        url: str,
+        *,
+        json: dict[str, Any],
+        headers: dict[str, str],
+        timeout: float,
+    ) -> Any: ...
 _logger = logging.getLogger("fpl_influencer_hivemind.transcripts.youtube_transcript_io")
 
 _API_URL = "https://www.youtube-transcript.io/api/transcripts"
@@ -36,7 +46,7 @@ class YouTubeTranscriptIOFetcher:
         timeout: float = 30.0,
         max_retries: int = 3,
         retry_backoff: float = 1.5,
-        session: requests.Session | None = None,
+        session: SessionLike | None = None,
     ) -> None:
         self._api_key = api_key
         self._timeout = timeout

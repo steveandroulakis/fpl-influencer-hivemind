@@ -40,7 +40,8 @@ def stub_select_single_channel(
     failure_set = {int(item) for item in (fail_gameweeks or [])}
 
     def fake_select_single_channel(**kwargs: object) -> ChannelResult:
-        gameweek = int(kwargs.get("gameweek", 0))
+        gameweek_raw = kwargs.get("gameweek", 0)
+        gameweek = int(gameweek_raw) if isinstance(gameweek_raw, str | int) else 0
         calls.append(gameweek)
         if gameweek in failure_set:
             raise VideoPickerError(f"No videos for gameweek {gameweek}")

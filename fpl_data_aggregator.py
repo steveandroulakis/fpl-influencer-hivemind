@@ -11,10 +11,10 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from fpl_influencer_hivemind.cli import default_transcript_prompt
 from fpl_influencer_hivemind.pipeline import (
     AggregationError,
     aggregate,
-    default_transcript_prompt,
     generate_unique_path,
 )
 

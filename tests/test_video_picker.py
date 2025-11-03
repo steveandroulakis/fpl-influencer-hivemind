@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any
 
 import pytest
 
@@ -12,13 +13,21 @@ from fpl_influencer_hivemind.youtube import video_picker as vp
 class DummyRanker:
     """Anthropic stub that returns a deterministic selection."""
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: object, **kwargs: object) -> None:
         pass
 
-    def rank_videos_by_channel(self, channels_candidates, _gameweek):
-        video = next(iter(channels_candidates.values()))[0]
+    def rank_videos_by_channel(
+        self,
+        channels_candidates: dict[str, list[vp.VideoItem]],
+        _gameweek: int,
+    ) -> dict[str, tuple[vp.VideoItem, vp.AnthropicChannelResponse]]:
+        if not channels_candidates:
+            raise ValueError("channels_candidates cannot be empty")
+
+        channel_name, videos = next(iter(channels_candidates.items()))
+        video = videos[0]
         return {
-            next(iter(channels_candidates.keys())): (
+            channel_name: (
                 video,
                 vp.AnthropicChannelResponse(
                     channel_name=video.channel_name,
@@ -43,7 +52,7 @@ def test_select_single_channel_returns_ranked_result(
         description="My team selection video",
     )
 
-    def fake_fetch(_self, _channel_url: str):
+    def fake_fetch(_self: Any, _channel_url: str) -> list[vp.VideoItem]:
         return [video]
 
     monkeypatch.setattr(vp.FPLVideoCollector, "_fetch_channel_videos", fake_fetch)
@@ -66,7 +75,7 @@ def test_select_single_channel_returns_ranked_result(
 def test_select_single_channel_raises_when_no_videos(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    def fake_fetch(_self, _channel_url: str):
+    def fake_fetch(_self: Any, _channel_url: str) -> list[vp.VideoItem]:
         return []
 
     monkeypatch.setattr(vp.FPLVideoCollector, "_fetch_channel_videos", fake_fetch)

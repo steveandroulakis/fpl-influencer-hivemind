@@ -24,7 +24,10 @@ import importlib.util
 spec = importlib.util.spec_from_file_location(
     "fpl_video_picker", "./youtube-titles/fpl_video_picker.py"
 )
+if spec is None or spec.loader is None:
+    raise RuntimeError("Unable to locate youtube-titles/fpl_video_picker.py module")
 fpl_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(fpl_module)
 
 
 @dataclass
@@ -36,12 +39,12 @@ class MockVideoItem:
     description: str = ""
 
     @property
-    def normalized_title(self):
+    def normalized_title(self) -> str:
         return self.title.lower().strip()
 
 
 # Create test video data
-test_videos = [
+test_videos: list[MockVideoItem] = [
     MockVideoItem(
         title="My GW5 Team Selection - Final Team Reveal!",
         url="https://youtube.com/watch?v=test1",
@@ -73,7 +76,7 @@ test_videos = [
 ]
 
 
-def test_heuristic_filter():
+def test_heuristic_filter() -> list[MockVideoItem]:
     """Test the heuristic filtering system."""
     print("Testing Heuristic Filter...")
 
@@ -108,10 +111,10 @@ def test_heuristic_filter():
             "chat",
         ]
 
-        def __init__(self, gameweek=None):
+        def __init__(self, gameweek: int | None = None) -> None:
             self.gameweek = gameweek
 
-        def calculate_score(self, video):
+        def calculate_score(self, video: MockVideoItem) -> float:
             score = 0.0
             text = f"{video.normalized_title} {video.description.lower()}"
 
@@ -140,7 +143,7 @@ def test_heuristic_filter():
 
     hf = MockHeuristicFilter(gameweek=5)
 
-    scored_videos = []
+    scored_videos: list[tuple[MockVideoItem, float]] = []
     for video in test_videos:
         score = hf.calculate_score(video)
         scored_videos.append((video, score))
@@ -148,7 +151,7 @@ def test_heuristic_filter():
 
     # Sort by score
     scored_videos.sort(key=lambda x: x[1], reverse=True)
-    winner = scored_videos[0][0]
+    winner: MockVideoItem = scored_videos[0][0]
 
     print(f"\n🎯 Heuristic Winner: {winner.title}")
     print(f"   Channel: {winner.channel_name}")
@@ -157,11 +160,11 @@ def test_heuristic_filter():
     return [video for video, score in scored_videos if score > 0]
 
 
-def test_anthropic_prompt():
+def test_anthropic_prompt() -> None:
     """Test the Anthropic prompt generation."""
     print("\nTesting Anthropic Prompt Generation...")
 
-    candidates_json = []
+    candidates_json: list[dict[str, object]] = []
     for i, video in enumerate(test_videos[:3]):
         candidates_json.append(
             {
@@ -210,7 +213,7 @@ Choose the video that best matches FPL team selection content."""
     print("✓ Schema defined correctly")
 
 
-def main():
+def main() -> None:
     print("=== FPL Video Picker Component Tests ===\n")
 
     # Test heuristic filter

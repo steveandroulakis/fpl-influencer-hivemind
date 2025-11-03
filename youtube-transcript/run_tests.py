@@ -15,10 +15,15 @@ from pathlib import Path
 # Add current directory to path to import the main module
 sys.path.insert(0, str(Path(__file__).parent))
 
+from typing import TYPE_CHECKING
+
 from fpl_transcript import format_as_txt, parse_video_id, srt_timestamp, vtt_timestamp
 
+if TYPE_CHECKING:
+    from fpl_influencer_hivemind.types import TranscriptSegment
 
-def test_parse_video_id():
+
+def test_parse_video_id() -> None:
     """Test video ID parsing."""
     print("Testing parse_video_id...")
 
@@ -42,7 +47,7 @@ def test_parse_video_id():
     print("✓ parse_video_id tests passed!\n")
 
 
-def test_timestamps():
+def test_timestamps() -> None:
     """Test timestamp formatting."""
     print("Testing timestamp formatting...")
 
@@ -61,12 +66,12 @@ def test_timestamps():
     print("✓ Timestamp tests passed!\n")
 
 
-def test_formatting():
+def test_formatting() -> None:
     """Test transcript formatting functions."""
     print("Testing transcript formatting...")
 
     # Sample data
-    sample_data = [
+    sample_data: list[TranscriptSegment] = [
         {"text": "Hello there", "start": 0.0, "duration": 1.5},
         {"text": "How are you?", "start": 1.5, "duration": 2.3},
     ]

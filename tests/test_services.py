@@ -13,6 +13,8 @@ from fpl_influencer_hivemind.transcripts.youtube_transcript_io_fetcher import (
 if TYPE_CHECKING:
     from pytest import MonkeyPatch
 
+    from fpl_influencer_hivemind.types import TranscriptEntry, TranscriptSegment
+
 
 def _patch_run(monkeypatch: MonkeyPatch, result: Any) -> None:
     async def fake_call(*_args: Any, **_kwargs: Any) -> Any:
@@ -51,7 +53,12 @@ def test_fpl_get_my_team(monkeypatch: MonkeyPatch) -> None:
 
 def test_transcripts_fetch_transcript_text(monkeypatch: MonkeyPatch) -> None:
     class DummyFetcher:
-        def fetch_transcript(self, video_id: str, _languages, _translate_to):
+        def fetch_transcript(
+            self,
+            video_id: str,
+            _languages: list[str],
+            _translate_to: str,
+        ) -> tuple[list[TranscriptSegment], str, bool]:
             assert video_id == "abc123"
             return (
                 [
@@ -71,7 +78,7 @@ def test_transcripts_fetch_transcript_text(monkeypatch: MonkeyPatch) -> None:
         ),
     )
 
-    transcript = transcript_service.fetch_transcript("abc123", verbose=False)
+    transcript: TranscriptEntry = transcript_service.fetch_transcript("abc123", verbose=False)
     assert transcript["language"] == "en"
     assert transcript["text"] == "Line one\nLine two"
     assert transcript["segments"][0]["text"] == "Line one"
@@ -85,22 +92,27 @@ def test_transcripts_prefers_youtube_transcript_io(monkeypatch: MonkeyPatch) -> 
     monkeypatch.setattr(transcript_service, "_YOUTUBE_IO_CACHE", None)
 
     class DummyYouTubeFetcher:
-        def fetch_transcript(self, video_id: str, languages, translate_to: str):
+        def fetch_transcript(
+            self,
+            video_id: str,
+            languages: list[str],
+            translate_to: str,
+        ) -> tuple[list[TranscriptSegment], str, bool]:
             assert video_id == "abc123"
             assert next(iter(languages)) == "en"
             assert translate_to == "en"
             return (
-                [{"start": "0", "duration": "1.0", "text": "Primary"}],
+                [{"start": 0.0, "duration": 1.0, "text": "Primary"}],
                 "en",
                 False,
             )
 
-    def fake_make_fetcher(api_key: str, *, timeout: float):
+    def fake_make_fetcher(api_key: str, *, timeout: float) -> DummyYouTubeFetcher:
         assert api_key == "secret-key"
         assert timeout == 300.0
         return DummyYouTubeFetcher()
 
-    def fail_legacy_loader():  # pragma: no cover - defensive
+    def fail_legacy_loader() -> None:  # pragma: no cover - defensive
         raise AssertionError("Legacy fetcher should not run when YouTube IO succeeds")
 
     monkeypatch.setattr(transcript_service, "_make_youtube_fetcher", fake_make_fetcher)
@@ -117,14 +129,21 @@ def test_transcripts_falls_back_when_youtube_fails(monkeypatch: MonkeyPatch) -> 
     monkeypatch.setattr(transcript_service, "_YOUTUBE_IO_CACHE", None)
 
     class FailingFetcher:
-        def fetch_transcript(self, *_args, **_kwargs):
+        def fetch_transcript(
+            self, *_args: Any, **_kwargs: Any
+        ) -> tuple[list[TranscriptSegment], str, bool]:
             raise YouTubeTranscriptIOError("boom")
 
-    def fake_make_fetcher(*_args, **_kwargs):
+    def fake_make_fetcher(*_args: Any, **_kwargs: Any) -> FailingFetcher:
         return FailingFetcher()
 
     class LegacyFetcher:
-        def fetch_transcript(self, video_id: str, _languages, _translate_to):
+        def fetch_transcript(
+            self,
+            video_id: str,
+            _languages: list[str],
+            _translate_to: str,
+        ) -> tuple[list[TranscriptSegment], str, bool]:
             assert video_id == "abc123"
             return (
                 [{"start": 0.0, "duration": 1.0, "text": "Fallback"}],
@@ -132,10 +151,12 @@ def test_transcripts_falls_back_when_youtube_fails(monkeypatch: MonkeyPatch) -> 
                 False,
             )
 
-    def legacy_factory(**_kwargs):
+    def legacy_factory(**_kwargs: Any) -> LegacyFetcher:
         return LegacyFetcher()
 
-    def legacy_formatter(data, *, include_timestamps: bool):
+    def legacy_formatter(
+        data: list[TranscriptSegment], *, include_timestamps: bool
+    ) -> str:
         assert include_timestamps is False
         return "\n".join(item["text"] for item in data)
 

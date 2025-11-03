@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib
+import importlib.util as importlib_util
 from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
@@ -54,10 +55,10 @@ def test_format_gameweek_info_adds_deadline() -> None:
 
 @pytest.mark.asyncio
 async def test_get_current_gameweek_info(monkeypatch: pytest.MonkeyPatch) -> None:
-    async def fake_create_session():
+    async def fake_create_session() -> tuple[object, SimpleNamespace]:
         return object(), SimpleNamespace(close=lambda: None)
 
-    async def fake_get_bootstrap_data(_client):
+    async def fake_get_bootstrap_data(_client: object) -> dict[str, object]:
         return {
             "events": [
                 {
@@ -69,7 +70,7 @@ async def test_get_current_gameweek_info(monkeypatch: pytest.MonkeyPatch) -> Non
             ]
         }
 
-    async def fake_safe_close(_session):
+    async def fake_safe_close(_session: object) -> None:
         return None
 
     monkeypatch.setattr(gw, "create_fpl_session", fake_create_session)
@@ -82,10 +83,10 @@ async def test_get_current_gameweek_info(monkeypatch: pytest.MonkeyPatch) -> Non
 
 @pytest.mark.asyncio
 async def test_get_top_players_by_ownership(monkeypatch: pytest.MonkeyPatch) -> None:
-    async def fake_create_session():
+    async def fake_create_session() -> tuple[object, SimpleNamespace]:
         return object(), SimpleNamespace(close=lambda: None)
 
-    async def fake_get_bootstrap_data(_client):
+    async def fake_get_bootstrap_data(_client: object) -> dict[str, object]:
         return {
             "teams": [{"id": 1, "name": "Team"}],
             "elements": [
@@ -118,7 +119,7 @@ async def test_get_top_players_by_ownership(monkeypatch: pytest.MonkeyPatch) -> 
             ],
         }
 
-    async def fake_safe_close(_session):
+    async def fake_safe_close(_session: object) -> None:
         return None
 
     monkeypatch.setattr(top_ownership, "create_fpl_session", fake_create_session)
@@ -148,7 +149,7 @@ async def test_get_my_team_info(monkeypatch: pytest.MonkeyPatch) -> None:
         favourite_team = 1
         started_event = 1
 
-        async def get_picks(self):
+        async def get_picks(self) -> dict[int, list[dict[str, int | bool]]]:
             return {
                 5: [
                     {
@@ -162,21 +163,21 @@ async def test_get_my_team_info(monkeypatch: pytest.MonkeyPatch) -> None:
                 ]
             }
 
-        async def get_gameweek_history(self):
+        async def get_gameweek_history(self) -> list[object]:
             return []
 
-        async def get_transfers(self):
+        async def get_transfers(self) -> list[object]:
             return []
 
     class DummyFPL:
-        async def get_user(self, entry_id: int):
+        async def get_user(self, entry_id: int) -> DummyUser:
             assert entry_id == 123
             return DummyUser()
 
-    async def fake_create_session():
+    async def fake_create_session() -> tuple[DummyFPL, SimpleNamespace]:
         return DummyFPL(), SimpleNamespace(close=lambda: None)
 
-    async def fake_get_bootstrap_data(_client):
+    async def fake_get_bootstrap_data(_client: DummyFPL) -> dict[str, object]:
         return {
             "elements": [
                 {
@@ -191,7 +192,7 @@ async def test_get_my_team_info(monkeypatch: pytest.MonkeyPatch) -> None:
             "teams": [{"id": 1, "name": "Team"}],
         }
 
-    async def fake_safe_close(_session):
+    async def fake_safe_close(_session: object) -> None:
         return None
 
     monkeypatch.setattr(my_team, "create_fpl_session", fake_create_session)
@@ -220,12 +221,12 @@ def test_load_external_fpl_detects_shadowed_package(
         origin = str(shadow_origin)
 
     monkeypatch.setattr(
-        importlib.util, "find_spec", lambda name: DummySpec() if name == "fpl" else None
+        importlib_util, "find_spec", lambda name: DummySpec() if name == "fpl" else None
     )
 
     import_called = False
 
-    def fake_import(_name: str):  # pragma: no cover - should not be invoked
+    def fake_import(_name: str) -> object:  # pragma: no cover - should not be invoked
         nonlocal import_called
         import_called = True
         return object()

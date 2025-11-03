@@ -24,8 +24,9 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-import requests  # type: ignore[import-untyped]
+import requests
 import yt_dlp  # type: ignore[import-untyped]
+from yt_dlp.utils import DownloadError  # type: ignore[import-untyped]
 
 
 def parse_video_id(url_or_id: str) -> str:
@@ -301,7 +302,7 @@ class YtDlpTranscriptFetcher:
         Raises:
             Various yt-dlp exceptions
         """
-        last_exception = None
+        last_exception: Exception | None = None
         url = f"https://www.youtube.com/watch?v={video_id}"
 
         for attempt in range(self.max_retries):
@@ -315,7 +316,7 @@ class YtDlpTranscriptFetcher:
                     self._apply_delay(attempt)
 
                 # Configure yt-dlp options
-                ydl_opts = {
+                ydl_opts: dict[str, Any] = {
                     "writeautomaticsub": True,
                     "writesubtitles": True,
                     "subtitleslangs": languages,
@@ -334,12 +335,12 @@ class YtDlpTranscriptFetcher:
                 with tempfile.TemporaryDirectory() as temp_dir:
                     ydl_opts["outtmpl"] = str(Path(temp_dir) / "%(id)s.%(ext)s")
 
-                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    with yt_dlp.YoutubeDL(ydl_opts) as ydl: # type: ignore
                         try:
                             ydl.extract_info(url, download=True)
 
                             # Find downloaded subtitle files
-                            subtitle_files = []
+                            subtitle_files: list[tuple[str, str, bool]] = []
                             temp_path = Path(temp_dir)
                             for lang in languages:
                                 for ext in ["vtt", "srt"]:
@@ -394,7 +395,7 @@ class YtDlpTranscriptFetcher:
                             else:
                                 raise Exception("No subtitle files found")
 
-                        except yt_dlp.DownloadError as e:
+                        except DownloadError as e:
                             error_msg = str(e).lower()
                             if any(
                                 keyword in error_msg
@@ -611,7 +612,7 @@ class EasySubApiFetcher:
         }
         payload = {"video_id": video_id}
 
-        last_exception = None
+        last_exception: Exception | None = None
 
         for attempt in range(self.max_retries):
             try:

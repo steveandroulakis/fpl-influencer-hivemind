@@ -24,13 +24,13 @@ class _FakeResponse:
 class _FakeSession:
     def __init__(self, payloads: list[object]) -> None:
         self._payloads = payloads
-        self.calls: list[tuple[str, dict]] = []
+        self.calls: list[tuple[str, dict[str, object]]] = []
 
     def post(
         self,
         url: str,
-        json: dict,
-        headers: dict,
+        json: dict[str, object],
+        headers: dict[str, str],
         timeout: float,
     ) -> _FakeResponse:
         _ = headers, timeout
