@@ -335,7 +335,7 @@ class YtDlpTranscriptFetcher:
                 with tempfile.TemporaryDirectory() as temp_dir:
                     ydl_opts["outtmpl"] = str(Path(temp_dir) / "%(id)s.%(ext)s")
 
-                    with yt_dlp.YoutubeDL(ydl_opts) as ydl: # type: ignore
+                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                         try:
                             ydl.extract_info(url, download=True)
 

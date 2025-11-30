@@ -77,8 +77,8 @@ class FPLIntelligenceAnalyzer:
             raise ValueError("ANTHROPIC_API_KEY environment variable is required")
 
         self.client = anthropic.Anthropic(api_key=api_key)
-        self.sonnet_model = "claude-sonnet-4-5-20250929"  # "claude-sonnet-4-20250514"
-        self.opus_model = "claude-opus-4-1-20250805"  # "claude-opus-4-1-20250805"
+        self.sonnet_model = "claude-opus-4-5-20251101"  # "claude-sonnet-4-20250514" // claude-sonnet-4-5-20250929
+        self.opus_model = "claude-opus-4-5-20251101"  # "claude-opus-4-1-20250805"
 
     def setup_logging(self, verbose: bool) -> None:
         """Setup logging configuration."""
@@ -154,6 +154,29 @@ class FPLIntelligenceAnalyzer:
         )
         return condensed_players
 
+    def _strip_lineup_metadata(
+        self, current_picks: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        """Remove lineup-specific fields that don't apply to upcoming gameweek decisions.
+
+        The FPL API returns lineup data (captain, bench order) from the previous gameweek,
+        which is irrelevant for recommendations about the upcoming gameweek.
+        """
+        sanitized: list[dict[str, Any]] = []
+        for pick in current_picks:
+            sanitized.append(
+                {
+                    "element_id": pick.get("element_id"),
+                    "web_name": pick.get("web_name"),
+                    "team_name": pick.get("team_name"),
+                    "player_position": pick.get("player_position"),
+                    "price": pick.get("price"),
+                    "total_points": pick.get("total_points"),
+                    "selling_price": pick.get("selling_price"),
+                }
+            )
+        return sanitized
+
     def format_my_team(
         self, my_team_data: dict[str, Any], free_transfers: int = 1
     ) -> str:
@@ -162,6 +185,9 @@ class FPLIntelligenceAnalyzer:
             current_picks = my_team_data.get("current_picks", [])
             summary = my_team_data.get("summary", {})
             team_value_info = my_team_data.get("team_value", {})
+
+            # Strip lineup metadata (captain, bench order) - not relevant for upcoming GW
+            sanitized_picks = self._strip_lineup_metadata(current_picks)
 
             # Prepare team data for LLM formatting
             team_context = {
@@ -172,20 +198,22 @@ class FPLIntelligenceAnalyzer:
                 "team_value": team_value_info.get("team_value", 0),
                 "bank_balance": team_value_info.get("bank_balance", 0),
                 "free_transfers": free_transfers,
-                "current_picks": current_picks,
+                "squad": sanitized_picks,
             }
 
             prompt = f"""Format this FPL team data into a clear, readable summary:
 
 {json.dumps(team_context, indent=2)}
 
-Create a concise summary including:
-- Team name and current performance
-- Starting XI with positions and key stats
-- Bench players
+Create a concise summary of this FPL manager's squad:
+- Team name and current performance (points, rank)
+- Squad of 15 players grouped by position (GKP, DEF, MID, FWD)
+- For each player: name, team, price, total points, selling price
 - Team value and bank balance
 - Free transfers available
-- Current captain/vice-captain
+
+Do NOT mention captain, vice-captain, starting XI, or bench - these are decisions
+the manager will make for the upcoming gameweek based on recommendations.
 
 Format it as clear prose, not JSON."""
 
@@ -524,7 +552,7 @@ DEFINITIONS
 
 DATA YOU CAN USE (may be partially provided)
 - influencers[]: [channel name, formation_strategy?, key_transfers?, captain?, vice?, watchlist[], key_issues_discussed[], chip_talk?, starting_xi?, bench?, notable_rationale?]
-- my_team: [squad[15] with positions/teams/prices/sell_prices, IGNORE CURRENT STARTING XI AND MY CURRENT BENCH. ASSUME I WILL CHANGE IT BY GW START, free_transfers (IMPORTANT: consider this number (and the number of hits beyond that number) when making transfer recommendations), planned_hits?, team_value, chips_available, risk_tolerance?]
+- my_team: [squad[15] with positions/teams/prices/sell_prices, free_transfers (IMPORTANT: consider this number (and the number of hits beyond that number) when making transfer recommendations), planned_hits?, team_value, chips_available, risk_tolerance?]
 - context (optional): [gw, deadline_utc, fixture_difficulty, minutes/injury flags, projections, blank/double indicators, price_change_risk]
 
 FPL VALIDATION RULES FOR ALL RECOMMENDATIONS
@@ -532,7 +560,7 @@ FPL VALIDATION RULES FOR ALL RECOMMENDATIONS
 - Max 3 players per real club. E.g. can't recommend transferring in more than 3 players.
 - Transfers must be the same position. E.g. you CAN'T transfer a MID for a FWD, you can only transfer a FWD for a FWD.
 - Legal starting XI formation (GK x1, DEF 3-5, MID 2-5, FWD 1-3; 11 players total).
-- Always provide bench order (1/2/3) and GK decision. Do NOT comment on current bench, assume I will be open to changing it. e.g. do NOT tell me "you have this critical player benched!" it is NOT relevant.
+- Always provide bench order (1/2/3) and GK decision.
 - Show remaining ITB after any proposed moves and the hit cost if applicable.
 - If required info is missing, say “not stated” rather than guessing.
 
@@ -594,7 +622,6 @@ Start with 1-3 **clear recommended paths** (transfers, captaincy, XI) for what t
 
 ### Starting XI & Bench Order
 - List recommended XI by position.
-- Do NOT pay attention to my current starting XI and bench order, ONLY the players I have in total. You can recommend whatever XI and bench you see fit.
 - Show bench order (1/2/3) and highlight any 50/50 calls, with reasoning.
 
 ### Future Planning (GW+1 to GW+3)
