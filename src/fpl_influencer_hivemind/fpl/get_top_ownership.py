@@ -1,4 +1,4 @@
-"""Return players ordered by ownership percentage."""
+"""Return players ordered by form (primary) and total points (secondary)."""
 
 from __future__ import annotations
 
@@ -52,7 +52,27 @@ def _create_player_record(
     }
 
 
-async def get_top_players_by_ownership(limit: int = 150) -> list[dict[str, Any]]:
+def _is_available(player: dict[str, Any], min_form: float = 1.0) -> bool:
+    """Filter out injured/unavailable/suspended players and low-form players."""
+    status = player.get("status", "a")
+    # Exclude: i=injured, u=unavailable, s=suspended
+    # Keep: a=available, d=doubtful (may still play)
+    if status in {"i", "u", "s"}:
+        return False
+    # Exclude players with very low form (not viable candidates)
+    form_str = player.get("form", "0.0") or "0.0"
+    try:
+        form = float(form_str)
+    except (ValueError, TypeError):
+        form = 0.0
+    return form >= min_form
+
+
+async def get_top_players_by_form(limit: int = 150) -> list[dict[str, Any]]:
+    """Return top players sorted by form (primary) and total_points (secondary).
+
+    Excludes injured/unavailable/suspended players and those with form < 1.0.
+    """
     fpl, session = await create_fpl_session()
     try:
         bootstrap = await get_bootstrap_data(fpl)
@@ -60,10 +80,12 @@ async def get_top_players_by_ownership(limit: int = 150) -> list[dict[str, Any]]
             team.get("id"): team.get("name") for team in bootstrap.get("teams", [])
         }
         players = bootstrap.get("elements", [])
-        records = [_create_player_record(player, teams) for player in players]
+        # Filter out unavailable/low-form players before creating records
+        available_players = [p for p in players if _is_available(p)]
+        records = [_create_player_record(player, teams) for player in available_players]
         records.sort(
             key=lambda record: (
-                record.get("selected_by_percent", 0.0),
+                float(record.get("form", "0.0") or "0.0"),
                 record.get("total_points", 0),
             ),
             reverse=True,
@@ -71,3 +93,9 @@ async def get_top_players_by_ownership(limit: int = 150) -> list[dict[str, Any]]
         return records[:limit]
     finally:
         await safe_close_session(session)
+
+
+# Backwards compatibility alias
+async def get_top_players_by_ownership(limit: int = 150) -> list[dict[str, Any]]:
+    """Deprecated: Use get_top_players_by_form instead."""
+    return await get_top_players_by_form(limit)

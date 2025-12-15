@@ -50,11 +50,13 @@ async def _get_current_picks(
 
 
 async def _get_team_value(user: Any) -> dict[str, Any]:
+    # FPL API returns values in tenths of millions (e.g., 1024 = 102.4m)
+    # normalize_price divides by 10 to get actual millions
     return {
-        "team_value": normalize_price(user.last_deadline_value * 10),
-        "bank_balance": normalize_price(user.last_deadline_bank * 10),
+        "team_value": normalize_price(user.last_deadline_value),
+        "bank_balance": normalize_price(user.last_deadline_bank),
         "total_value": normalize_price(
-            (user.last_deadline_value + user.last_deadline_bank) * 10
+            user.last_deadline_value + user.last_deadline_bank
         ),
         "total_transfers": user.last_deadline_total_transfers,
     }

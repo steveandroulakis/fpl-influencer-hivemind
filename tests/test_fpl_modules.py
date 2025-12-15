@@ -82,7 +82,7 @@ async def test_get_current_gameweek_info(monkeypatch: pytest.MonkeyPatch) -> Non
 
 
 @pytest.mark.asyncio
-async def test_get_top_players_by_ownership(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_get_top_players_by_form(monkeypatch: pytest.MonkeyPatch) -> None:
     async def fake_create_session() -> tuple[object, SimpleNamespace]:
         return object(), SimpleNamespace(close=lambda: None)
 
@@ -92,12 +92,12 @@ async def test_get_top_players_by_ownership(monkeypatch: pytest.MonkeyPatch) -> 
             "elements": [
                 {
                     "id": 10,
-                    "web_name": "Player",
+                    "web_name": "HighForm",
                     "team": 1,
                     "element_type": 2,
                     "now_cost": 55,
-                    "selected_by_percent": "78.5",
-                    "total_points": 100,
+                    "selected_by_percent": "30.0",
+                    "total_points": 80,
                     "minutes": 900,
                     "goals_scored": 5,
                     "assists": 3,
@@ -106,7 +106,7 @@ async def test_get_top_players_by_ownership(monkeypatch: pytest.MonkeyPatch) -> 
                     "saves": 0,
                     "bonus": 12,
                     "bps": 200,
-                    "form": "5.0",
+                    "form": "8.0",
                     "influence": "200",
                     "creativity": "150",
                     "threat": "100",
@@ -114,8 +114,42 @@ async def test_get_top_players_by_ownership(monkeypatch: pytest.MonkeyPatch) -> 
                     "expected_points": "6.5",
                     "status": "a",
                     "news": "",
-                    "chance_of_playing_next_round": 75,
-                }
+                    "chance_of_playing_next_round": 100,
+                },
+                {
+                    "id": 11,
+                    "web_name": "HighOwnership",
+                    "team": 1,
+                    "element_type": 2,
+                    "now_cost": 60,
+                    "selected_by_percent": "78.5",
+                    "total_points": 100,
+                    "minutes": 900,
+                    "form": "5.0",
+                    "status": "a",
+                },
+                {
+                    "id": 12,
+                    "web_name": "Injured",
+                    "team": 1,
+                    "element_type": 2,
+                    "now_cost": 50,
+                    "selected_by_percent": "50.0",
+                    "total_points": 90,
+                    "form": "0.0",
+                    "status": "i",  # injured - should be filtered
+                },
+                {
+                    "id": 13,
+                    "web_name": "LowForm",
+                    "team": 1,
+                    "element_type": 2,
+                    "now_cost": 45,
+                    "selected_by_percent": "40.0",
+                    "total_points": 70,
+                    "form": "0.5",  # below 1.0 threshold - should be filtered
+                    "status": "a",
+                },
             ],
         }
 
@@ -126,9 +160,16 @@ async def test_get_top_players_by_ownership(monkeypatch: pytest.MonkeyPatch) -> 
     monkeypatch.setattr(top_ownership, "get_bootstrap_data", fake_get_bootstrap_data)
     monkeypatch.setattr(top_ownership, "safe_close_session", fake_safe_close)
 
-    players = await top_ownership.get_top_players_by_ownership(limit=5)
-    assert players[0]["web_name"] == "Player"
-    assert players[0]["team_name"] == "Team"
+    players = await top_ownership.get_top_players_by_form(limit=5)
+    # Should only have 2 players (Injured and LowForm filtered out)
+    assert len(players) == 2
+    # HighForm (form=8.0) should be first despite lower ownership
+    assert players[0]["web_name"] == "HighForm"
+    assert players[1]["web_name"] == "HighOwnership"
+    # Verify injured/low-form players are excluded
+    web_names = [p["web_name"] for p in players]
+    assert "Injured" not in web_names
+    assert "LowForm" not in web_names
 
 
 @pytest.mark.asyncio

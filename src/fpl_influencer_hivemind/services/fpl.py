@@ -39,8 +39,15 @@ def get_current_gameweek_info() -> dict[str, Any]:
     return _run(_call(_current_gameweek_module.get_current_gameweek_info))  # type: ignore[no-any-return]
 
 
+def get_top_players(limit: int = 150) -> list[dict[str, Any]]:
+    """Get top players sorted by form (excludes injured/unavailable)."""
+    return _run(_call(_top_ownership_module.get_top_players_by_form, limit))  # type: ignore[no-any-return]
+
+
+# Backwards compatibility alias
 def get_top_ownership(limit: int = 150) -> list[dict[str, Any]]:
-    return _run(_call(_top_ownership_module.get_top_players_by_ownership, limit))  # type: ignore[no-any-return]
+    """Deprecated: Use get_top_players instead."""
+    return get_top_players(limit)
 
 
 def get_my_team(entry_id: int) -> dict[str, Any]:
@@ -51,5 +58,6 @@ __all__ = [
     "FPLServiceError",
     "get_current_gameweek_info",
     "get_my_team",
-    "get_top_ownership",
+    "get_top_ownership",  # Deprecated alias
+    "get_top_players",
 ]

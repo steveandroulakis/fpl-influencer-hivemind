@@ -5,6 +5,82 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import NotRequired, TypedDict
 
+from pydantic import BaseModel
+
+# =============================================================================
+# Analyzer Stage Models (Pydantic)
+# =============================================================================
+
+
+class PlayerRef(BaseModel):
+    """Player reference with position for validation."""
+
+    name: str
+    position: str  # GKP/DEF/MID/FWD
+    team: str | None = None
+
+
+class RiskFlag(BaseModel):
+    """Risk flag for a player."""
+
+    player: str
+    risk: str
+
+
+class GapAnalysis(BaseModel):
+    """Stage 1 output: gaps between my squad and influencer consensus."""
+
+    players_to_sell: list[PlayerRef]
+    players_missing: list[PlayerRef]
+    risk_flags: list[RiskFlag]
+    formation_gaps: list[str]
+    captain_gap: str | None = None
+
+
+class Transfer(BaseModel):
+    """Single transfer move."""
+
+    out_player: str  # "Mateta (FWD)"
+    out_team: str
+    in_player: str  # "Isak (FWD)"
+    in_team: str
+    in_price: float
+    selling_price: float
+    cost_delta: float
+    backers: list[str]
+
+
+class TransferPlan(BaseModel):
+    """Stage 2 output: specific transfer moves."""
+
+    transfers: list[Transfer]
+    total_cost: float
+    new_itb: float
+    fts_used: int
+    fts_remaining: int
+    hit_cost: int  # 0 if within FTs, else 4 * (transfers - FTs)
+    reasoning: str
+
+
+class LineupPlan(BaseModel):
+    """Stage 3 output: XI + bench selection."""
+
+    starting_xi: list[str]  # 11 "Player (POS)" strings
+    bench: list[str]  # 4 players in auto-sub priority
+    captain: str
+    vice_captain: str
+    formation: str  # e.g., "3-5-2"
+    reasoning: str
+
+
+class ValidationResult(BaseModel):
+    """Stage 4 output: validation status."""
+
+    valid: bool
+    errors: list[str]
+    warnings: list[str]
+    failed_stage: str | None = None  # "gap", "transfer", "lineup"
+
 
 class _VideoResultRequired(TypedDict):
     channel_name: str
@@ -102,8 +178,15 @@ __all__ = [
     "ChannelDiscovery",
     "ChannelsFile",
     "GameweekInfo",
+    "GapAnalysis",
+    "LineupPlan",
     "MyTeamPayload",
+    "PlayerRef",
+    "RiskFlag",
     "TranscriptEntry",
     "TranscriptSegment",
+    "Transfer",
+    "TransferPlan",
+    "ValidationResult",
     "VideoResult",
 ]
