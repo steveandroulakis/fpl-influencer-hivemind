@@ -461,6 +461,39 @@ Return valid JSON only. For short transcripts, extract whatever information is a
     # Multi-Stage Analysis Methods
     # =========================================================================
 
+    def _extract_last_json(self, response: str) -> str:
+        """Extract the last valid JSON object from a response with multiple blocks.
+
+        Models sometimes output multiple JSON blocks when they realize an error
+        and self-correct. This extracts the last valid JSON block.
+        """
+        # Find all JSON blocks in markdown fences
+        json_blocks = re.findall(
+            r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", response, re.DOTALL
+        )
+        if json_blocks:
+            # Return the last JSON block (most likely the corrected one)
+            return json_blocks[-1]
+
+        # Try to find raw JSON (not in fences)
+        # Look for last complete JSON object
+        cleaned = response.strip()
+        if cleaned.startswith("{"):
+            # Find matching closing brace
+            brace_count = 0
+            end_pos = 0
+            for i, char in enumerate(cleaned):
+                if char == "{":
+                    brace_count += 1
+                elif char == "}":
+                    brace_count -= 1
+                    if brace_count == 0:
+                        end_pos = i + 1
+            if end_pos > 0:
+                return cleaned[:end_pos]
+
+        return cleaned
+
     def _build_squad_context(
         self,
         my_team_data: dict[str, Any],
@@ -646,13 +679,7 @@ Return valid JSON only. Be precise about which players are in the squad vs recom
 
         # Parse response
         try:
-            # Clean up response if needed
-            cleaned = response.strip()
-            if cleaned.startswith("```"):
-                json_match = re.search(r"```(?:json)?\s*(\{.*\})\s*```", cleaned, re.DOTALL)
-                if json_match:
-                    cleaned = json_match.group(1)
-
+            cleaned = self._extract_last_json(response)
             data = json.loads(cleaned)
             return GapAnalysis(**data)
         except (json.JSONDecodeError, ValidationError) as e:
@@ -767,12 +794,7 @@ Return valid JSON only. Double-check that out players are in squad and in player
 
         # Parse response
         try:
-            cleaned = response.strip()
-            if cleaned.startswith("```"):
-                json_match = re.search(r"```(?:json)?\s*(\{.*\})\s*```", cleaned, re.DOTALL)
-                if json_match:
-                    cleaned = json_match.group(1)
-
+            cleaned = self._extract_last_json(response)
             data = json.loads(cleaned)
             return TransferPlan(**data)
         except (json.JSONDecodeError, ValidationError) as e:
@@ -870,12 +892,7 @@ Return valid JSON only. Use exact player names from the provided squad."""
 
         # Parse response
         try:
-            cleaned = response.strip()
-            if cleaned.startswith("```"):
-                json_match = re.search(r"```(?:json)?\s*(\{.*\})\s*```", cleaned, re.DOTALL)
-                if json_match:
-                    cleaned = json_match.group(1)
-
+            cleaned = self._extract_last_json(response)
             data = json.loads(cleaned)
             return LineupPlan(**data)
         except (json.JSONDecodeError, ValidationError) as e:
