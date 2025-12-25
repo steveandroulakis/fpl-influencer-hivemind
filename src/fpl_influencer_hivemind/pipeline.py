@@ -150,7 +150,12 @@ def _load_channels(path: Path | None = None) -> list[ChannelConfig]:
 
 def _collect_fpl_data(
     team_id: int, log: LogCallback | None
-) -> tuple[GameweekInfo, list[dict[str, object]], MyTeamPayload]:
+) -> tuple[
+    GameweekInfo,
+    list[dict[str, object]],
+    MyTeamPayload,
+    dict[str, list[dict[str, object]]],
+]:
     _emit(log, "Fetching current gameweek info...", "info")
     try:
         gameweek = cast("GameweekInfo", fpl_service.get_current_gameweek_info())
@@ -169,8 +174,14 @@ def _collect_fpl_data(
     except FPLServiceError as exc:
         raise AggregationError(str(exc)) from exc
 
+    _emit(log, "Fetching transfer momentum data...", "info")
+    try:
+        transfer_momentum = fpl_service.get_transfer_momentum(limit=10)
+    except FPLServiceError as exc:
+        raise AggregationError(str(exc)) from exc
+
     _emit(log, "FPL data collected", "success")
-    return gameweek, top_players, my_team
+    return gameweek, top_players, my_team, transfer_momentum
 
 
 def _discover_videos(
@@ -304,7 +315,7 @@ def aggregate(
 
     _emit(log, f"Fetching FPL data for team {team_id}...", "info")
     timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-    gameweek, top_players, my_team = _collect_fpl_data(team_id, log)
+    gameweek, top_players, my_team, transfer_momentum = _collect_fpl_data(team_id, log)
     source_gameweek_id = int(gameweek.get("id", 0))
     requested_gameweek_id = (
         source_gameweek_id + 1
@@ -459,6 +470,7 @@ def aggregate(
             "gameweek_info": gameweek,
             "top_players": top_players,
             "my_team": my_team,
+            "transfer_momentum": transfer_momentum,
         },
         "youtube_analysis": {
             "channels_processed": len(channels_list),

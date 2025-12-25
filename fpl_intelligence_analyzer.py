@@ -46,6 +46,7 @@ from tenacity import (
 from src.fpl_influencer_hivemind.types import (
     GapAnalysis,
     LineupPlan,
+    QualityReview,
     Transfer,
     TransferPlan,
     ValidationResult,
@@ -88,6 +89,14 @@ class FPLIntelligenceAnalyzer:
         self.client = anthropic.Anthropic(api_key=api_key)
         self.sonnet_model = "claude-opus-4-5-20251101"  # "claude-sonnet-4-20250514" // claude-sonnet-4-5-20250929
         self.opus_model = "claude-opus-4-5-20251101"  # "claude-opus-4-1-20250805"
+        self.haiku_model = "claude-3-5-haiku-20241022"
+
+        # Cohesion validation thresholds
+        self.consensus_threshold = 3  # min influencers for warning
+        self.majority_ratio = 0.6  # 4/6 = majority, triggers error
+
+        # Cache for justification verification
+        self._justification_cache: dict[str, dict[str, object]] = {}
 
     def setup_logging(self, verbose: bool) -> None:
         """Setup logging configuration."""
@@ -606,6 +615,7 @@ Return valid JSON only. For short transcripts, extract whatever information is a
         channel_analyses: list[ChannelAnalysis],
         squad_context: dict[str, Any],
         gameweek: int,
+        transfer_momentum: dict[str, Any] | None = None,
         previous_errors: list[str] | None = None,
     ) -> GapAnalysis:
         """Stage 1: identify gaps between my squad and consensus."""
@@ -614,6 +624,34 @@ Return valid JSON only. For short transcripts, extract whatever information is a
         squad = squad_context["squad"]
         squad_names = {p["name"] for p in squad}
         consensus = self._aggregate_influencer_consensus(channel_analyses)
+
+        # Build transfer momentum section if available
+        momentum_section = ""
+        if transfer_momentum:
+            top_in = transfer_momentum.get("top_transfers_in", [])
+            top_out = transfer_momentum.get("top_transfers_out", [])
+            top_net = transfer_momentum.get("top_net_transfers", [])
+            if top_in or top_out or top_net:
+                in_summary = [
+                    {"name": p.get("web_name"), "team": p.get("team_name"), "net": p.get("net_transfers")}
+                    for p in top_in[:5]
+                ]
+                out_summary = [
+                    {"name": p.get("web_name"), "team": p.get("team_name"), "net": p.get("net_transfers")}
+                    for p in top_out[:5]
+                ]
+                net_summary = [
+                    {"name": p.get("web_name"), "team": p.get("team_name"), "net": p.get("net_transfers")}
+                    for p in top_net[:5]
+                ]
+                momentum_section = f"""
+TRANSFER MOMENTUM (Real-time FPL manager activity this gameweek):
+Top Transfers IN: {json.dumps(in_summary, indent=2)}
+Top Transfers OUT: {json.dumps(out_summary, indent=2)}
+Top Net Transfers: {json.dumps(net_summary, indent=2)}
+
+NOTE: Flag players with >100k net transfers NOT mentioned by influencers as potential gaps.
+"""
 
         # Build error feedback section
         error_feedback = ""
@@ -625,6 +663,7 @@ Return valid JSON only. For short transcripts, extract whatever information is a
             )
 
         prompt = f"""Analyze gaps between my FPL squad and influencer consensus for GW{gameweek}.
+{momentum_section}
 
 MY SQUAD (15 players):
 {json.dumps(squad, indent=2)}
@@ -907,6 +946,283 @@ Return valid JSON only. Use exact player names from the provided squad."""
                 reasoning="Failed to generate lineup",
             )
 
+    # =========================================================================
+    # Cohesion Validation Methods
+    # =========================================================================
+
+    def _verify_justification_llm(
+        self,
+        player_name: str,
+        reasoning_texts: list[str],
+        context: str,
+    ) -> dict[str, object]:
+        """Use LLM to verify if a player exclusion is justified in reasoning."""
+        # Check cache first
+        cache_key = f"{player_name}:{hash(tuple(reasoning_texts))}"
+        if cache_key in self._justification_cache:
+            return self._justification_cache[cache_key]
+
+        combined_reasoning = "\n\n".join(reasoning_texts)
+        prompt = f"""Analyze if the exclusion of player "{player_name}" is justified in the reasoning text.
+
+REASONING TEXT:
+{combined_reasoning}
+
+CONTEXT:
+{context}
+
+Return JSON:
+{{"justified": true/false, "reason": "brief explanation"}}
+
+Rules:
+- "justified": true if ANY valid reason is given (budget, fixtures, already covered, better alternatives, etc.)
+- "justified": false only if the player is not mentioned or no reason given
+- Be lenient - if there's any reasonable explanation, it's justified"""
+
+        try:
+            response, _ = self._make_anthropic_call(
+                model=self.haiku_model,
+                prompt=prompt,
+                system="Analyze transfer reasoning. Return JSON only.",
+                max_tokens=200,
+            )
+            cleaned = self._extract_last_json(response)
+            result = json.loads(cleaned)
+        except (json.JSONDecodeError, Exception) as e:
+            self.logger.debug(f"Justification check failed for {player_name}: {e}")
+            # Assume justified if we can't verify (fail open)
+            result = {"justified": True, "reason": "Could not verify"}
+
+        self._justification_cache[cache_key] = result
+        return result
+
+    def _compute_player_affordability(
+        self,
+        player_name: str,  # noqa: ARG002
+        player_price: float,
+        squad_context: dict[str, Any],
+    ) -> tuple[bool, float]:
+        """Check if a player is affordable given current ITB + potential sells.
+
+        Returns (is_affordable, max_budget_available).
+        """
+        itb = squad_context.get("itb", 0.0)
+        squad = squad_context.get("squad", [])
+
+        # Find max sell price from any single player
+        max_sell = 0.0
+        for p in squad:
+            sell_price = p.get("sell_price", p.get("price", 0.0))
+            if sell_price > max_sell:
+                max_sell = sell_price
+
+        max_budget = itb + max_sell
+        is_affordable = player_price <= max_budget
+
+        return is_affordable, max_budget
+
+    def _validate_gap_to_transfer_cohesion(
+        self,
+        gap: GapAnalysis,
+        transfers: TransferPlan,
+        consensus: dict[str, Any],  # noqa: ARG002
+    ) -> tuple[list[str], list[str]]:
+        """Validate Stage 1 gaps are addressed in Stage 2 transfers."""
+        errors: list[str] = []
+        warnings: list[str] = []
+
+        # Get transferred-in player names
+        transferred_in = {
+            t.in_player.split(" (")[0].lower() for t in transfers.transfers
+        }
+        transferred_out = {
+            t.out_player.split(" (")[0].lower() for t in transfers.transfers
+        }
+
+        reasoning_texts = [transfers.reasoning]
+
+        # Check captain_gap (ERROR if not addressed)
+        if gap.captain_gap:
+            captain_name = gap.captain_gap.lower()
+            if captain_name not in transferred_in:
+                justification = self._verify_justification_llm(
+                    gap.captain_gap,
+                    reasoning_texts,
+                    "This player is the consensus captain pick that the manager doesn't own.",
+                )
+                if not justification.get("justified", False):
+                    errors.append(
+                        f"COHESION ISSUE: Captain gap '{gap.captain_gap}' not addressed - "
+                        "transfer in or justify in reasoning"
+                    )
+
+        # Check players_missing (WARNING if not addressed)
+        for player_ref in gap.players_missing:
+            player_name = player_ref.name.lower()
+            if player_name not in transferred_in:
+                justification = self._verify_justification_llm(
+                    player_ref.name,
+                    reasoning_texts,
+                    f"High-priority missing player ({player_ref.position}, {player_ref.team}).",
+                )
+                if not justification.get("justified", False):
+                    warnings.append(
+                        f"COHESION ISSUE: High-priority gap '{player_ref.name}' not in transfers"
+                    )
+
+        # Check players_to_sell (WARNING if not addressed)
+        for player_ref in gap.players_to_sell:
+            player_name = player_ref.name.lower()
+            if player_name not in transferred_out:
+                justification = self._verify_justification_llm(
+                    player_ref.name,
+                    reasoning_texts,
+                    f"Player identified to sell ({player_ref.position}, {player_ref.team}).",
+                )
+                if not justification.get("justified", False):
+                    warnings.append(
+                        f"COHESION ISSUE: Player to sell '{player_ref.name}' not transferred out"
+                    )
+
+        return errors, warnings
+
+    def _validate_consensus_coverage(
+        self,
+        transfers: TransferPlan,
+        consensus: dict[str, Any],
+        squad_context: dict[str, Any],
+        condensed_players: list[dict[str, Any]],
+    ) -> tuple[list[str], list[str]]:
+        """Validate transfer plan covers strong influencer consensus."""
+        errors: list[str] = []
+        warnings: list[str] = []
+
+        transfers_in_counts = consensus.get("transfers_in_counts", {})
+        total_channels = consensus.get("total_channels", 6)
+        majority_count = int(total_channels * self.majority_ratio)
+
+        # Get transferred-in player names
+        transferred_in = {
+            t.in_player.split(" (")[0].lower() for t in transfers.transfers
+        }
+
+        # Get current squad names
+        squad_names = {p.get("name", "").lower() for p in squad_context.get("squad", [])}
+
+        reasoning_texts = [transfers.reasoning]
+
+        # Build player price lookup
+        price_lookup: dict[str, float] = {}
+        for p in condensed_players:
+            name = p.get("web_name", "").lower()
+            price_lookup[name] = p.get("price", 0.0)
+
+        for player, backers in transfers_in_counts.items():
+            backer_count = len(backers)
+            player_lower = player.lower()
+
+            # Skip if already in squad or already being transferred in
+            if player_lower in squad_names or player_lower in transferred_in:
+                continue
+
+            # Check if recommended by threshold+ influencers
+            if backer_count >= self.consensus_threshold:
+                # Check affordability
+                player_price = price_lookup.get(player_lower, 0.0)
+                is_affordable, max_budget = self._compute_player_affordability(
+                    player, player_price, squad_context
+                )
+
+                context = (
+                    f"Recommended by {backer_count} influencers: {', '.join(backers)}. "
+                    f"Price: £{player_price}m. "
+                    f"{'Affordable' if is_affordable else 'Not affordable'} (max budget: £{max_budget}m)."
+                )
+
+                justification = self._verify_justification_llm(
+                    player, reasoning_texts, context
+                )
+
+                if not justification.get("justified", False):
+                    if backer_count >= majority_count:
+                        # Majority consensus ignored = ERROR
+                        errors.append(
+                            f"COHESION ISSUE: Majority ({backer_count}/{total_channels}) "
+                            f"recommend '{player}' but not in plan"
+                        )
+                    else:
+                        # Strong but not majority = WARNING
+                        warnings.append(
+                            f"COHESION ISSUE: {backer_count} influencers recommend '{player}' "
+                            "but not in plan"
+                        )
+
+        return errors, warnings
+
+    def _validate_risk_contingency(
+        self,
+        gap: GapAnalysis,
+        lineup: LineupPlan,
+    ) -> tuple[list[str], list[str]]:
+        """Validate risk flags have corresponding contingency in lineup."""
+        errors: list[str] = []
+        warnings: list[str] = []
+
+        # Build set of risky player names
+        risky_players = {rf.player.lower(): rf.risk for rf in gap.risk_flags}
+
+        if not risky_players:
+            return errors, warnings
+
+        # Get XI and bench names
+        xi_names = [p.split(" (")[0].lower() for p in lineup.starting_xi]
+        bench_names = [p.split(" (")[0].lower() for p in lineup.bench]
+
+        captain_name = lineup.captain.split(" (")[0].lower() if lineup.captain else ""
+        vice_name = lineup.vice_captain.split(" (")[0].lower() if lineup.vice_captain else ""
+
+        # Check captain risk
+        if captain_name in risky_players:
+            captain_risk = risky_players[captain_name]
+            if vice_name in risky_players:
+                # Both captain and vice have risk = ERROR
+                vice_risk = risky_players[vice_name]
+                errors.append(
+                    f"COHESION ISSUE: Captain '{lineup.captain}' has risk ({captain_risk}) "
+                    f"AND vice '{lineup.vice_captain}' has risk ({vice_risk}) - need safe fallback"
+                )
+            else:
+                # Just captain risky, vice is safe = WARNING
+                warnings.append(
+                    f"COHESION ISSUE: Captain '{lineup.captain}' has risk flag ({captain_risk})"
+                )
+
+        # Check risky XI players have bench backup
+        for i, xi_player in enumerate(xi_names):
+            if xi_player in risky_players and xi_player != captain_name:
+                risk = risky_players[xi_player]
+                # Check if there's a same-position backup in bench[0:2]
+                xi_full = lineup.starting_xi[i] if i < len(lineup.starting_xi) else ""
+                if "(" in xi_full:
+                    xi_pos = xi_full.split("(")[1].rstrip(")")
+                    has_backup = False
+                    for bench_player in bench_names[:2]:
+                        # Check if bench player is same position
+                        bench_idx = bench_names.index(bench_player)
+                        bench_full = lineup.bench[bench_idx] if bench_idx < len(lineup.bench) else ""
+                        if "(" in bench_full:
+                            bench_pos = bench_full.split("(")[1].rstrip(")")
+                            if bench_pos == xi_pos:
+                                has_backup = True
+                                break
+                    if not has_backup:
+                        warnings.append(
+                            f"COHESION ISSUE: Risky player '{xi_full}' ({risk}) - "
+                            "no same-position backup in top bench slots"
+                        )
+
+        return errors, warnings
+
     def _validate_transfers(
         self,
         transfers: TransferPlan,
@@ -1005,25 +1321,50 @@ Return valid JSON only. Use exact player names from the provided squad."""
 
     def _validate_all(
         self,
-        gap: GapAnalysis,  # noqa: ARG002
+        gap: GapAnalysis,
         transfers: TransferPlan,
         lineup: LineupPlan,
         original_squad: list[dict[str, Any]],
         post_transfer_squad: list[dict[str, Any]],
+        consensus: dict[str, Any] | None = None,
+        squad_context: dict[str, Any] | None = None,
+        condensed_players: list[dict[str, Any]] | None = None,
     ) -> ValidationResult:
-        """Stage 4: programmatic validation of all outputs."""
+        """Stage 4: programmatic validation of all outputs including cohesion checks."""
         errors: list[str] = []
         warnings: list[str] = []
 
-        # Validate transfers
+        # Validate transfers (mechanical)
         transfer_errors = self._validate_transfers(
             transfers, original_squad, post_transfer_squad
         )
         errors.extend(transfer_errors)
 
-        # Validate lineup
+        # Validate lineup (mechanical)
         lineup_errors = self._validate_lineup(lineup, post_transfer_squad)
         errors.extend(lineup_errors)
+
+        # Cohesion validation (if data available)
+        if consensus is not None:
+            # Gap to transfer cohesion
+            gap_errors, gap_warnings = self._validate_gap_to_transfer_cohesion(
+                gap, transfers, consensus
+            )
+            errors.extend(gap_errors)
+            warnings.extend(gap_warnings)
+
+            # Consensus coverage
+            if squad_context is not None and condensed_players is not None:
+                consensus_errors, consensus_warnings = self._validate_consensus_coverage(
+                    transfers, consensus, squad_context, condensed_players
+                )
+                errors.extend(consensus_errors)
+                warnings.extend(consensus_warnings)
+
+        # Risk contingency validation
+        risk_errors, risk_warnings = self._validate_risk_contingency(gap, lineup)
+        errors.extend(risk_errors)
+        warnings.extend(risk_warnings)
 
         # Determine failed stage
         failed_stage: str | None = None
@@ -1041,6 +1382,8 @@ Return valid JSON only. Use exact player names from the provided squad."""
                 for e in errors
             ):
                 failed_stage = "lineup"
+            elif any("COHESION" in e for e in errors):
+                failed_stage = "cohesion"
 
         return ValidationResult(
             valid=len(errors) == 0,
@@ -1049,6 +1392,124 @@ Return valid JSON only. Use exact player names from the provided squad."""
             failed_stage=failed_stage,
         )
 
+    def _holistic_quality_review(
+        self,
+        gap: GapAnalysis,
+        transfers: TransferPlan,
+        lineup: LineupPlan,
+        consensus: dict[str, Any],
+        squad_context: dict[str, Any],
+        gameweek: int,
+    ) -> QualityReview:
+        """Final holistic LLM review of the complete report for quality assessment."""
+        self.logger.info("Running holistic quality review")
+
+        # Build comprehensive context for LLM review
+        squad_names = [p.get("name", "") for p in squad_context.get("squad", [])]
+        itb = squad_context.get("itb", 0.0)
+        free_transfers = squad_context.get("free_transfers", 1)
+
+        # Summarize consensus
+        captain_counts = consensus.get("captain_counts", {})
+        top_captains = sorted(
+            captain_counts.items(), key=lambda x: len(x[1]), reverse=True
+        )[:3]
+        transfers_in_counts = consensus.get("transfers_in_counts", {})
+        top_transfers_in = sorted(
+            transfers_in_counts.items(), key=lambda x: len(x[1]), reverse=True
+        )[:5]
+
+        prompt = f"""Review this FPL GW{gameweek} recommendation report for INTERNAL CONSISTENCY ONLY.
+
+CRITICAL RULES:
+- DO NOT use your own knowledge about players, teams, positions, or transfers
+- ONLY compare the data provided below against itself
+- Trust ALL player names, teams, and positions as given - the FPL API is authoritative
+- Focus ONLY on logical consistency between the stages
+
+## GAP ANALYSIS (Stage 1)
+Players to sell: {[p.name for p in gap.players_to_sell]}
+Players missing: {[p.name for p in gap.players_missing]}
+Risk flags: {[(rf.player, rf.risk) for rf in gap.risk_flags]}
+Captain gap: {gap.captain_gap}
+
+## TRANSFER PLAN (Stage 2)
+Transfers: {[(t.out_player, "→", t.in_player) for t in transfers.transfers]}
+Budget after: £{transfers.new_itb}m
+FTs used: {transfers.fts_used}, Hits: {transfers.hit_cost}
+Reasoning: {transfers.reasoning}
+
+## LINEUP (Stage 3)
+Starting XI: {lineup.starting_xi}
+Bench: {lineup.bench}
+Captain: {lineup.captain}, Vice: {lineup.vice_captain}
+Formation: {lineup.formation}
+Reasoning: {lineup.reasoning}
+
+## INFLUENCER CONSENSUS (from transcripts)
+Top captain picks: {[(c, len(backers)) for c, backers in top_captains]}
+Top transfer targets: {[(p, len(backers)) for p, backers in top_transfers_in]}
+Total channels: {consensus.get('total_channels', 0)}
+
+## SQUAD CONTEXT
+Current squad: {squad_names}
+ITB: £{itb}m, Free transfers: {free_transfers}
+
+Return JSON:
+{{
+  "confidence_score": 0.0-1.0,
+  "quality_notes": ["note1", "note2"],
+  "consensus_alignment": "How well does plan align with influencer consensus",
+  "risk_assessment": "Summary of risks and how they're mitigated",
+  "potential_issues": ["issue1", "issue2"],
+  "recommendation_strength": "strong|moderate|weak"
+}}
+
+ONLY flag issues that are INTERNAL CONTRADICTIONS such as:
+- Player listed in "players to sell" but starting in XI without justification
+- Player with risk flag as captain AND vice-captain also has risk (no safe fallback)
+- High-consensus transfer target (3+) not in plan AND not addressed in reasoning
+- Transfer-out momentum flagged but player starting without bench backup
+- Gap analysis identifies missing player but transfers don't address it (check reasoning)
+
+DO NOT flag:
+- Player team names (trust the data)
+- Player positions (trust the data)
+- Any "fact" from your training data
+- Anything not directly contradicted by the data above"""
+
+        system = """You validate FPL reports for INTERNAL CONSISTENCY ONLY.
+DO NOT use your own knowledge - only compare the provided data against itself.
+Trust all player names, teams, and positions as given. Return valid JSON only."""
+
+        self.save_debug_content("holistic_review_prompt.txt", prompt)
+
+        try:
+            response, _ = self._make_anthropic_call(
+                model=self.sonnet_model,
+                prompt=prompt,
+                system=system,
+                max_tokens=1500,
+            )
+
+            self.save_debug_content("holistic_review_response.json", response)
+
+            cleaned = self._extract_last_json(response)
+            data = json.loads(cleaned)
+            return QualityReview(**data)
+
+        except (json.JSONDecodeError, ValidationError) as e:
+            self.logger.error(f"Holistic review parse error: {e}")
+            # Return neutral fallback
+            return QualityReview(
+                confidence_score=0.5,
+                quality_notes=["Automated quality review could not be completed"],
+                consensus_alignment="Unable to assess",
+                risk_assessment="Unable to assess",
+                potential_issues=[],
+                recommendation_strength="moderate",
+            )
+
     def _run_staged_analysis(
         self,
         channel_analyses: list[ChannelAnalysis],
@@ -1056,14 +1517,18 @@ Return valid JSON only. Use exact player names from the provided squad."""
         my_team_data: dict[str, Any],
         gameweek: int,
         free_transfers: int,
+        transfer_momentum: dict[str, Any] | None = None,
         commentary: str | None = None,  # noqa: ARG002
         max_stage_attempts: int = 2,
-    ) -> tuple[GapAnalysis, TransferPlan, LineupPlan]:
-        """Orchestrate all stages with validation retry loop."""
+    ) -> tuple[GapAnalysis, TransferPlan, LineupPlan, QualityReview]:
+        """Orchestrate all stages with validation retry loop and final quality review."""
         self.logger.info("Starting multi-stage analysis")
 
         squad_context = self._build_squad_context(my_team_data, free_transfers)
         original_squad = squad_context["squad"]
+
+        # Compute consensus once for cohesion validation
+        consensus = self._aggregate_influencer_consensus(channel_analyses)
 
         # Stage 1: Gap Analysis (2 attempts)
         gap: GapAnalysis | None = None
@@ -1074,6 +1539,7 @@ Return valid JSON only. Use exact player names from the provided squad."""
                 channel_analyses,
                 squad_context,
                 gameweek,
+                transfer_momentum=transfer_momentum,
                 previous_errors=gap_errors if gap_errors else None,
             )
             # Gap analysis doesn't have strict validation, accept it
@@ -1082,7 +1548,7 @@ Return valid JSON only. Use exact player names from the provided squad."""
         if gap is None:
             raise ValueError("Gap analysis failed")
 
-        # Stage 2: Transfer Plan (2 attempts)
+        # Stage 2: Transfer Plan (2 attempts) - includes cohesion validation
         transfers: TransferPlan | None = None
         transfer_errors: list[str] = []
         post_transfer_squad: list[dict[str, Any]] = []
@@ -1102,9 +1568,26 @@ Return valid JSON only. Use exact player names from the provided squad."""
                 original_squad, transfers.transfers
             )
 
+            # Mechanical validation
             transfer_errors = self._validate_transfers(
                 transfers, original_squad, post_transfer_squad
             )
+
+            # Cohesion validation (gap → transfer consistency)
+            cohesion_errors, cohesion_warnings = self._validate_gap_to_transfer_cohesion(
+                gap, transfers, consensus
+            )
+            transfer_errors.extend(cohesion_errors)
+
+            # Consensus coverage validation
+            consensus_errors, consensus_warnings = self._validate_consensus_coverage(
+                transfers, consensus, squad_context, condensed_players
+            )
+            transfer_errors.extend(consensus_errors)
+
+            # Log warnings but don't fail on them
+            for warning in cohesion_warnings + consensus_warnings:
+                self.logger.warning(warning)
 
             if not transfer_errors:
                 self.logger.info("Stage 2 validation passed")
@@ -1115,7 +1598,7 @@ Return valid JSON only. Use exact player names from the provided squad."""
         if transfers is None:
             raise ValueError("Transfer plan failed")
 
-        # Stage 3: Lineup Selection (2 attempts)
+        # Stage 3: Lineup Selection (2 attempts) - includes risk validation
         lineup: LineupPlan | None = None
         lineup_errors: list[str] = []
 
@@ -1128,7 +1611,16 @@ Return valid JSON only. Use exact player names from the provided squad."""
                 previous_errors=lineup_errors if lineup_errors else None,
             )
 
+            # Mechanical validation
             lineup_errors = self._validate_lineup(lineup, post_transfer_squad)
+
+            # Risk contingency validation
+            risk_errors, risk_warnings = self._validate_risk_contingency(gap, lineup)
+            lineup_errors.extend(risk_errors)
+
+            # Log warnings but don't fail on them
+            for warning in risk_warnings:
+                self.logger.warning(warning)
 
             if not lineup_errors:
                 self.logger.info("Stage 3 validation passed")
@@ -1139,9 +1631,16 @@ Return valid JSON only. Use exact player names from the provided squad."""
         if lineup is None:
             raise ValueError("Lineup selection failed")
 
-        # Final validation
+        # Final validation (all checks including cohesion)
         final_validation = self._validate_all(
-            gap, transfers, lineup, original_squad, post_transfer_squad
+            gap,
+            transfers,
+            lineup,
+            original_squad,
+            post_transfer_squad,
+            consensus=consensus,
+            squad_context=squad_context,
+            condensed_players=condensed_players,
         )
 
         if not final_validation.valid:
@@ -1149,7 +1648,19 @@ Return valid JSON only. Use exact player names from the provided squad."""
                 f"Final validation has errors (proceeding anyway): {final_validation.errors}"
             )
 
-        return gap, transfers, lineup
+        if final_validation.warnings:
+            self.logger.info(f"Final validation warnings: {final_validation.warnings}")
+
+        # Holistic quality review (final LLM assessment)
+        quality_review = self._holistic_quality_review(
+            gap, transfers, lineup, consensus, squad_context, gameweek
+        )
+        self.logger.info(
+            f"Quality review: confidence={quality_review.confidence_score:.2f}, "
+            f"strength={quality_review.recommendation_strength}"
+        )
+
+        return gap, transfers, lineup, quality_review
 
     def _generate_consensus_section(
         self, channel_analyses: list[ChannelAnalysis]
@@ -1347,6 +1858,7 @@ Return valid JSON only. Use exact player names from the provided squad."""
         lineup: LineupPlan,
         gameweek: int,  # noqa: ARG002
         commentary: str | None = None,
+        quality_review: QualityReview | None = None,
     ) -> str:
         """Assemble final markdown report from stage outputs."""
         sections = []
@@ -1359,7 +1871,47 @@ Return valid JSON only. Use exact player names from the provided squad."""
         sections.append(self._format_gap_section(gap))
         sections.append(self._format_action_plan(transfers, lineup))
 
+        # Add quality review section if available
+        if quality_review:
+            sections.append(self._format_quality_review(quality_review))
+
         return "\n\n".join(sections)
+
+    def _format_quality_review(self, review: QualityReview) -> str:
+        """Format the quality review section for the report."""
+        lines = ["## 5) Quality Assessment\n"]
+
+        # Confidence indicator
+        confidence_pct = int(review.confidence_score * 100)
+        strength_emoji = {"strong": "🟢", "moderate": "🟡", "weak": "🔴"}.get(
+            review.recommendation_strength, "⚪"
+        )
+        lines.append(
+            f"**Confidence:** {confidence_pct}% | "
+            f"**Recommendation Strength:** {strength_emoji} {review.recommendation_strength.title()}\n"
+        )
+
+        # Consensus alignment
+        lines.append(f"### Consensus Alignment\n{review.consensus_alignment}\n")
+
+        # Risk assessment
+        lines.append(f"### Risk Assessment\n{review.risk_assessment}\n")
+
+        # Quality notes
+        if review.quality_notes:
+            lines.append("### Key Observations")
+            for note in review.quality_notes:
+                lines.append(f"- {note}")
+            lines.append("")
+
+        # Potential issues
+        if review.potential_issues:
+            lines.append("### Potential Issues to Consider")
+            for issue in review.potential_issues:
+                lines.append(f"- ⚠️ {issue}")
+            lines.append("")
+
+        return "\n".join(lines)
 
     def _legacy_comparative_analysis(
         self,
@@ -1612,6 +2164,7 @@ specific, well-reasoned, and tailored to the user's current team situation."""
             gameweek = data["gameweek"]["current"]
             top_players = data["fpl_data"]["top_players"]
             my_team_data = data["fpl_data"]["my_team"]
+            transfer_momentum = data["fpl_data"].get("transfer_momentum", {})
             video_results = data["youtube_analysis"]["video_results"]
             transcripts = data["youtube_analysis"]["transcripts"]
 
@@ -1658,12 +2211,13 @@ specific, well-reasoned, and tailored to the user's current team situation."""
             self.logger.info("Phase 2: Running multi-stage analysis")
             self.logger.info(f"Free transfers available: {free_transfers}")
 
-            gap, transfers, lineup = self._run_staged_analysis(
+            gap, transfers, lineup, quality_review = self._run_staged_analysis(
                 channel_analyses,
                 condensed_players,
                 my_team_data,
                 gameweek,
                 free_transfers,
+                transfer_momentum=transfer_momentum,
                 commentary=commentary,
             )
 
@@ -1675,6 +2229,7 @@ specific, well-reasoned, and tailored to the user's current team situation."""
                 lineup,
                 gameweek,
                 commentary=commentary,
+                quality_review=quality_review,
             )
 
             # Add header with metadata

@@ -27,6 +27,8 @@ class SessionLike(Protocol):
         headers: dict[str, str],
         timeout: float,
     ) -> Any: ...
+
+
 _logger = logging.getLogger("fpl_influencer_hivemind.transcripts.youtube_transcript_io")
 
 _API_URL = "https://www.youtube-transcript.io/api/transcripts"

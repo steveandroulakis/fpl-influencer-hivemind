@@ -13,6 +13,7 @@ import pytest
 from fpl_influencer_hivemind.fpl import get_current_gameweek as gw
 from fpl_influencer_hivemind.fpl import get_my_team as my_team
 from fpl_influencer_hivemind.fpl import get_top_ownership as top_ownership
+from fpl_influencer_hivemind.fpl import get_transfer_momentum as transfer_momentum_mod
 from fpl_influencer_hivemind.fpl import utils
 
 
@@ -278,3 +279,79 @@ def test_load_external_fpl_detects_shadowed_package(
         utils._load_external_fpl()
 
     assert import_called is False
+
+
+@pytest.mark.asyncio
+async def test_get_transfer_momentum(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test transfer momentum fetching and ranking."""
+
+    async def fake_create_session() -> tuple[object, SimpleNamespace]:
+        return object(), SimpleNamespace(close=lambda: None)
+
+    async def fake_get_bootstrap_data(_client: object) -> dict[str, object]:
+        return {
+            "teams": [{"id": 1, "name": "Fulham"}, {"id": 2, "name": "Arsenal"}],
+            "elements": [
+                {
+                    "id": 10,
+                    "web_name": "Wilson",
+                    "team": 1,
+                    "element_type": 3,
+                    "now_cost": 56,
+                    "selected_by_percent": "14.2",
+                    "transfers_in_event": 1080000,
+                    "transfers_out_event": 50000,
+                },
+                {
+                    "id": 11,
+                    "web_name": "Injured",
+                    "team": 2,
+                    "element_type": 3,
+                    "now_cost": 90,
+                    "selected_by_percent": "40.0",
+                    "transfers_in_event": 30000,
+                    "transfers_out_event": 500000,
+                },
+                {
+                    "id": 12,
+                    "web_name": "Stable",
+                    "team": 2,
+                    "element_type": 2,
+                    "now_cost": 50,
+                    "selected_by_percent": "25.0",
+                    "transfers_in_event": 500,
+                    "transfers_out_event": 400,
+                },
+            ],
+        }
+
+    async def fake_safe_close(_session: object) -> None:
+        return None
+
+    monkeypatch.setattr(
+        transfer_momentum_mod, "create_fpl_session", fake_create_session
+    )
+    monkeypatch.setattr(
+        transfer_momentum_mod, "get_bootstrap_data", fake_get_bootstrap_data
+    )
+    monkeypatch.setattr(transfer_momentum_mod, "safe_close_session", fake_safe_close)
+
+    result = await transfer_momentum_mod.get_transfer_momentum(limit=10, min_net=1000)
+
+    # Verify structure
+    assert "top_transfers_in" in result
+    assert "top_transfers_out" in result
+    assert "top_net_transfers" in result
+
+    # Should have 2 players (Stable filtered out due to min_net threshold)
+    assert len(result["top_transfers_in"]) == 2
+    assert len(result["top_transfers_out"]) == 2
+
+    # Wilson (1.03M net) should be first in transfers_in and net_transfers
+    assert result["top_transfers_in"][0]["web_name"] == "Wilson"
+    assert result["top_net_transfers"][0]["web_name"] == "Wilson"
+    assert result["top_net_transfers"][0]["net_transfers"] == 1030000
+
+    # Injured (470k out) should be first in transfers_out
+    assert result["top_transfers_out"][0]["web_name"] == "Injured"
+    assert result["top_transfers_out"][0]["net_transfers"] == -470000

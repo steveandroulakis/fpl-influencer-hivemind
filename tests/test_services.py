@@ -78,7 +78,9 @@ def test_transcripts_fetch_transcript_text(monkeypatch: MonkeyPatch) -> None:
         ),
     )
 
-    transcript: TranscriptEntry = transcript_service.fetch_transcript("abc123", verbose=False)
+    transcript: TranscriptEntry = transcript_service.fetch_transcript(
+        "abc123", verbose=False
+    )
     assert transcript["language"] == "en"
     assert transcript["text"] == "Line one\nLine two"
     assert transcript["segments"][0]["text"] == "Line one"

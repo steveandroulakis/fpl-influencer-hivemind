@@ -14,6 +14,42 @@
 
 Artifacts are written under `var/hivemind/` with timestamped filenames.
 
+## Analyzer Stages
+The analyzer (`fpl_intelligence_analyzer.py`) runs a multi-stage pipeline with validation:
+
+### Stage 1: Gap Analysis
+- Identifies gaps between user's squad and influencer consensus
+- Outputs: `players_to_sell`, `players_missing`, `risk_flags`, `captain_gap`
+
+### Stage 2: Transfer Plan
+- Generates specific transfers addressing gaps
+- Validates: budget, club limits, position matching
+- **Cohesion validation**: checks gaps are addressed or justified in reasoning
+- **Consensus validation**: flags if 3+ influencer recs ignored (warning) or 4+ majority ignored (error)
+- Retries up to 2x on validation failure
+
+### Stage 3: Lineup Selection
+- Selects starting XI, bench order, captain/vice
+- Validates: 11 starters, 4 bench, formation rules (1 GKP, 3-5 DEF, 2-5 MID, 1-3 FWD)
+- **Risk validation**: risky captain needs safe vice; risky XI players need bench backup
+- Retries up to 2x on validation failure
+
+### Stage 4: Validation
+- Combines mechanical checks (budget, formation) + cohesion checks (stage consistency)
+- Uses LLM (haiku) to verify justifications in reasoning text
+- Errors trigger retry; warnings are logged but don't block
+
+### Stage 5: Quality Review
+- Holistic LLM review (sonnet) of complete report
+- Assesses: confidence score, consensus alignment, risk assessment, potential issues
+- Outputs `QualityReview` with `recommendation_strength` ("strong"/"moderate"/"weak")
+- Added to final report as "Quality Assessment" section
+
+### Key Models (`types.py`)
+- `GapAnalysis`, `TransferPlan`, `LineupPlan` – stage outputs
+- `ValidationResult` – errors/warnings from validation
+- `QualityReview` – holistic assessment with confidence score
+
 ## Required Environment
 Use `.env` (auto sourced) based on `.env.example`:
 - `YOUTUBE_API_KEY` – YouTube Data API v3 key (needed for video discovery).
@@ -116,10 +152,11 @@ The project uses strict mypy settings in `pyproject.toml`:
 - `ignore_missing_imports = false` to catch all import issues (add type ignore comments as needed).
 
 ## File Guide
+- `fpl_intelligence_analyzer.py` – multi-stage LLM analyzer with validation + quality review.
 - `src/fpl_influencer_hivemind/pipeline.py` – orchestrator + logging callbacks + transcript prompts.
 - `src/fpl_influencer_hivemind/services/discovery.py` – strategy layer for channel discovery (heuristic default).
 - `src/fpl_influencer_hivemind/services/transcripts.py` – transcript wrapper returning `{text, language, translated, segments[]}`.
-- `src/fpl_influencer_hivemind/types.py` – shared TypedDict/dataclass definitions for discovery/transcripts/gameweek data.
+- `src/fpl_influencer_hivemind/types.py` – shared TypedDict/dataclass/Pydantic models (includes analyzer stage outputs).
 - `src/fpl_influencer_hivemind/youtube/video_picker.py` – reusable discovery logic + CLI shim (`youtube-titles/fpl_video_picker.py`).
 - `tests/test_video_picker.py` – unit tests for discovery module.
 - `tests/test_pipeline.py` – end-to-end aggregation behaviour under stubs.

@@ -82,6 +82,17 @@ class ValidationResult(BaseModel):
     failed_stage: str | None = None  # "gap", "transfer", "lineup"
 
 
+class QualityReview(BaseModel):
+    """Holistic quality assessment of the final report."""
+
+    confidence_score: float  # 0.0-1.0, overall confidence in recommendations
+    quality_notes: list[str]  # Key observations about report quality
+    consensus_alignment: str  # How well plan aligns with influencer consensus
+    risk_assessment: str  # Summary of risks and mitigations
+    potential_issues: list[str]  # Things user should be aware of
+    recommendation_strength: str  # "strong", "moderate", "weak"
+
+
 class _VideoResultRequired(TypedDict):
     channel_name: str
     video_id: str
@@ -182,6 +193,7 @@ __all__ = [
     "LineupPlan",
     "MyTeamPayload",
     "PlayerRef",
+    "QualityReview",
     "RiskFlag",
     "TranscriptEntry",
     "TranscriptSegment",

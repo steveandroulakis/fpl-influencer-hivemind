@@ -44,7 +44,9 @@ def _make_outcome(tmp_path: Path) -> AggregationOutcome:
     )
 
 
-def test_collect_command_writes_destination(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+def test_collect_command_writes_destination(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
     outcome = _make_outcome(tmp_path)
     monkeypatch.setattr(cli, "aggregate", lambda **_: outcome)
     destination = Path(tmp_path) / "custom.json"
@@ -76,7 +78,9 @@ def test_pipeline_command_skips_analysis_when_declined(
     assert status == 0
 
 
-def test_pipeline_command_auto_runs_analysis(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+def test_pipeline_command_auto_runs_analysis(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
     outcome = _make_outcome(tmp_path)
     monkeypatch.setattr(cli, "aggregate", lambda **_: outcome)
     monkeypatch.setattr(cli, "_run_analyzer", lambda **_: 0)
@@ -98,7 +102,9 @@ def test_collect_handles_aggregation_error(monkeypatch: MonkeyPatch) -> None:
 
 
 def test_run_analyzer_handles_failure(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
-    def raise_error(args: object, *, check: object, text: object, cwd: object = None) -> None:
+    def raise_error(
+        args: object, *, check: object, text: object, cwd: object = None
+    ) -> None:
         _ = (check, text, cwd)
         raise subprocess.CalledProcessError(returncode=1, cmd=args, stderr="fail")  # type: ignore[arg-type]
 

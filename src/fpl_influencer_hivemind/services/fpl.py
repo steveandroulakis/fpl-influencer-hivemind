@@ -14,6 +14,9 @@ from ..fpl import (
 from ..fpl import (
     get_top_ownership as _top_ownership_module,
 )
+from ..fpl import (
+    get_transfer_momentum as _transfer_momentum_module,
+)
 
 
 class FPLServiceError(RuntimeError):
@@ -54,10 +57,16 @@ def get_my_team(entry_id: int) -> dict[str, Any]:
     return _run(_call(_my_team_module.get_my_team_info, entry_id))  # type: ignore[no-any-return]
 
 
+def get_transfer_momentum(limit: int = 10) -> dict[str, list[dict[str, Any]]]:
+    """Get top players by transfer momentum (in/out/net)."""
+    return _run(_call(_transfer_momentum_module.get_transfer_momentum, limit))  # type: ignore[no-any-return]
+
+
 __all__ = [
     "FPLServiceError",
     "get_current_gameweek_info",
     "get_my_team",
     "get_top_ownership",  # Deprecated alias
     "get_top_players",
+    "get_transfer_momentum",
 ]
