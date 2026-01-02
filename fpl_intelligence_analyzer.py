@@ -30,6 +30,8 @@ import logging
 import os
 import re
 import sys
+import unicodedata
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
@@ -108,6 +110,31 @@ class ChannelAnalysis(BaseModel):
     transcript_length: int = 0
 
 
+@dataclass(slots=True)
+class PlayerLookupEntry:
+    name: str
+    position: str
+    team: str
+    price: float
+    element_id: int | None
+
+
+@dataclass(slots=True)
+class SquadPlayerEntry:
+    name: str
+    position: str
+    team: str
+    selling_price: float
+
+
+@dataclass(slots=True)
+class DecisionOption:
+    label: str
+    transfers: TransferPlan
+    lineup: LineupPlan
+    rationale: str
+
+
 class FPLIntelligenceAnalyzer:
     """Main class for FPL intelligence analysis using LLM calls."""
 
@@ -150,6 +177,242 @@ class FPLIntelligenceAnalyzer:
             debug_path = self.prompts_dir / filename
             debug_path.write_text(content, encoding="utf-8")
             self.logger.debug(f"Saved debug content to {debug_path}")
+
+    def _normalize_name(self, name: str) -> str:
+        """Normalize player names for matching (lowercase, no accents/punctuation)."""
+        normalized = unicodedata.normalize("NFKD", name)
+        stripped = "".join(
+            char for char in normalized if not unicodedata.combining(char)
+        )
+        return re.sub(r"[^a-z0-9]", "", stripped.lower())
+
+    def _normalize_player_label(self, label: str) -> str:
+        """Normalize a player label, removing any position suffix."""
+        name, _ = self._split_player_label(label)
+        return self._normalize_name(name)
+
+    def _split_player_label(self, label: str) -> tuple[str, str | None]:
+        """Split 'Player (POS)' into name + position."""
+        cleaned = label.strip()
+        if not cleaned:
+            return "", None
+        match = re.match(
+            r"^(.*?)\s*\((GKP|DEF|MID|FWD)\)\s*$", cleaned, re.IGNORECASE
+        )
+        if match:
+            return match.group(1).strip(), match.group(2).strip().upper()
+        return cleaned, None
+
+    def _coerce_price(self, value: object) -> float:
+        """Coerce price values to float safely."""
+        try:
+            return float(value)  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            return 0.0
+
+    def _build_player_lookup(
+        self,
+        top_players: list[dict[str, Any]],
+        my_team_data: dict[str, Any],
+        transfer_momentum: dict[str, Any] | None = None,
+    ) -> dict[str, list[PlayerLookupEntry]]:
+        """Build lookup table for canonical player names."""
+        lookup: dict[str, list[PlayerLookupEntry]] = {}
+
+        def add_entry(entry: PlayerLookupEntry, raw_key: str) -> None:
+            if not raw_key:
+                return
+            key = self._normalize_name(raw_key)
+            existing = lookup.get(key, [])
+            for candidate in existing:
+                if (
+                    candidate.name == entry.name
+                    and candidate.position == entry.position
+                    and candidate.team == entry.team
+                ):
+                    return
+            existing.append(entry)
+            lookup[key] = existing
+
+        def add_player(
+            name: str,
+            position: str,
+            team: str,
+            price: float,
+            element_id: int | None,
+            aliases: list[str] | None = None,
+        ) -> None:
+            if not name or not position:
+                return
+            entry = PlayerLookupEntry(
+                name=name,
+                position=position,
+                team=team,
+                price=price,
+                element_id=element_id,
+            )
+            add_entry(entry, name)
+            if aliases:
+                for alias in aliases:
+                    add_entry(entry, alias)
+
+        for player in top_players:
+            aliases = []
+            full_name = player.get("full_name")
+            if full_name:
+                aliases.append(str(full_name))
+            first = player.get("first_name")
+            second = player.get("second_name")
+            if first and second:
+                aliases.append(f"{first} {second}")
+            add_player(
+                player.get("web_name", ""),
+                player.get("position", ""),
+                player.get("team_name", ""),
+                self._coerce_price(player.get("price", 0.0)),
+                player.get("id"),
+                aliases=aliases,
+            )
+
+        for pick in my_team_data.get("current_picks", []):
+            add_player(
+                pick.get("web_name", ""),
+                pick.get("player_position", ""),
+                pick.get("team_name", ""),
+                self._coerce_price(pick.get("price", 0.0)),
+                pick.get("element_id"),
+            )
+
+        if transfer_momentum:
+            for key in ("top_transfers_in", "top_transfers_out", "top_net_transfers"):
+                for player in transfer_momentum.get(key, []) or []:
+                    add_player(
+                        player.get("web_name", ""),
+                        player.get("position", ""),
+                        player.get("team_name", ""),
+                        self._coerce_price(player.get("price", 0.0)),
+                        None,
+                    )
+
+        return lookup
+
+    def _select_lookup_candidate(
+        self,
+        candidates: list[PlayerLookupEntry],
+        name_hint: str,
+        pos_hint: str | None,
+    ) -> PlayerLookupEntry | None:
+        """Select best lookup candidate using optional position/name hints."""
+        if not candidates:
+            return None
+
+        filtered = candidates
+        if pos_hint:
+            pos_hint = pos_hint.upper()
+            pos_filtered = [c for c in filtered if c.position.upper() == pos_hint]
+            if pos_filtered:
+                filtered = pos_filtered
+
+        exact = [c for c in filtered if c.name.lower() == name_hint.lower()]
+        if len(exact) == 1:
+            return exact[0]
+
+        if len(filtered) == 1:
+            return filtered[0]
+
+        return None
+
+    def _canonicalize_player_label(
+        self,
+        label: str,
+        player_lookup: dict[str, list[PlayerLookupEntry]],
+        pos_hint: str | None = None,
+    ) -> str:
+        """Canonicalize a player label to 'web_name (POS)' when possible."""
+        if not label or label.strip().lower() == "not specified":
+            return label
+
+        name, pos = self._split_player_label(label)
+        if not name:
+            return label.strip()
+
+        key = self._normalize_name(name)
+        candidates = player_lookup.get(key, [])
+        candidate = self._select_lookup_candidate(candidates, name, pos or pos_hint)
+        if not candidate:
+            return label.strip()
+
+        return f"{candidate.name} ({candidate.position})"
+
+    def _canonicalize_channel_analysis(
+        self,
+        analysis_data: dict[str, Any],
+        player_lookup: dict[str, list[PlayerLookupEntry]],
+    ) -> dict[str, Any]:
+        """Normalize player labels in channel analysis payload."""
+        def canonicalize_list(items: list[str]) -> list[str]:
+            return [
+                self._canonicalize_player_label(item, player_lookup)
+                for item in items
+                if item
+            ]
+
+        if "team_selection" in analysis_data:
+            team_selection = analysis_data.get("team_selection", [])
+            if isinstance(team_selection, list):
+                analysis_data["team_selection"] = canonicalize_list(team_selection)
+            else:
+                analysis_data["team_selection"] = []
+
+        if "transfers_in" in analysis_data:
+            transfers_in = analysis_data.get("transfers_in", [])
+            if isinstance(transfers_in, list):
+                analysis_data["transfers_in"] = canonicalize_list(transfers_in)
+            else:
+                analysis_data["transfers_in"] = []
+
+        if "transfers_out" in analysis_data:
+            transfers_out = analysis_data.get("transfers_out", [])
+            if isinstance(transfers_out, list):
+                analysis_data["transfers_out"] = canonicalize_list(transfers_out)
+            else:
+                analysis_data["transfers_out"] = []
+
+        captain = analysis_data.get("captain_choice")
+        if isinstance(captain, str):
+            analysis_data["captain_choice"] = self._canonicalize_player_label(
+                captain, player_lookup
+            )
+
+        vice = analysis_data.get("vice_captain_choice")
+        if isinstance(vice, str):
+            analysis_data["vice_captain_choice"] = self._canonicalize_player_label(
+                vice, player_lookup
+            )
+
+        watchlist = analysis_data.get("watchlist", [])
+        if isinstance(watchlist, list):
+            normalized_watchlist: list[dict[str, Any]] = []
+            for item in watchlist:
+                if not isinstance(item, dict):
+                    continue
+                name = item.get("name", "")
+                normalized_watchlist.append(
+                    {
+                        **item,
+                        "name": self._canonicalize_player_label(
+                            str(name), player_lookup
+                        ),
+                    }
+                )
+            analysis_data["watchlist"] = normalized_watchlist
+
+        return analysis_data
+
+    def _merge_commentary(self, base: str | None, extra: str | None) -> str | None:
+        if base and extra:
+            return f"{base}\n{extra}"
+        return base or extra
 
     def load_aggregated_data(self, input_file: str) -> dict[str, Any]:
         """Load and parse the FPL aggregated data JSON file."""
@@ -346,6 +609,7 @@ Output requirements:
         condensed_players: list[dict[str, Any]],
         transcript: str,
         gameweek: int,
+        player_lookup: dict[str, list[PlayerLookupEntry]] | None = None,
     ) -> ChannelAnalysis | None:
         """Analyze a single channel's transcript using Sonnet-4."""
         channel_name = channel_data.get("channel_name", "Unknown")
@@ -455,6 +719,11 @@ Return valid JSON only, matching the provided schema exactly."""
                     analysis_data["captain_choice"] = "Not specified"
                 if analysis_data.get("vice_captain_choice") is None:
                     analysis_data["vice_captain_choice"] = "Not specified"
+
+                if player_lookup:
+                    analysis_data = self._canonicalize_channel_analysis(
+                        analysis_data, player_lookup
+                    )
 
                 analysis = ChannelAnalysis(**analysis_data)
 
@@ -568,6 +837,97 @@ Return valid JSON only, matching the provided schema exactly."""
             "club_counts": club_counts,
         }
 
+    def _apply_transfer_pricing(
+        self,
+        transfer_plan: TransferPlan,
+        squad_context: dict[str, Any],
+        player_lookup: dict[str, list[PlayerLookupEntry]],
+    ) -> tuple[TransferPlan, list[str]]:
+        """Recalculate transfer prices from FPL data and validate availability."""
+        errors: list[str] = []
+        updated_transfers: list[Transfer] = []
+
+        itb = float(squad_context.get("itb", 0.0))
+        fts = int(squad_context.get("free_transfers", 0))
+        squad_lookup: dict[str, SquadPlayerEntry] = {}
+
+        for player in squad_context.get("squad", []):
+            name = str(player.get("name", "")).strip()
+            if not name:
+                continue
+            squad_lookup[self._normalize_name(name)] = SquadPlayerEntry(
+                name=name,
+                position=str(player.get("position", "")),
+                team=str(player.get("team", "")),
+                selling_price=self._coerce_price(
+                    player.get("selling_price", player.get("price", 0.0))
+                ),
+            )
+
+        for transfer in transfer_plan.transfers:
+            out_name, out_pos_hint = self._split_player_label(transfer.out_player)
+            out_key = self._normalize_name(out_name)
+            out_info = squad_lookup.get(out_key)
+            if not out_info:
+                errors.append(f"Transfer OUT '{out_name}' not found in squad context")
+                continue
+
+            in_label = self._canonicalize_player_label(
+                transfer.in_player, player_lookup, pos_hint=out_pos_hint
+            )
+            in_name, in_pos_hint = self._split_player_label(in_label)
+            in_key = self._normalize_name(in_name)
+            candidates = player_lookup.get(in_key, [])
+            in_info = self._select_lookup_candidate(
+                candidates, in_name, in_pos_hint or out_info.position
+            )
+            if not in_info:
+                errors.append(
+                    f"Transfer IN '{in_name}' not found in available player list"
+                )
+                continue
+
+            if out_info.position != in_info.position:
+                errors.append(
+                    f"Position mismatch: {out_info.position} -> {in_info.position}"
+                )
+                continue
+
+            in_price = in_info.price
+            selling_price = out_info.selling_price
+            cost_delta = in_price - selling_price
+
+            updated_transfers.append(
+                Transfer(
+                    out_player=f"{out_info.name} ({out_info.position})",
+                    out_team=out_info.team,
+                    in_player=f"{in_info.name} ({in_info.position})",
+                    in_team=in_info.team,
+                    in_price=in_price,
+                    selling_price=selling_price,
+                    cost_delta=cost_delta,
+                    backers=transfer.backers,
+                )
+            )
+
+        total_cost = sum(t.cost_delta for t in updated_transfers)
+        new_itb = itb - total_cost
+        fts_used = len(updated_transfers)
+        fts_remaining = max(0, fts - fts_used)
+        hit_cost = max(0, fts_used - fts) * 4
+
+        updated_plan = TransferPlan(
+            transfers=updated_transfers,
+            total_cost=total_cost,
+            new_itb=new_itb,
+            fts_used=fts_used,
+            fts_remaining=fts_remaining,
+            hit_cost=hit_cost,
+            reasoning=transfer_plan.reasoning,
+        )
+
+        return updated_plan, errors
+
     def _compute_post_transfer_squad(
         self,
         original_squad: list[dict[str, Any]],
@@ -581,10 +941,11 @@ Return valid JSON only, matching the provided schema exactly."""
             out_name = transfer.out_player.split(" (")[0]
             in_name = transfer.in_player.split(" (")[0]
             in_pos = transfer.in_player.split("(")[1].rstrip(")")
+            out_key = self._normalize_name(out_name)
 
             # Find and replace the outgoing player
             for i, player in enumerate(new_squad):
-                if player["name"] == out_name:
+                if self._normalize_name(str(player.get("name", ""))) == out_key:
                     new_squad[i] = {
                         "name": in_name,
                         "position": in_pos,
@@ -642,12 +1003,31 @@ Return valid JSON only, matching the provided schema exactly."""
             "total_channels": len(channel_analyses),
         }
 
+    def _aggregate_influencer_xi(
+        self,
+        channel_analyses: list[ChannelAnalysis],
+    ) -> dict[str, Any]:
+        """Aggregate influencer starting XI selections where provided."""
+        xi_counts: dict[str, list[str]] = {}
+        formation_counts: dict[str, int] = {}
+
+        for analysis in channel_analyses:
+            if analysis.formation:
+                formation_counts[analysis.formation] = (
+                    formation_counts.get(analysis.formation, 0) + 1
+                )
+            for player in analysis.team_selection:
+                xi_counts.setdefault(player, []).append(analysis.channel_name)
+
+        return {"xi_counts": xi_counts, "formation_counts": formation_counts}
+
     def _stage_gap_analysis(
         self,
         channel_analyses: list[ChannelAnalysis],
         squad_context: dict[str, Any],
         gameweek: int,
         transfer_momentum: dict[str, Any] | None = None,
+        commentary: str | None = None,
         previous_errors: list[str] | None = None,
     ) -> GapAnalysis:
         """Stage 1: identify gaps between my squad and consensus."""
@@ -706,8 +1086,15 @@ NOTE: Flag players with >100k net transfers NOT mentioned by influencers as pote
                 + "\n\nFix these issues in your response.\n"
             )
 
+        directive_section = ""
+        if commentary:
+            directive_section = (
+                f"\nUSER DIRECTIVE (HIGH PRIORITY - FOLLOW THIS):\n{commentary}\n"
+            )
+
         prompt = f"""Analyze gaps between my FPL squad and influencer consensus for GW{gameweek}.
 {momentum_section}
+{directive_section}
 
 MY SQUAD (15 players):
 {json.dumps(squad, indent=2)}
@@ -786,6 +1173,7 @@ Use only the provided data (no external knowledge). Return valid JSON only."""
         condensed_players: list[dict[str, Any]],
         channel_analyses: list[ChannelAnalysis],
         gameweek: int,
+        commentary: str | None = None,
         previous_errors: list[str] | None = None,
     ) -> TransferPlan:
         """Stage 2: generate specific transfers to address gaps."""
@@ -808,10 +1196,17 @@ Use only the provided data (no external knowledge). Return valid JSON only."""
                 + "\n\nFix these issues in your response.\n"
             )
 
+        directive_section = ""
+        if commentary:
+            directive_section = (
+                f"\nUSER DIRECTIVE (HIGH PRIORITY - FOLLOW THIS):\n{commentary}\n"
+            )
+
         prompt = f"""Generate specific FPL transfers for GW{gameweek} based on gap analysis.
 
 GAP ANALYSIS:
 {gap.model_dump_json(indent=2)}
+{directive_section}
 
 MY SQUAD (with selling prices):
 {json.dumps(squad, indent=2)}
@@ -858,12 +1253,14 @@ Return JSON matching this schema EXACTLY:
 Rules:
 1. out_player MUST be in my squad; in_player MUST NOT be in my squad.
 2. Position must match: FWD->FWD, MID->MID, DEF->DEF, GKP->GKP.
-3. cost_delta = in_price - selling_price.
-4. new_itb = ITB - sum(cost_delta for all transfers) (must be >= 0).
-5. Club count after transfers must be <= 3 for any club.
-6. hit_cost = max(0, len(transfers) - fts) * 4.
-7. If no transfers recommended, return empty transfers array with fts_remaining = {fts}.
-8. backers should list influencer channel names when available; else [].
+3. in_player MUST be from AVAILABLE PLAYERS list above (use exact web_name + position).
+4. Use the exact price from AVAILABLE PLAYERS list (do not estimate).
+5. cost_delta = in_price - selling_price.
+6. new_itb = ITB - sum(cost_delta for all transfers) (must be >= 0).
+7. Club count after transfers must be <= 3 for any club.
+8. hit_cost = max(0, len(transfers) - fts) * 4.
+9. If no transfers recommended, return empty transfers array with fts_remaining = {fts}.
+10. backers should list influencer channel names when available; else [].
 
 Return ONLY valid JSON, no markdown fences."""
 
@@ -903,12 +1300,18 @@ Use only the provided data (no external knowledge). Return valid JSON only."""
         post_transfer_squad: list[dict[str, Any]],
         channel_analyses: list[ChannelAnalysis],
         gameweek: int,
+        commentary: str | None = None,
         previous_errors: list[str] | None = None,
     ) -> LineupPlan:
         """Stage 3: select XI, bench, captain from post-transfer squad."""
         self.logger.info("Stage 3: Lineup Selection")
 
         squad_names = [p["name"] for p in post_transfer_squad]
+        squad_labels = [
+            f"{p['name']} ({p['position']})" for p in post_transfer_squad if p.get("name")
+        ]
+
+        xi_consensus = self._aggregate_influencer_xi(channel_analyses)
 
         # Aggregate captaincy data
         captain_data: list[dict[str, Any]] = []
@@ -933,6 +1336,12 @@ Use only the provided data (no external knowledge). Return valid JSON only."""
                 + "\n\nFix these issues in your response.\n"
             )
 
+        directive_section = ""
+        if commentary:
+            directive_section = (
+                f"\nUSER DIRECTIVE (HIGH PRIORITY - FOLLOW THIS):\n{commentary}\n"
+            )
+
         prompt = f"""Select starting XI, bench, and captain for GW{gameweek}.
 
 POST-TRANSFER SQUAD (15 players - use ONLY these):
@@ -941,8 +1350,17 @@ POST-TRANSFER SQUAD (15 players - use ONLY these):
 VALID PLAYER NAMES (use exact names from this list):
 {json.dumps(squad_names, indent=2)}
 
+VALID PLAYER LABELS (use EXACT labels in your output):
+{json.dumps(squad_labels, indent=2)}
+
 INFLUENCER CAPTAINCY CHOICES:
 {json.dumps(captain_data, indent=2)}
+INFLUENCER XI PICKS (players explicitly in their starting XIs):
+{json.dumps(xi_consensus["xi_counts"], indent=2)}
+
+FORMATION TRENDS (count of formations mentioned):
+{json.dumps(xi_consensus["formation_counts"], indent=2)}
+{directive_section}
 {error_feedback}
 Return JSON matching this schema EXACTLY:
 {{
@@ -961,9 +1379,10 @@ Rules:
 2. Formation must be valid: 1 GKP, 3-5 DEF, 2-5 MID, 1-3 FWD.
 3. captain and vice_captain MUST be in starting_xi.
 4. ALL 15 players must be used exactly once.
-5. Use EXACT names from VALID PLAYER NAMES list.
-6. Player format: "PlayerName (POS)".
-7. starting_xi order preference: GK, DEFs, MIDs, FWDs (helps readability).
+5. Use EXACT labels from VALID PLAYER LABELS list.
+6. Player format: "PlayerName (POS)" only.
+7. Prefer players with higher influencer XI backer counts when choices are close.
+8. starting_xi order preference: GK, DEFs, MIDs, FWDs (helps readability).
 
 Return ONLY valid JSON, no markdown fences."""
 
@@ -1064,7 +1483,7 @@ Rules:
         # Find max sell price from any single player
         max_sell = 0.0
         for p in squad:
-            sell_price = p.get("sell_price", p.get("price", 0.0))
+            sell_price = p.get("selling_price", p.get("price", 0.0))
             if sell_price > max_sell:
                 max_sell = sell_price
 
@@ -1085,18 +1504,20 @@ Rules:
 
         # Get transferred-in player names
         transferred_in = {
-            t.in_player.split(" (")[0].lower() for t in transfers.transfers
+            self._normalize_name(t.in_player.split(" (")[0])
+            for t in transfers.transfers
         }
         transferred_out = {
-            t.out_player.split(" (")[0].lower() for t in transfers.transfers
+            self._normalize_name(t.out_player.split(" (")[0])
+            for t in transfers.transfers
         }
 
         reasoning_texts = [transfers.reasoning]
 
         # Check captain_gap (ERROR if not addressed)
         if gap.captain_gap:
-            captain_name = gap.captain_gap.lower()
-            if captain_name not in transferred_in:
+            captain_key = self._normalize_player_label(gap.captain_gap)
+            if captain_key not in transferred_in:
                 justification = self._verify_justification_llm(
                     gap.captain_gap,
                     reasoning_texts,
@@ -1110,8 +1531,8 @@ Rules:
 
         # Check players_missing (WARNING if not addressed)
         for player_ref in gap.players_missing:
-            player_name = player_ref.name.lower()
-            if player_name not in transferred_in:
+            player_key = self._normalize_player_label(player_ref.name)
+            if player_key not in transferred_in:
                 justification = self._verify_justification_llm(
                     player_ref.name,
                     reasoning_texts,
@@ -1124,8 +1545,8 @@ Rules:
 
         # Check players_to_sell (WARNING if not addressed)
         for player_ref in gap.players_to_sell:
-            player_name = player_ref.name.lower()
-            if player_name not in transferred_out:
+            player_key = self._normalize_player_label(player_ref.name)
+            if player_key not in transferred_out:
                 justification = self._verify_justification_llm(
                     player_ref.name,
                     reasoning_texts,
@@ -1160,7 +1581,8 @@ Rules:
 
         # Get current squad names
         squad_names = {
-            p.get("name", "").lower() for p in squad_context.get("squad", [])
+            self._normalize_name(str(p.get("name", "")))
+            for p in squad_context.get("squad", [])
         }
 
         reasoning_texts = [transfers.reasoning]
@@ -1168,21 +1590,21 @@ Rules:
         # Build player price lookup
         price_lookup: dict[str, float] = {}
         for p in condensed_players:
-            name = p.get("web_name", "").lower()
+            name = self._normalize_player_label(str(p.get("web_name", "")))
             price_lookup[name] = p.get("price", 0.0)
 
         for player, backers in transfers_in_counts.items():
             backer_count = len(backers)
-            player_lower = player.lower()
+            player_key = self._normalize_player_label(player)
 
             # Skip if already in squad or already being transferred in
-            if player_lower in squad_names or player_lower in transferred_in:
+            if player_key in squad_names or player_key in transferred_in:
                 continue
 
             # Check if recommended by threshold+ influencers
             if backer_count >= self.consensus_threshold:
                 # Check affordability
-                player_price = price_lookup.get(player_lower, 0.0)
+                player_price = price_lookup.get(player_key, 0.0)
                 is_affordable, max_budget = self._compute_player_affordability(
                     player, player_price, squad_context
                 )
@@ -1223,18 +1645,28 @@ Rules:
         warnings: list[str] = []
 
         # Build set of risky player names
-        risky_players = {rf.player.lower(): rf.risk for rf in gap.risk_flags}
+        risky_players = {
+            self._normalize_player_label(rf.player): rf.risk for rf in gap.risk_flags
+        }
 
         if not risky_players:
             return errors, warnings
 
         # Get XI and bench names
-        xi_names = [p.split(" (")[0].lower() for p in lineup.starting_xi]
-        bench_names = [p.split(" (")[0].lower() for p in lineup.bench]
+        xi_names = [
+            self._normalize_name(p.split(" (")[0]) for p in lineup.starting_xi
+        ]
+        bench_names = [self._normalize_name(p.split(" (")[0]) for p in lineup.bench]
 
-        captain_name = lineup.captain.split(" (")[0].lower() if lineup.captain else ""
+        captain_name = (
+            self._normalize_name(lineup.captain.split(" (")[0])
+            if lineup.captain
+            else ""
+        )
         vice_name = (
-            lineup.vice_captain.split(" (")[0].lower() if lineup.vice_captain else ""
+            self._normalize_name(lineup.vice_captain.split(" (")[0])
+            if lineup.vice_captain
+            else ""
         )
 
         # Check captain risk
@@ -1291,18 +1723,22 @@ Rules:
     ) -> list[str]:
         """Validate transfer plan."""
         errors: list[str] = []
-        original_names = {p["name"] for p in original_squad}
+        original_names = {
+            self._normalize_name(str(p.get("name", ""))) for p in original_squad
+        }
 
         for t in transfers.transfers:
             out_name = t.out_player.split(" (")[0]
             in_name = t.in_player.split(" (")[0]
+            out_key = self._normalize_name(out_name)
+            in_key = self._normalize_name(in_name)
 
             # Out player must be in original squad
-            if out_name not in original_names:
+            if out_key not in original_names:
                 errors.append(f"Transfer OUT '{out_name}' not in squad")
 
             # In player must NOT be in original squad
-            if in_name in original_names:
+            if in_key in original_names:
                 errors.append(f"Transfer IN '{in_name}' already in squad")
 
             # Position match
@@ -1334,10 +1770,11 @@ Rules:
     ) -> list[str]:
         """Validate lineup plan."""
         errors: list[str] = []
-        post_names = {p["name"] for p in post_transfer_squad}
+        post_names = {
+            self._normalize_name(str(p.get("name", ""))) for p in post_transfer_squad
+        }
 
-        xi_names = {p.split(" (")[0] for p in lineup.starting_xi}
-        bench_names = {p.split(" (")[0] for p in lineup.bench}
+        xi_names = {self._normalize_name(p.split(" (")[0]) for p in lineup.starting_xi}
 
         # Count by position
         pos_count = {"GKP": 0, "DEF": 0, "MID": 0, "FWD": 0}
@@ -1372,9 +1809,9 @@ Rules:
                 errors.append(f"Vice '{vice_name}' not in starting XI")
 
         # All players exist in post-transfer squad
-        all_lineup = xi_names | bench_names
-        for name in all_lineup:
-            if name not in post_names:
+        for label in lineup.starting_xi + lineup.bench:
+            name = label.split(" (")[0]
+            if self._normalize_name(name) not in post_names:
                 errors.append(f"'{name}' not in post-transfer squad")
 
         return errors
@@ -1583,8 +2020,9 @@ Trust all player names, teams, and positions as given. Return valid JSON only.""
         my_team_data: dict[str, Any],
         gameweek: int,
         free_transfers: int,
+        player_lookup: dict[str, list[PlayerLookupEntry]],
         transfer_momentum: dict[str, Any] | None = None,
-        commentary: str | None = None,  # noqa: ARG002
+        commentary: str | None = None,
         max_stage_attempts: int = 2,
     ) -> tuple[GapAnalysis, TransferPlan, LineupPlan, QualityReview]:
         """Orchestrate all stages with validation retry loop and final quality review."""
@@ -1606,6 +2044,7 @@ Trust all player names, teams, and positions as given. Return valid JSON only.""
                 squad_context,
                 gameweek,
                 transfer_momentum=transfer_momentum,
+                commentary=commentary,
                 previous_errors=gap_errors if gap_errors else None,
             )
             # Gap analysis doesn't have strict validation, accept it
@@ -1627,7 +2066,12 @@ Trust all player names, teams, and positions as given. Return valid JSON only.""
                 condensed_players,
                 channel_analyses,
                 gameweek,
+                commentary=commentary,
                 previous_errors=transfer_errors if transfer_errors else None,
+            )
+
+            transfers, pricing_errors = self._apply_transfer_pricing(
+                transfers, squad_context, player_lookup
             )
 
             post_transfer_squad = self._compute_post_transfer_squad(
@@ -1635,7 +2079,7 @@ Trust all player names, teams, and positions as given. Return valid JSON only.""
             )
 
             # Mechanical validation
-            transfer_errors = self._validate_transfers(
+            transfer_errors = pricing_errors + self._validate_transfers(
                 transfers, original_squad, post_transfer_squad
             )
 
@@ -1674,6 +2118,7 @@ Trust all player names, teams, and positions as given. Return valid JSON only.""
                 post_transfer_squad,
                 channel_analyses,
                 gameweek,
+                commentary=commentary,
                 previous_errors=lineup_errors if lineup_errors else None,
             )
 
@@ -1753,7 +2198,11 @@ Trust all player names, teams, and positions as given. Return valid JSON only.""
                     condensed_players,
                     channel_analyses,
                     gameweek,
+                    commentary=commentary,
                     previous_errors=transfer_fixes,
+                )
+                transfers, _ = self._apply_transfer_pricing(
+                    transfers, squad_context, player_lookup
                 )
                 post_transfer_squad = self._compute_post_transfer_squad(
                     original_squad, transfers.transfers
@@ -1766,6 +2215,7 @@ Trust all player names, teams, and positions as given. Return valid JSON only.""
                     post_transfer_squad,
                     channel_analyses,
                     gameweek,
+                    commentary=commentary,
                     previous_errors=lineup_fixes if lineup_fixes else None,
                 )
 
@@ -1781,6 +2231,114 @@ Trust all player names, teams, and positions as given. Return valid JSON only.""
             )
 
         return gap, transfers, lineup, quality_review
+
+    def _build_decision_options(
+        self,
+        gap: GapAnalysis,
+        primary_transfers: TransferPlan,
+        primary_lineup: LineupPlan,
+        squad_context: dict[str, Any],
+        original_squad: list[dict[str, Any]],
+        channel_analyses: list[ChannelAnalysis],
+        condensed_players: list[dict[str, Any]],
+        player_lookup: dict[str, list[PlayerLookupEntry]],
+        gameweek: int,
+        commentary: str | None = None,
+    ) -> list[DecisionOption]:
+        """Create 2-3 decision options: primary + conservative (+ optional chase)."""
+        options: list[DecisionOption] = []
+
+        options.append(
+            DecisionOption(
+                label="Option A: Primary (influencer-aligned)",
+                transfers=primary_transfers,
+                lineup=primary_lineup,
+                rationale="Best balance of consensus alignment and validation checks.",
+            )
+        )
+
+        conservative_commentary = self._merge_commentary(
+            commentary,
+            "CONSERVATIVE PLAN: make no transfers and prioritize safe minutes.",
+        )
+        roll_transfers = TransferPlan(
+            transfers=[],
+            total_cost=0.0,
+            new_itb=float(squad_context.get("itb", 0.0)),
+            fts_used=0,
+            fts_remaining=int(squad_context.get("free_transfers", 0)),
+            hit_cost=0,
+            reasoning="Roll the transfer to bank flexibility and avoid hits.",
+        )
+        conservative_lineup = self._stage_lineup_selection(
+            original_squad,
+            channel_analyses,
+            gameweek,
+            commentary=conservative_commentary,
+        )
+        lineup_errors = self._validate_lineup(conservative_lineup, original_squad)
+        if lineup_errors:
+            self.logger.warning(
+                "Conservative lineup failed validation; using primary lineup fallback"
+            )
+            conservative_lineup = primary_lineup
+
+        options.append(
+            DecisionOption(
+                label="Option B: Conservative (roll transfer)",
+                transfers=roll_transfers,
+                lineup=conservative_lineup,
+                rationale="Lower variance: bank FTs and prioritize secure starters.",
+            )
+        )
+
+        target = gap.captain_gap or (gap.players_missing[0].name if gap.players_missing else None)
+        if target:
+            chase_commentary = self._merge_commentary(
+                commentary,
+                f"AGGRESSIVE PLAN: prioritize bringing in {target} even if it requires a hit.",
+            )
+            chase_transfers = self._stage_transfer_plan(
+                gap,
+                squad_context,
+                condensed_players,
+                channel_analyses,
+                gameweek,
+                commentary=chase_commentary,
+            )
+            chase_transfers, pricing_errors = self._apply_transfer_pricing(
+                chase_transfers, squad_context, player_lookup
+            )
+            post_chase_squad = self._compute_post_transfer_squad(
+                original_squad, chase_transfers.transfers
+            )
+            chase_errors = pricing_errors + self._validate_transfers(
+                chase_transfers, original_squad, post_chase_squad
+            )
+            if not chase_errors:
+                chase_lineup = self._stage_lineup_selection(
+                    post_chase_squad,
+                    channel_analyses,
+                    gameweek,
+                    commentary=chase_commentary,
+                )
+                lineup_errors = self._validate_lineup(chase_lineup, post_chase_squad)
+                if not lineup_errors:
+                    options.append(
+                        DecisionOption(
+                            label="Option C: Aggressive (consensus chase)",
+                            transfers=chase_transfers,
+                            lineup=chase_lineup,
+                            rationale=f"High-conviction pivot toward {target} despite hit risk.",
+                        )
+                    )
+            else:
+                self.logger.warning(
+                    "Skipping aggressive option due to validation errors: %s",
+                    chase_errors,
+                )
+
+        return options
 
     def _generate_consensus_section(
         self, channel_analyses: list[ChannelAnalysis]
@@ -1918,66 +2476,76 @@ Trust all player names, teams, and positions as given. Return valid JSON only.""
 
         return "\n".join(lines)
 
-    def _format_action_plan(self, transfers: TransferPlan, lineup: LineupPlan) -> str:
-        """Format Section 4 from TransferPlan + LineupPlan."""
-        lines = ["## 4) Action Plan\n"]
+    def _format_action_plan(self, decision_options: list[DecisionOption]) -> str:
+        """Format Section 4 with 2-3 decision options."""
+        lines = ["## 4) Action Plan\n", "### Decision Options (choose 1)\n"]
 
-        # Transfers
-        lines.append("### Recommended Transfers\n")
-        if transfers.transfers:
-            for t in transfers.transfers:
-                backers = ", ".join(t.backers) if t.backers else "General consensus"
-                lines.append(f"- **{t.out_player}** → **{t.in_player}**")
-                lines.append(f"  - Sell: {t.selling_price}m, Buy: {t.in_price}m")
-                lines.append(f"  - Cost delta: {t.cost_delta:+.1f}m")
-                lines.append(f"  - Backers: {backers}")
-            lines.append("")
-            lines.append(f"**Budget after transfers:** {transfers.new_itb:.1f}m ITB")
+        for option in decision_options:
+            transfers = option.transfers
+            lineup = option.lineup
+
+            lines.append(f"#### {option.label}")
+
+            if transfers.transfers:
+                lines.append("**Transfers:**")
+                for t in transfers.transfers:
+                    backers = ", ".join(t.backers) if t.backers else "General consensus"
+                    lines.append(f"- **{t.out_player}** → **{t.in_player}**")
+                    lines.append(
+                        f"  - Sell: {t.selling_price}m, Buy: {t.in_price}m, "
+                        f"Delta: {t.cost_delta:+.1f}m"
+                    )
+                    lines.append(f"  - Backers: {backers}")
+            else:
+                lines.append("*No transfers (roll).*")
+
             lines.append(
-                f"**FTs used:** {transfers.fts_used}, remaining: {transfers.fts_remaining}"
+                f"**Budget after:** {transfers.new_itb:.1f}m ITB | "
+                f"**FTs used:** {transfers.fts_used} | "
+                f"**FTs remaining:** {transfers.fts_remaining} | "
+                f"**Hit cost:** {transfers.hit_cost}"
             )
-            if transfers.hit_cost > 0:
-                lines.append(f"**Hit cost:** -{transfers.hit_cost} points")
-        else:
-            lines.append("*No transfers recommended - roll the transfer.*")
-            lines.append(f"**FTs remaining:** {transfers.fts_remaining}")
 
-        lines.append(f"\n**Reasoning:** {transfers.reasoning}\n")
+            lines.append(
+                f"**Captain:** {lineup.captain} | "
+                f"**Vice:** {lineup.vice_captain} | "
+                f"**Formation:** {lineup.formation}"
+            )
 
-        # Lineup
-        lines.append(f"### Starting XI ({lineup.formation})\n")
-        lines.append(f"**Captain:** {lineup.captain}")
-        lines.append(f"**Vice Captain:** {lineup.vice_captain}\n")
+            gkp = [p for p in lineup.starting_xi if "(GKP)" in p]
+            defs = [p for p in lineup.starting_xi if "(DEF)" in p]
+            mids = [p for p in lineup.starting_xi if "(MID)" in p]
+            fwds = [p for p in lineup.starting_xi if "(FWD)" in p]
 
-        # Group by position
-        gkp = [p for p in lineup.starting_xi if "(GKP)" in p]
-        defs = [p for p in lineup.starting_xi if "(DEF)" in p]
-        mids = [p for p in lineup.starting_xi if "(MID)" in p]
-        fwds = [p for p in lineup.starting_xi if "(FWD)" in p]
+            if gkp:
+                lines.append(f"**GKP:** {', '.join(gkp)}")
+            if defs:
+                lines.append(f"**DEF:** {', '.join(defs)}")
+            if mids:
+                lines.append(f"**MID:** {', '.join(mids)}")
+            if fwds:
+                lines.append(f"**FWD:** {', '.join(fwds)}")
 
-        if gkp:
-            lines.append(f"**GKP:** {', '.join(gkp)}")
-        if defs:
-            lines.append(f"**DEF:** {', '.join(defs)}")
-        if mids:
-            lines.append(f"**MID:** {', '.join(mids)}")
-        if fwds:
-            lines.append(f"**FWD:** {', '.join(fwds)}")
+            bench_str = ", ".join(
+                f"{idx}. {player}" for idx, player in enumerate(lineup.bench, 1)
+            )
+            lines.append(f"**Bench:** {bench_str}")
 
-        lines.append("\n### Bench (auto-sub order)\n")
-        for i, p in enumerate(lineup.bench, 1):
-            lines.append(f"{i}. {p}")
+            if option.rationale:
+                lines.append(f"**Why:** {option.rationale}")
 
-        lines.append(f"\n**Reasoning:** {lineup.reasoning}")
+            if transfers.reasoning:
+                lines.append(f"**Transfer reasoning:** {transfers.reasoning}")
 
-        return "\n".join(lines)
+            lines.append("")
+
+        return "\n".join(lines).strip()
 
     def _assemble_report(
         self,
         channel_analyses: list[ChannelAnalysis],
         gap: GapAnalysis,
-        transfers: TransferPlan,
-        lineup: LineupPlan,
+        decision_options: list[DecisionOption],
         gameweek: int,  # noqa: ARG002
         commentary: str | None = None,
         quality_review: QualityReview | None = None,
@@ -1991,7 +2559,7 @@ Trust all player names, teams, and positions as given. Return valid JSON only.""
         sections.append(self._generate_consensus_section(channel_analyses))
         sections.append(self._generate_channel_notes(channel_analyses))
         sections.append(self._format_gap_section(gap))
-        sections.append(self._format_action_plan(transfers, lineup))
+        sections.append(self._format_action_plan(decision_options))
 
         # Add quality review section if available
         if quality_review:
@@ -2298,6 +2866,9 @@ specific, well-reasoned, and tailored to the user's current team situation."""
             # Phase 1: Individual channel analysis
             self.logger.info("Phase 1: Analyzing individual channels")
             condensed_players = self.condense_player_list(top_players)
+            player_lookup = self._build_player_lookup(
+                top_players, my_team_data, transfer_momentum
+            )
             channel_analyses = []
 
             for video_data in video_results:
@@ -2316,7 +2887,11 @@ specific, well-reasoned, and tailored to the user's current team situation."""
                             if segment.get("text")
                         )
                     analysis = self.analyze_channel(
-                        video_data, condensed_players, transcript, gameweek
+                        video_data,
+                        condensed_players,
+                        transcript,
+                        gameweek,
+                        player_lookup=player_lookup,
                     )
                     if analysis:
                         channel_analyses.append(analysis)
@@ -2340,7 +2915,22 @@ specific, well-reasoned, and tailored to the user's current team situation."""
                 my_team_data,
                 gameweek,
                 free_transfers,
+                player_lookup,
                 transfer_momentum=transfer_momentum,
+                commentary=commentary,
+            )
+
+            squad_context = self._build_squad_context(my_team_data, free_transfers)
+            decision_options = self._build_decision_options(
+                gap,
+                transfers,
+                lineup,
+                squad_context,
+                squad_context["squad"],
+                channel_analyses,
+                condensed_players,
+                player_lookup,
+                gameweek,
                 commentary=commentary,
             )
 
@@ -2348,8 +2938,7 @@ specific, well-reasoned, and tailored to the user's current team situation."""
             final_report = self._assemble_report(
                 channel_analyses,
                 gap,
-                transfers,
-                lineup,
+                decision_options,
                 gameweek,
                 commentary=commentary,
                 quality_review=quality_review,

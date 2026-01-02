@@ -21,7 +21,7 @@ import tempfile
 import time
 from io import StringIO
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from urllib.parse import parse_qs, urlparse
 
 import requests
@@ -335,7 +335,7 @@ class YtDlpTranscriptFetcher:
                 with tempfile.TemporaryDirectory() as temp_dir:
                     ydl_opts["outtmpl"] = str(Path(temp_dir) / "%(id)s.%(ext)s")
 
-                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    with yt_dlp.YoutubeDL(cast("Any", ydl_opts)) as ydl:
                         try:
                             ydl.extract_info(url, download=True)
 
