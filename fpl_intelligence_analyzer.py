@@ -52,6 +52,29 @@ from src.fpl_influencer_hivemind.types import (
     ValidationResult,
 )
 
+# Current Premier League teams (2025/2026 season)
+PL_TEAMS_2025_26 = [
+    "Arsenal", "Aston Villa", "Bournemouth", "Brentford", "Brighton",
+    "Burnley", "Chelsea", "Crystal Palace", "Everton", "Fulham",
+    "Leeds United", "Liverpool", "Manchester City", "Manchester United",
+    "Newcastle United", "Nottingham Forest", "Sunderland",
+    "Tottenham Hotspur", "West Ham United", "Wolverhampton Wanderers",
+]
+
+# Prompt block for current PL teams context
+PL_TEAMS_CONTEXT = """CURRENT PREMIER LEAGUE TEAMS (2025/2026):
+Arsenal, Aston Villa, Bournemouth, Brentford, Brighton, Chelsea, Crystal Palace,
+Everton, Fulham, Liverpool, Manchester City, Manchester United, Newcastle United,
+Nottingham Forest, Tottenham Hotspur, West Ham United, Wolverhampton Wanderers
+PROMOTED THIS SEASON: Burnley, Leeds United, Sunderland
+
+IMPORTANT:
+- ALL 20 teams above are current Premier League teams
+- Burnley, Leeds, Sunderland were PROMOTED from Championship - they are NOW Premier League
+- DO NOT use training knowledge about team league status
+- Trust the FPL API data - it's authoritative
+"""
+
 
 class ChannelAnalysis(BaseModel):
     """Pydantic model for individual channel analysis."""
@@ -332,8 +355,8 @@ Format it as clear prose, not JSON."""
 CHANNEL: {channel_name}
 VIDEO: {video_title}
 
-TOP FPL PLAYERS BY OWNERSHIP (showing first 75 for context - includes injury status):
-{json.dumps(condensed_players[:75], indent=1)}
+TOP FPL PLAYERS BY OWNERSHIP (showing first 150 for context - includes injury status):
+{json.dumps(condensed_players[:150], indent=1)}
 
 PLAYER STATUS CODES:
 - a: available, d: doubtful, i: injured, s: suspended, u: unavailable
@@ -364,6 +387,8 @@ Extract the following information and return as JSON:
   "confidence": 0.85,
   "transcript_length": {transcript_length}
 }}
+
+{PL_TEAMS_CONTEXT}
 
 IMPORTANT:
 - The transcript may have transcription errors for player names
@@ -693,11 +718,13 @@ Return JSON matching this schema EXACTLY:
   "captain_gap": "Player Name if consensus captain not in my squad, else null"
 }}
 
+{PL_TEAMS_CONTEXT}
+
 CRITICAL RULES:
 1. players_to_sell: My players that influencers are selling/benching (must be IN my squad)
 2. players_missing: Popular picks I don't own - MUST NOT include any player from MY SQUAD
 3. Prioritize captain_gap first - if consensus captain not in my squad, this is #1 priority
-4. risk_flags: Injury/rotation risks for players in my squad
+4. risk_flags: Injury/rotation/form risks ONLY - do NOT flag based on perceived team quality or league status
 5. formation_gaps: Position imbalances or formation issues
 
 Return ONLY valid JSON, no markdown fences."""
@@ -777,8 +804,8 @@ CURRENT CLUB COUNTS (max 3 per club):
 
 BUDGET: ITB = {itb}m, Free Transfers = {fts}
 
-AVAILABLE PLAYERS (top 50 by form):
-{json.dumps(condensed_players[:50], indent=2)}
+AVAILABLE PLAYERS (top 150 by form):
+{json.dumps(condensed_players[:150], indent=2)}
 
 INFLUENCER TRANSFER RECOMMENDATIONS:
 - Transfers IN: {json.dumps(consensus['transfers_in_counts'], indent=2)}
@@ -805,6 +832,8 @@ Return JSON matching this schema EXACTLY:
   "hit_cost": 0,
   "reasoning": "Brief explanation"
 }}
+
+{PL_TEAMS_CONTEXT}
 
 CRITICAL RULES:
 1. out_player MUST be in my squad (check SQUAD PLAYER NAMES)
@@ -903,6 +932,8 @@ Return JSON matching this schema EXACTLY:
   "formation": "3-5-2",
   "reasoning": "Brief explanation"
 }}
+
+{PL_TEAMS_CONTEXT}
 
 CRITICAL RULES:
 1. starting_xi must have EXACTLY 11 players
@@ -1461,18 +1492,30 @@ Return JSON:
   "quality_notes": ["note1", "note2"],
   "consensus_alignment": "How well does plan align with influencer consensus",
   "risk_assessment": "Summary of risks and how they're mitigated",
-  "potential_issues": ["issue1", "issue2"],
-  "recommendation_strength": "strong|moderate|weak"
+  "potential_issues": ["non-fixable issues for user awareness"],
+  "recommendation_strength": "strong|moderate|weak",
+  "fixable_issues": [
+    {{
+      "stage": "transfer|lineup",
+      "issue": "description of the internal contradiction",
+      "fix_instruction": "specific instruction to fix this in the next attempt"
+    }}
+  ]
 }}
 
-ONLY flag issues that are INTERNAL CONTRADICTIONS such as:
-- Player listed in "players to sell" but starting in XI without justification
-- Player with risk flag as captain AND vice-captain also has risk (no safe fallback)
-- High-consensus transfer target (3+) not in plan AND not addressed in reasoning
-- Transfer-out momentum flagged but player starting without bench backup
-- Gap analysis identifies missing player but transfers don't address it (check reasoning)
+FIXABLE ISSUES (put in fixable_issues array):
+These are INTERNAL CONTRADICTIONS that can be fixed by re-running a stage:
+- Player in "players to sell" but starting in XI → stage: "lineup", fix: bench them or justify
+- Captain has risk flag AND vice also has risk → stage: "lineup", fix: pick safe vice
+- High-consensus target (3+) ignored without reasoning → stage: "transfer", fix: add transfer or justify
+- Gap player not addressed in transfers → stage: "transfer", fix: add transfer or justify
 
-DO NOT flag:
+NON-FIXABLE ISSUES (put in potential_issues array):
+- General observations the user should know about
+- Trade-offs that were made consciously
+- Budget constraints that limit options
+
+DO NOT flag as issues:
 - Player team names (trust the data)
 - Player positions (trust the data)
 - Any "fact" from your training data
@@ -1651,7 +1694,7 @@ Trust all player names, teams, and positions as given. Return valid JSON only.""
         if final_validation.warnings:
             self.logger.info(f"Final validation warnings: {final_validation.warnings}")
 
-        # Holistic quality review (final LLM assessment)
+        # Holistic quality review (LLM assessment with corrective loop)
         quality_review = self._holistic_quality_review(
             gap, transfers, lineup, consensus, squad_context, gameweek
         )
@@ -1659,6 +1702,60 @@ Trust all player names, teams, and positions as given. Return valid JSON only.""
             f"Quality review: confidence={quality_review.confidence_score:.2f}, "
             f"strength={quality_review.recommendation_strength}"
         )
+
+        # Corrective loop: if fixable issues found, re-run affected stages
+        if quality_review.fixable_issues:
+            self.logger.info(
+                f"Quality review found {len(quality_review.fixable_issues)} fixable issues"
+            )
+
+            # Group issues by stage
+            transfer_fixes = [
+                f"QUALITY REVIEW FIX: {fi.issue} - {fi.fix_instruction}"
+                for fi in quality_review.fixable_issues
+                if fi.stage == "transfer"
+            ]
+            lineup_fixes = [
+                f"QUALITY REVIEW FIX: {fi.issue} - {fi.fix_instruction}"
+                for fi in quality_review.fixable_issues
+                if fi.stage == "lineup"
+            ]
+
+            # Re-run transfer stage if needed
+            if transfer_fixes:
+                self.logger.info(f"Re-running Stage 2 with {len(transfer_fixes)} fixes")
+                transfers = self._stage_transfer_plan(
+                    gap,
+                    squad_context,
+                    condensed_players,
+                    channel_analyses,
+                    gameweek,
+                    previous_errors=transfer_fixes,
+                )
+                post_transfer_squad = self._compute_post_transfer_squad(
+                    original_squad, transfers.transfers
+                )
+
+            # Re-run lineup stage if needed (or if transfers changed)
+            if lineup_fixes or transfer_fixes:
+                self.logger.info(f"Re-running Stage 3 with {len(lineup_fixes)} fixes")
+                lineup = self._stage_lineup_selection(
+                    post_transfer_squad,
+                    channel_analyses,
+                    gameweek,
+                    previous_errors=lineup_fixes if lineup_fixes else None,
+                )
+
+            # Re-run quality review on corrected output
+            self.logger.info("Re-running quality review after corrections")
+            quality_review = self._holistic_quality_review(
+                gap, transfers, lineup, consensus, squad_context, gameweek
+            )
+            self.logger.info(
+                f"Updated quality review: confidence={quality_review.confidence_score:.2f}, "
+                f"strength={quality_review.recommendation_strength}, "
+                f"remaining issues={len(quality_review.fixable_issues)}"
+            )
 
         return gap, transfers, lineup, quality_review
 

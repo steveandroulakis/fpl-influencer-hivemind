@@ -39,16 +39,19 @@ The analyzer (`fpl_intelligence_analyzer.py`) runs a multi-stage pipeline with v
 - Uses LLM (haiku) to verify justifications in reasoning text
 - Errors trigger retry; warnings are logged but don't block
 
-### Stage 5: Quality Review
-- Holistic LLM review (sonnet) of complete report
-- Assesses: confidence score, consensus alignment, risk assessment, potential issues
-- Outputs `QualityReview` with `recommendation_strength` ("strong"/"moderate"/"weak")
-- Added to final report as "Quality Assessment" section
+### Stage 5: Quality Review (Corrective)
+- Holistic LLM review (sonnet) for **internal consistency only** (no model knowledge)
+- Compares: gap analysis vs transfers vs lineup vs influencer consensus
+- Outputs `QualityReview` with `fixable_issues` array
+- **Corrective loop**: if fixable issues found, re-runs affected stages with fix instructions
+- Re-runs quality review after corrections
+- Final report includes "Quality Assessment" section with remaining observations
 
 ### Key Models (`types.py`)
 - `GapAnalysis`, `TransferPlan`, `LineupPlan` – stage outputs
 - `ValidationResult` – errors/warnings from validation
-- `QualityReview` – holistic assessment with confidence score
+- `QualityReview` – holistic assessment with `fixable_issues: list[FixableIssue]`
+- `FixableIssue` – issue + stage + fix_instruction for corrective loop
 
 ## Required Environment
 Use `.env` (auto sourced) based on `.env.example`:

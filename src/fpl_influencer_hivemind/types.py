@@ -82,6 +82,14 @@ class ValidationResult(BaseModel):
     failed_stage: str | None = None  # "gap", "transfer", "lineup"
 
 
+class FixableIssue(BaseModel):
+    """An issue that can be fixed by re-running a stage."""
+
+    stage: str  # "transfer" or "lineup"
+    issue: str  # Description of the problem
+    fix_instruction: str  # What the stage should do differently
+
+
 class QualityReview(BaseModel):
     """Holistic quality assessment of the final report."""
 
@@ -89,8 +97,9 @@ class QualityReview(BaseModel):
     quality_notes: list[str]  # Key observations about report quality
     consensus_alignment: str  # How well plan aligns with influencer consensus
     risk_assessment: str  # Summary of risks and mitigations
-    potential_issues: list[str]  # Things user should be aware of
+    potential_issues: list[str]  # Things user should be aware of (non-fixable)
     recommendation_strength: str  # "strong", "moderate", "weak"
+    fixable_issues: list[FixableIssue] = []  # Issues that can be corrected by re-running stages
 
 
 class _VideoResultRequired(TypedDict):
@@ -188,6 +197,7 @@ __all__ = [
     "ChannelConfig",
     "ChannelDiscovery",
     "ChannelsFile",
+    "FixableIssue",
     "GameweekInfo",
     "GapAnalysis",
     "LineupPlan",
