@@ -16,6 +16,7 @@ from fpl_influencer_hivemind.pipeline import (
 )
 from fpl_influencer_hivemind.services.discovery import DiscoveryStrategy
 from fpl_influencer_hivemind.services.fpl import FPLServiceError
+from fpl_influencer_hivemind.services.transcripts import TranscriptServiceError
 from fpl_influencer_hivemind.types import ChannelConfig, ChannelDiscovery
 from fpl_influencer_hivemind.youtube.video_picker import (
     ChannelResult,
@@ -181,11 +182,12 @@ def test_aggregate_creates_expected_payload(
     assert data["gameweek"]["fallback_used"] is False
     assert data["youtube_analysis"]["videos_discovered"] == 1
     assert data["youtube_analysis"]["transcripts_retrieved"] == 1
-    transcript_payload = data["youtube_analysis"]["transcripts"]["FPL Test"]
+    transcript_payload = data["youtube_analysis"]["transcripts"]["abc123def45"]
     assert transcript_payload["text"] == "Line one\nLine two"
     assert transcript_payload["language"] == "en"
     assert transcript_payload["translated"] is False
     assert transcript_payload["segments"][0]["text"] == "Line one"
+    assert data["youtube_analysis"]["transcript_errors"] == {}
 
     assert fpl_calls == [
         "current_gameweek",
@@ -254,6 +256,45 @@ def test_aggregate_skips_transcripts_without_prompt(
     )
 
     assert outcome.transcripts_retrieved == 0
+
+
+def test_aggregate_records_transcript_errors(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    channels: list[ChannelConfig] = [
+        {"name": "FPL Test", "url": "https://www.youtube.com/@fpltest"}
+    ]
+
+    stub_select_single_channel(monkeypatch)
+    setup_default_services(monkeypatch)
+
+    def fail_fetch(*_: object, **__: object) -> dict[str, object]:
+        raise TranscriptServiceError("no transcript")
+
+    monkeypatch.setattr(
+        "fpl_influencer_hivemind.pipeline.transcript_service.fetch_transcript",
+        fail_fetch,
+    )
+
+    outcome = aggregate(
+        team_id=1178124,
+        channels=channels,
+        artifacts_dir=tmp_path,
+        auto_approve_transcripts=True,
+        transcript_delay=0.0,
+    )
+
+    assert outcome.transcripts_retrieved == 0
+    assert outcome.transcript_errors
+    assert "abc123def45" in outcome.transcript_errors
+
+    data = json.loads(outcome.result_path.read_text(encoding="utf-8"))
+    assert data["youtube_analysis"]["transcripts"] == {}
+    assert data["youtube_analysis"]["transcripts_retrieved"] == 0
+    assert data["youtube_analysis"]["transcript_errors"]["abc123def45"]["error"] == (
+        "no transcript"
+    )
+    assert data["summary"]["failed_transcripts"] == 1
 
 
 def test_aggregate_invalid_team_id_raises() -> None:

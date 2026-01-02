@@ -141,6 +141,14 @@ class TranscriptEntry(_TranscriptEntryRequired, total=False):
     """Transcript payload stored in aggregation artifacts."""
 
 
+class TranscriptErrorEntry(TypedDict):
+    """Transcript fetch error metadata."""
+
+    video_id: str
+    channel_name: str
+    error: str
+
+
 class GameweekInfo(TypedDict, total=False):
     """Subset of the gameweek payload returned by ``get_current_gameweek``."""
 
@@ -206,6 +214,7 @@ __all__ = [
     "QualityReview",
     "RiskFlag",
     "TranscriptEntry",
+    "TranscriptErrorEntry",
     "TranscriptSegment",
     "Transfer",
     "TransferPlan",

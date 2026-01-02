@@ -54,25 +54,39 @@ from src.fpl_influencer_hivemind.types import (
 
 # Current Premier League teams (2025/2026 season)
 PL_TEAMS_2025_26 = [
-    "Arsenal", "Aston Villa", "Bournemouth", "Brentford", "Brighton",
-    "Burnley", "Chelsea", "Crystal Palace", "Everton", "Fulham",
-    "Leeds United", "Liverpool", "Manchester City", "Manchester United",
-    "Newcastle United", "Nottingham Forest", "Sunderland",
-    "Tottenham Hotspur", "West Ham United", "Wolverhampton Wanderers",
+    "Arsenal",
+    "Aston Villa",
+    "Bournemouth",
+    "Brentford",
+    "Brighton",
+    "Burnley",
+    "Chelsea",
+    "Crystal Palace",
+    "Everton",
+    "Fulham",
+    "Leeds United",
+    "Liverpool",
+    "Manchester City",
+    "Manchester United",
+    "Newcastle United",
+    "Nottingham Forest",
+    "Sunderland",
+    "Tottenham Hotspur",
+    "West Ham United",
+    "Wolverhampton Wanderers",
 ]
 
 # Prompt block for current PL teams context
 PL_TEAMS_CONTEXT = """CURRENT PREMIER LEAGUE TEAMS (2025/2026):
 Arsenal, Aston Villa, Bournemouth, Brentford, Brighton, Chelsea, Crystal Palace,
 Everton, Fulham, Liverpool, Manchester City, Manchester United, Newcastle United,
-Nottingham Forest, Tottenham Hotspur, West Ham United, Wolverhampton Wanderers
-PROMOTED THIS SEASON: Burnley, Leeds United, Sunderland
+Nottingham Forest, Tottenham Hotspur, West Ham United, Wolverhampton Wanderers,
+Burnley, Leeds United, Sunderland
 
 IMPORTANT:
 - ALL 20 teams above are current Premier League teams
-- Burnley, Leeds, Sunderland were PROMOTED from Championship - they are NOW Premier League
 - DO NOT use training knowledge about team league status
-- Trust the FPL API data - it's authoritative
+- Trust the FPL API data for players and their teams - it's authoritative
 """
 
 
@@ -246,22 +260,22 @@ class FPLIntelligenceAnalyzer:
 
 {json.dumps(team_context, indent=2)}
 
-Create a concise summary of this FPL manager's squad:
-- Team name and current performance (points, rank)
-- Squad of 15 players grouped by position (GKP, DEF, MID, FWD)
-- For each player: name, team, price, total points, selling price
-- Team value and bank balance
-- Free transfers available
-
-Do NOT mention captain, vice-captain, starting XI, or bench - these are decisions
-the manager will make for the upcoming gameweek based on recommendations.
-
-Format it as clear prose, not JSON."""
+Output requirements:
+- Clear, concise text (no JSON, no code fences).
+- Use short labeled sections in this order: Team, Performance, Squad, Finances.
+- Squad section: group all 15 players by position (GKP, DEF, MID, FWD).
+- For each player: name, team, price, total points, selling price.
+- Finances: team value, bank balance, free transfers.
+- Do NOT mention captain, vice-captain, starting XI, or bench.
+"""
 
             response, stop_reason = self._make_anthropic_call(
                 model=self.sonnet_model,
                 prompt=prompt,
-                system="You are an FPL analyst. Format team data clearly and concisely.",
+                system=(
+                    "You are an FPL analyst. Format team data clearly and concisely. "
+                    "Use only the provided data and do not invent details."
+                ),
             )
 
             if stop_reason and stop_reason not in {"end_turn", "stop_sequence"}:
@@ -355,60 +369,53 @@ Format it as clear prose, not JSON."""
 CHANNEL: {channel_name}
 VIDEO: {video_title}
 
-TOP FPL PLAYERS BY OWNERSHIP (showing first 150 for context - includes injury status):
+TOP FPL PLAYERS BY OWNERSHIP (first 150, includes injury status):
 {json.dumps(condensed_players[:150], indent=1)}
 
 PLAYER STATUS CODES:
 - a: available, d: doubtful, i: injured, s: suspended, u: unavailable
-- Pay attention to "status", "news", and "chance_of_playing_next_round" fields
+- Use "status", "news", and "chance_of_playing_next_round" where relevant
 
 TRANSCRIPT:
 {transcript}
 
-Extract the following information and return as JSON:
-
+Return ONLY valid JSON matching this schema (all keys required):
 {{
   "channel_name": "{channel_name}",
   "formation": "3-5-2",
-  "team_selection": ["Salah (FWD)", "Haaland (FWD)", ...],
-  "transfers_in": ["Player (POS)", ...],
-  "transfers_out": ["Player (POS)", ...],
+  "team_selection": ["Player (POS)", "..."],
+  "transfers_in": ["Player (POS)", "..."],
+  "transfers_out": ["Player (POS)", "..."],
   "captain_choice": "Player (POS)",
   "vice_captain_choice": "Player (POS)",
   "key_issues_discussed": [
-    {{"issue": "Salah vs Haaland captaincy", "opinion": "On pens, great fixtures in GW5"}},
-    {{"issue": "Arsenal defensive assets", "opinion": "Avoid due to tough fixtures next 3 weeks"}}
+    {{"issue": "topic", "opinion": "their view"}}
   ],
   "watchlist": [
-    {{"name": "Player (POS)", "priority": "high", "why": "Great fixtures coming up after international break"}}
+    {{"name": "Player (POS)", "priority": "high|med|low", "why": "reason"}}
   ],
   "bank_itb": "0.5m",
-  "key_reasoning": ["Reason 1", "Reason 2", ...],
+  "key_reasoning": ["Reason 1", "Reason 2"],
   "confidence": 0.85,
   "transcript_length": {transcript_length}
 }}
 
 {PL_TEAMS_CONTEXT}
 
-IMPORTANT:
-- The transcript may have transcription errors for player names
-- Use the top players list to identify correct player names and their injury status
-- ALL PLAYER NAMES must include position in format: "Player (POS)" e.g. "Salah (FWD)", "Robertson (DEF)"
-- Extract their actual team selection, transfers, and reasoning
-- Formation: Look for tactical discussions (3-5-2, 4-4-2, etc.) - set null if not mentioned
-- Key Issues: Extract major talking points with their specific opinions (if any discussed)
-- Watchlist: Players they mention considering but not immediately transferring (high/med/low priority)
-- Bank ITB: If they mention money in the bank or ITB, capture the amount (e.g. "0.5m", "2.1m")
-- Consider player availability (status/news/chance_of_playing_next_round) in analysis
-- Set confidence based on clarity of their decisions and transcript length
-- If information is unclear or missing, use empty arrays for lists and default values
-- FOR SHORT TRANSCRIPTS (<3000 chars): Focus on extracting the most essential information (transfers, captain)
-- ALWAYS return valid JSON even if limited information is available
+Rules:
+- Player format: "Name (POS)" where POS is GKP/DEF/MID/FWD.
+- Normalize names using the top players list when possible; otherwise keep transcript spelling.
+- formation: null if not mentioned.
+- captain_choice/vice_captain_choice: "Not specified" if not stated.
+- bank_itb: string like "0.5m" if stated, otherwise null.
+- Use empty arrays for missing lists.
+- For short transcripts (<3000 chars), focus on transfers and captain; lower confidence.
+- Do not invent players or decisions not stated in the transcript.
 """
 
-            system = """You are an expert FPL analyst. Extract structured information from influencer video transcripts.
-Focus on concrete decisions: team selections, transfers, captain choices, and key reasoning.
-Return valid JSON only. For short transcripts, extract whatever information is available."""
+            system = """You are an expert FPL analyst extracting structured data from influencer transcripts.
+Focus on concrete decisions (team selection, transfers, captaincy, reasoning).
+Return valid JSON only, matching the provided schema exactly."""
 
             # Save prompt if debug mode is on
             self.save_debug_content(f"{channel_name}_prompt.txt", prompt)
@@ -658,15 +665,27 @@ Return valid JSON only. For short transcripts, extract whatever information is a
             top_net = transfer_momentum.get("top_net_transfers", [])
             if top_in or top_out or top_net:
                 in_summary = [
-                    {"name": p.get("web_name"), "team": p.get("team_name"), "net": p.get("net_transfers")}
+                    {
+                        "name": p.get("web_name"),
+                        "team": p.get("team_name"),
+                        "net": p.get("net_transfers"),
+                    }
                     for p in top_in[:5]
                 ]
                 out_summary = [
-                    {"name": p.get("web_name"), "team": p.get("team_name"), "net": p.get("net_transfers")}
+                    {
+                        "name": p.get("web_name"),
+                        "team": p.get("team_name"),
+                        "net": p.get("net_transfers"),
+                    }
                     for p in top_out[:5]
                 ]
                 net_summary = [
-                    {"name": p.get("web_name"), "team": p.get("team_name"), "net": p.get("net_transfers")}
+                    {
+                        "name": p.get("web_name"),
+                        "team": p.get("team_name"),
+                        "net": p.get("net_transfers"),
+                    }
                     for p in top_net[:5]
                 ]
                 momentum_section = f"""
@@ -693,15 +712,15 @@ NOTE: Flag players with >100k net transfers NOT mentioned by influencers as pote
 MY SQUAD (15 players):
 {json.dumps(squad, indent=2)}
 
-SQUAD PLAYER NAMES (for validation - do NOT recommend these as transfers IN):
+SQUAD PLAYER NAMES (do NOT recommend these as transfers IN):
 {json.dumps(list(squad_names), indent=2)}
 
 INFLUENCER CONSENSUS:
-- Captain choices: {json.dumps(consensus['captain_counts'], indent=2)}
-- Transfers IN recommended: {json.dumps(consensus['transfers_in_counts'], indent=2)}
-- Transfers OUT recommended: {json.dumps(consensus['transfers_out_counts'], indent=2)}
-- Watchlist: {json.dumps(consensus['watchlist'], indent=2)}
-- Total channels analyzed: {consensus['total_channels']}
+- Captain choices: {json.dumps(consensus["captain_counts"], indent=2)}
+- Transfers IN recommended: {json.dumps(consensus["transfers_in_counts"], indent=2)}
+- Transfers OUT recommended: {json.dumps(consensus["transfers_out_counts"], indent=2)}
+- Watchlist: {json.dumps(consensus["watchlist"], indent=2)}
+- Total channels analyzed: {consensus["total_channels"]}
 {error_feedback}
 Return JSON matching this schema EXACTLY:
 {{
@@ -715,22 +734,23 @@ Return JSON matching this schema EXACTLY:
     {{"player": "Player Name", "risk": "Description of risk"}}
   ],
   "formation_gaps": ["Gap description"],
-  "captain_gap": "Player Name if consensus captain not in my squad, else null"
+  "captain_gap": "Player Name or null"
 }}
 
 {PL_TEAMS_CONTEXT}
 
-CRITICAL RULES:
-1. players_to_sell: My players that influencers are selling/benching (must be IN my squad)
-2. players_missing: Popular picks I don't own - MUST NOT include any player from MY SQUAD
-3. Prioritize captain_gap first - if consensus captain not in my squad, this is #1 priority
-4. risk_flags: Injury/rotation/form risks ONLY - do NOT flag based on perceived team quality or league status
-5. formation_gaps: Position imbalances or formation issues
+Rules:
+1. players_to_sell: ONLY players in MY SQUAD that influencers are selling/benching.
+2. players_missing: Popular picks I don't own; MUST NOT include any player from MY SQUAD.
+3. captain_gap: If consensus captain is NOT in my squad, set this (top priority); else null.
+4. risk_flags: injury/rotation/form/availability risks ONLY (no team-quality speculation).
+5. formation_gaps: position imbalances or formation inflexibility.
+6. Use transfer momentum as a secondary signal for missing players when relevant.
 
 Return ONLY valid JSON, no markdown fences."""
 
         system = """You are an FPL analyst identifying gaps between a manager's squad and influencer recommendations.
-Return valid JSON only. Be precise about which players are in the squad vs recommended."""
+Use only the provided data (no external knowledge). Return valid JSON only."""
 
         self.save_debug_content("stage1_gap_analysis_prompt.txt", prompt)
 
@@ -796,7 +816,7 @@ GAP ANALYSIS:
 MY SQUAD (with selling prices):
 {json.dumps(squad, indent=2)}
 
-SQUAD PLAYER NAMES (CANNOT transfer these IN - they're already owned):
+SQUAD PLAYER NAMES (CANNOT transfer these IN - already owned):
 {json.dumps(list(squad_names), indent=2)}
 
 CURRENT CLUB COUNTS (max 3 per club):
@@ -808,8 +828,8 @@ AVAILABLE PLAYERS (top 150 by form):
 {json.dumps(condensed_players[:150], indent=2)}
 
 INFLUENCER TRANSFER RECOMMENDATIONS:
-- Transfers IN: {json.dumps(consensus['transfers_in_counts'], indent=2)}
-- Transfers OUT: {json.dumps(consensus['transfers_out_counts'], indent=2)}
+- Transfers IN: {json.dumps(consensus["transfers_in_counts"], indent=2)}
+- Transfers OUT: {json.dumps(consensus["transfers_out_counts"], indent=2)}
 {error_feedback}
 Return JSON matching this schema EXACTLY:
 {{
@@ -835,19 +855,20 @@ Return JSON matching this schema EXACTLY:
 
 {PL_TEAMS_CONTEXT}
 
-CRITICAL RULES:
-1. out_player MUST be in my squad (check SQUAD PLAYER NAMES)
-2. in_player MUST NOT be in my squad (check SQUAD PLAYER NAMES)
-3. Position must match: FWD->FWD, MID->MID, DEF->DEF, GKP->GKP
-4. new_itb = ITB + selling_price - in_price (must be >= 0)
-5. Club count after transfer must be <= 3 for any club
-6. hit_cost = max(0, len(transfers) - fts) * 4
-7. If no transfers recommended, return empty transfers array with fts_remaining = {fts}
+Rules:
+1. out_player MUST be in my squad; in_player MUST NOT be in my squad.
+2. Position must match: FWD->FWD, MID->MID, DEF->DEF, GKP->GKP.
+3. cost_delta = in_price - selling_price.
+4. new_itb = ITB - sum(cost_delta for all transfers) (must be >= 0).
+5. Club count after transfers must be <= 3 for any club.
+6. hit_cost = max(0, len(transfers) - fts) * 4.
+7. If no transfers recommended, return empty transfers array with fts_remaining = {fts}.
+8. backers should list influencer channel names when available; else [].
 
 Return ONLY valid JSON, no markdown fences."""
 
         system = """You are an FPL transfer strategist. Generate specific, valid transfers respecting all FPL rules.
-Return valid JSON only. Double-check that out players are in squad and in players are NOT in squad."""
+Use only the provided data (no external knowledge). Return valid JSON only."""
 
         self.save_debug_content("stage2_transfer_plan_prompt.txt", prompt)
 
@@ -914,7 +935,7 @@ Return valid JSON only. Double-check that out players are in squad and in player
 
         prompt = f"""Select starting XI, bench, and captain for GW{gameweek}.
 
-POST-TRANSFER SQUAD (15 players - you MUST use ONLY these players):
+POST-TRANSFER SQUAD (15 players - use ONLY these):
 {json.dumps(post_transfer_squad, indent=2)}
 
 VALID PLAYER NAMES (use exact names from this list):
@@ -925,7 +946,7 @@ INFLUENCER CAPTAINCY CHOICES:
 {error_feedback}
 Return JSON matching this schema EXACTLY:
 {{
-  "starting_xi": ["Player1 (POS)", "Player2 (POS)", ...],
+  "starting_xi": ["Player1 (POS)", "Player2 (POS)", "..."],
   "bench": ["Player1 (POS)", "Player2 (POS)", "Player3 (POS)", "Player4 (POS)"],
   "captain": "PlayerName (POS)",
   "vice_captain": "PlayerName (POS)",
@@ -935,19 +956,19 @@ Return JSON matching this schema EXACTLY:
 
 {PL_TEAMS_CONTEXT}
 
-CRITICAL RULES:
-1. starting_xi must have EXACTLY 11 players
-2. bench must have EXACTLY 4 players (in auto-sub priority order)
-3. Formation must be valid: 1 GKP, 3-5 DEF, 2-5 MID, 1-3 FWD
-4. captain and vice_captain MUST be in starting_xi
-5. ALL 15 players must be used (11 in XI + 4 on bench)
-6. Use EXACT player names from the VALID PLAYER NAMES list
-7. Format: "PlayerName (POS)" e.g., "Salah (MID)", "Haaland (FWD)"
+Rules:
+1. starting_xi must have EXACTLY 11 players; bench must have EXACTLY 4 (auto-sub order).
+2. Formation must be valid: 1 GKP, 3-5 DEF, 2-5 MID, 1-3 FWD.
+3. captain and vice_captain MUST be in starting_xi.
+4. ALL 15 players must be used exactly once.
+5. Use EXACT names from VALID PLAYER NAMES list.
+6. Player format: "PlayerName (POS)".
+7. starting_xi order preference: GK, DEFs, MIDs, FWDs (helps readability).
 
 Return ONLY valid JSON, no markdown fences."""
 
         system = """You are an FPL lineup selector. Choose optimal starting XI, bench order, and captain.
-Return valid JSON only. Use exact player names from the provided squad."""
+Use only the provided squad data (no external knowledge). Return valid JSON only."""
 
         self.save_debug_content("stage3_lineup_selection_prompt.txt", prompt)
 
@@ -994,7 +1015,7 @@ Return valid JSON only. Use exact player names from the provided squad."""
             return self._justification_cache[cache_key]
 
         combined_reasoning = "\n\n".join(reasoning_texts)
-        prompt = f"""Analyze if the exclusion of player "{player_name}" is justified in the reasoning text.
+        prompt = f"""Assess whether excluding "{player_name}" is justified by the reasoning.
 
 REASONING TEXT:
 {combined_reasoning}
@@ -1002,13 +1023,13 @@ REASONING TEXT:
 CONTEXT:
 {context}
 
-Return JSON:
-{{"justified": true/false, "reason": "brief explanation"}}
+Return JSON only:
+{{"justified": true/false, "reason": "one short sentence"}}
 
 Rules:
-- "justified": true if ANY valid reason is given (budget, fixtures, already covered, better alternatives, etc.)
-- "justified": false only if the player is not mentioned or no reason given
-- Be lenient - if there's any reasonable explanation, it's justified"""
+- justified = true if ANY explicit or clearly implied reason is present.
+- justified = false only if the player is not mentioned and no rationale applies.
+- Be lenient: if there is a reasonable explanation, mark justified."""
 
         try:
             response, _ = self._make_anthropic_call(
@@ -1138,7 +1159,9 @@ Rules:
         }
 
         # Get current squad names
-        squad_names = {p.get("name", "").lower() for p in squad_context.get("squad", [])}
+        squad_names = {
+            p.get("name", "").lower() for p in squad_context.get("squad", [])
+        }
 
         reasoning_texts = [transfers.reasoning]
 
@@ -1210,7 +1233,9 @@ Rules:
         bench_names = [p.split(" (")[0].lower() for p in lineup.bench]
 
         captain_name = lineup.captain.split(" (")[0].lower() if lineup.captain else ""
-        vice_name = lineup.vice_captain.split(" (")[0].lower() if lineup.vice_captain else ""
+        vice_name = (
+            lineup.vice_captain.split(" (")[0].lower() if lineup.vice_captain else ""
+        )
 
         # Check captain risk
         if captain_name in risky_players:
@@ -1240,7 +1265,11 @@ Rules:
                     for bench_player in bench_names[:2]:
                         # Check if bench player is same position
                         bench_idx = bench_names.index(bench_player)
-                        bench_full = lineup.bench[bench_idx] if bench_idx < len(lineup.bench) else ""
+                        bench_full = (
+                            lineup.bench[bench_idx]
+                            if bench_idx < len(lineup.bench)
+                            else ""
+                        )
                         if "(" in bench_full:
                             bench_pos = bench_full.split("(")[1].rstrip(")")
                             if bench_pos == xi_pos:
@@ -1386,8 +1415,10 @@ Rules:
 
             # Consensus coverage
             if squad_context is not None and condensed_players is not None:
-                consensus_errors, consensus_warnings = self._validate_consensus_coverage(
-                    transfers, consensus, squad_context, condensed_players
+                consensus_errors, consensus_warnings = (
+                    self._validate_consensus_coverage(
+                        transfers, consensus, squad_context, condensed_players
+                    )
                 )
                 errors.extend(consensus_errors)
                 warnings.extend(consensus_warnings)
@@ -1452,11 +1483,10 @@ Rules:
 
         prompt = f"""Review this FPL GW{gameweek} recommendation report for INTERNAL CONSISTENCY ONLY.
 
-CRITICAL RULES:
-- DO NOT use your own knowledge about players, teams, positions, or transfers
-- ONLY compare the data provided below against itself
-- Trust ALL player names, teams, and positions as given - the FPL API is authoritative
-- Focus ONLY on logical consistency between the stages
+Critical rules:
+- Do NOT use external knowledge about players, teams, positions, or transfers.
+- Only compare the data below against itself.
+- Trust all names/positions as given (FPL data is authoritative).
 
 ## GAP ANALYSIS (Stage 1)
 Players to sell: {[p.name for p in gap.players_to_sell]}
@@ -1477,49 +1507,42 @@ Captain: {lineup.captain}, Vice: {lineup.vice_captain}
 Formation: {lineup.formation}
 Reasoning: {lineup.reasoning}
 
-## INFLUENCER CONSENSUS (from transcripts)
+## INFLUENCER CONSENSUS
 Top captain picks: {[(c, len(backers)) for c, backers in top_captains]}
 Top transfer targets: {[(p, len(backers)) for p, backers in top_transfers_in]}
-Total channels: {consensus.get('total_channels', 0)}
+Total channels: {consensus.get("total_channels", 0)}
 
 ## SQUAD CONTEXT
 Current squad: {squad_names}
 ITB: £{itb}m, Free transfers: {free_transfers}
 
-Return JSON:
+Return JSON only:
 {{
   "confidence_score": 0.0-1.0,
   "quality_notes": ["note1", "note2"],
-  "consensus_alignment": "How well does plan align with influencer consensus",
-  "risk_assessment": "Summary of risks and how they're mitigated",
+  "consensus_alignment": "alignment summary",
+  "risk_assessment": "risk summary",
   "potential_issues": ["non-fixable issues for user awareness"],
   "recommendation_strength": "strong|moderate|weak",
   "fixable_issues": [
     {{
       "stage": "transfer|lineup",
-      "issue": "description of the internal contradiction",
-      "fix_instruction": "specific instruction to fix this in the next attempt"
+      "issue": "internal contradiction",
+      "fix_instruction": "specific instruction to fix next attempt"
     }}
   ]
 }}
 
-FIXABLE ISSUES (put in fixable_issues array):
-These are INTERNAL CONTRADICTIONS that can be fixed by re-running a stage:
-- Player in "players to sell" but starting in XI → stage: "lineup", fix: bench them or justify
-- Captain has risk flag AND vice also has risk → stage: "lineup", fix: pick safe vice
-- High-consensus target (3+) ignored without reasoning → stage: "transfer", fix: add transfer or justify
-- Gap player not addressed in transfers → stage: "transfer", fix: add transfer or justify
+Fixable issues (go in fixable_issues):
+- Internal contradictions that can be fixed by re-running a stage.
+- Examples: sold player in XI; risky captain+vice; high-consensus target ignored without reasoning; gap not addressed.
 
-NON-FIXABLE ISSUES (put in potential_issues array):
-- General observations the user should know about
-- Trade-offs that were made consciously
-- Budget constraints that limit options
+Non-fixable issues (go in potential_issues):
+- Trade-offs or constraints that cannot be resolved within the stage outputs.
 
-DO NOT flag as issues:
-- Player team names (trust the data)
-- Player positions (trust the data)
-- Any "fact" from your training data
-- Anything not directly contradicted by the data above"""
+Do NOT flag:
+- Player names/positions/teams (trust the data).
+- Any external facts not present above."""
 
         system = """You validate FPL reports for INTERNAL CONSISTENCY ONLY.
 DO NOT use your own knowledge - only compare the provided data against itself.
@@ -1617,8 +1640,8 @@ Trust all player names, teams, and positions as given. Return valid JSON only.""
             )
 
             # Cohesion validation (gap → transfer consistency)
-            cohesion_errors, cohesion_warnings = self._validate_gap_to_transfer_cohesion(
-                gap, transfers, consensus
+            cohesion_errors, cohesion_warnings = (
+                self._validate_gap_to_transfer_cohesion(gap, transfers, consensus)
             )
             transfer_errors.extend(cohesion_errors)
 
@@ -1777,7 +1800,9 @@ Trust all player names, teams, and positions as given. Return valid JSON only.""
             for cap, backers in sorted(
                 captain_counts.items(), key=lambda x: len(x[1]), reverse=True
             ):
-                lines.append(f"| {cap} | {', '.join(backers)} | {len(backers)}/{total} |")
+                lines.append(
+                    f"| {cap} | {', '.join(backers)} | {len(backers)}/{total} |"
+                )
             lines.append("")
 
         # Universal/Majority transfers in
@@ -1842,7 +1867,9 @@ Trust all player names, teams, and positions as given. Return valid JSON only.""
             if analysis.key_issues_discussed:
                 lines.append("- **Key Issues:**")
                 for issue in analysis.key_issues_discussed[:3]:
-                    lines.append(f"  - {issue.get('issue', '')}: {issue.get('opinion', '')}")
+                    lines.append(
+                        f"  - {issue.get('issue', '')}: {issue.get('opinion', '')}"
+                    )
 
             if analysis.key_reasoning:
                 lines.append(
@@ -1891,9 +1918,7 @@ Trust all player names, teams, and positions as given. Return valid JSON only.""
 
         return "\n".join(lines)
 
-    def _format_action_plan(
-        self, transfers: TransferPlan, lineup: LineupPlan
-    ) -> str:
+    def _format_action_plan(self, transfers: TransferPlan, lineup: LineupPlan) -> str:
         """Format Section 4 from TransferPlan + LineupPlan."""
         lines = ["## 4) Action Plan\n"]
 
@@ -2101,7 +2126,7 @@ You are an analyst that turns influencer summaries/transcripts + my FPL squad da
 - If I'm likely free hitting then my future team or transfers don't matter
 
 STYLE
-- MAXIMUM 2000 words or 12000 characters over 250 lines. You can't exceed this output.
+- MAX 12000 characters and <=200 lines.
 - Keep it terse and practical. Use bullets and compact tables. No fluff.
 - Cite influencers inline like: (FPL Harry), (Let's Talk FPL, FPL Raptor). Never invent citations.
 - Only use the four section headers below. Do not add others.
@@ -2194,7 +2219,7 @@ Start with 1-3 **clear recommended paths** (transfers, captaincy, XI) for what t
 --------------------------------------------------
 CRITICAL REQUIREMENTS
 - {critical_directive_line}
-- MAXIMUM 2000 words or 12000 characters over 200 lines. You can't exceed this output.
+- MAX 12000 characters and <=200 lines.
 - Always attribute influencer opinions by name.
 - Factor injuries/rotation into every rec.
 - Enforce budget and per-club limits.
@@ -2277,8 +2302,9 @@ specific, well-reasoned, and tailored to the user's current team situation."""
 
             for video_data in video_results:
                 channel_name = video_data.get("channel_name")
-                if channel_name and channel_name in transcripts:
-                    transcript_data = transcripts[channel_name]
+                video_id = video_data.get("video_id")
+                if video_id and video_id in transcripts:
+                    transcript_data = transcripts[video_id]
                     transcript = transcript_data.get("text") or transcript_data.get(
                         "transcript", ""
                     )
@@ -2296,7 +2322,7 @@ specific, well-reasoned, and tailored to the user's current team situation."""
                         channel_analyses.append(analysis)
                 else:
                     self.logger.warning(
-                        f"No transcript found for {channel_name or 'Unknown'}"
+                        f"No transcript found for {channel_name or video_id or 'Unknown'}"
                     )
 
             if not channel_analyses:

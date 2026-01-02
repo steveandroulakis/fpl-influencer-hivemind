@@ -624,16 +624,19 @@ class AnthropicRanker:  # pragma: no cover - requires live Anthropic API interac
 
         return f"""You are an FPL content classifier. Return ONLY valid JSON with no extra commentary.
 
-For each YouTube channel, analyze their videos to find the most likely FPL "team selection" video{gameweek_context}:
+For each YouTube channel, select the single best "team selection" video{gameweek_context}.
 
+CHANNEL CANDIDATES:
 {json.dumps(channels_json, indent=2)}
 
-FPL "team selection" videos typically have titles like:
-- "My GW5 Team Selection"
-- "Gameweek 5 Team Reveal"
-- "Final Team GW5"
-- "Wildcard Draft GW5"
-- "Free Hit Team"
+Typical team-selection signals:
+- "team selection", "team reveal", "final team", "GW{gameweek or 'X'} team"
+- "wildcard draft", "free hit team", "bench boost team"
+
+Selection rules:
+- Prefer explicit gameweek matches when available.
+- Prefer the most recent relevant video when multiple match.
+- If no clear match exists, pick the closest and set a low confidence.
 
 Return this exact JSON schema with one result per channel:
 ```json
@@ -651,7 +654,7 @@ Return this exact JSON schema with one result per channel:
 }}
 ```
 
-Analyze each channel separately and choose the best team selection video for each."""
+Analyze each channel separately and choose the best team-selection video for each."""
 
     def rank_videos_by_channel(
         self,

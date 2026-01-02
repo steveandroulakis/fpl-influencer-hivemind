@@ -7,7 +7,7 @@ import os
 import re
 import time
 from collections.abc import Callable, Iterable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from importlib import resources
 from pathlib import Path
@@ -25,6 +25,7 @@ from .types import (
     GameweekInfo,
     MyTeamPayload,
     TranscriptEntry,
+    TranscriptErrorEntry,
     VideoResult,
 )
 
@@ -52,6 +53,7 @@ class AggregationOutcome:
     channels_processed: int
     videos_discovered: int
     transcripts_retrieved: int
+    transcript_errors: dict[str, TranscriptErrorEntry] = field(default_factory=dict)
 
 
 LogLevel = Literal["info", "success", "warning", "error", "debug"]
@@ -229,8 +231,9 @@ def _fetch_transcripts(
     delay_seconds: float,
     verbose: bool,
     log: LogCallback | None,
-) -> dict[str, TranscriptEntry]:
+) -> tuple[dict[str, TranscriptEntry], dict[str, TranscriptErrorEntry]]:
     transcripts: dict[str, TranscriptEntry] = {}
+    transcript_errors: dict[str, TranscriptErrorEntry] = {}
     delay_applied = False
     discoveries_list = list(discoveries)
     for item in discoveries_list:
@@ -266,12 +269,10 @@ def _fetch_transcripts(
                 f"Failed to fetch transcript for {channel_label}: {error_msg}",
                 "error",
             )
-            transcripts[channel_name] = {
+            transcript_errors[video_id] = {
                 "video_id": video_id,
-                "text": f"Transcript fetch failed: {error_msg}",
-                "language": "",
-                "translated": False,
-                "segments": [],
+                "channel_name": channel_label,
+                "error": error_msg,
             }
             continue
         _emit(
@@ -279,9 +280,9 @@ def _fetch_transcripts(
             f"Transcript fetched for {channel_label}.",
             "success",
         )
-        transcripts[channel_name] = transcript_payload
+        transcripts[video_id] = transcript_payload
 
-    return transcripts
+    return transcripts, transcript_errors
 
 
 def aggregate(
@@ -324,6 +325,7 @@ def aggregate(
     )
 
     transcripts: dict[str, TranscriptEntry] = {}
+    transcript_errors: dict[str, TranscriptErrorEntry] = {}
 
     strategy = discovery_strategy or HeuristicDiscoveryStrategy()
 
@@ -426,7 +428,7 @@ def aggregate(
                 f"Starting transcript fetch for {len(successful_discoveries)} videos...",
                 "info",
             )
-            transcripts = _fetch_transcripts(
+            transcripts, transcript_errors = _fetch_transcripts(
                 successful_discoveries,
                 delay_seconds=transcript_delay,
                 verbose=verbose,
@@ -437,6 +439,12 @@ def aggregate(
                 f"Transcript fetch complete. Retrieved {len(transcripts)} transcripts.",
                 "success",
             )
+            if transcript_errors:
+                _emit(
+                    log,
+                    f"Transcript fetch errors: {len(transcript_errors)} failures.",
+                    "warning",
+                )
         else:
             _emit(log, "Transcript fetch skipped by user.", "info")
     elif fetch_transcripts:
@@ -478,13 +486,14 @@ def aggregate(
             "transcripts_retrieved": len(transcripts),
             "video_results": video_results,
             "transcripts": transcripts,
+            "transcript_errors": transcript_errors,
         },
         "summary": {
             "total_channels": len(channels_list),
             "failed_discoveries": len(
                 [item for item in discoveries if item.result is None]
             ),
-            "failed_transcripts": len(successful_discoveries) - len(transcripts),
+            "failed_transcripts": len(transcript_errors),
             "success_rate": (
                 f"{len(successful_discoveries) * 100 // len(channels_list)}%"
                 if channels_list
@@ -505,6 +514,7 @@ def aggregate(
         result_path=result_path,
         video_results=video_results,
         transcripts=transcripts,
+        transcript_errors=transcript_errors,
         channels_processed=len(channels_list),
         videos_discovered=len(successful_discoveries),
         transcripts_retrieved=len(transcripts),
