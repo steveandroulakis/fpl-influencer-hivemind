@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib
 import importlib.util
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
@@ -78,6 +79,29 @@ async def create_fpl_session() -> tuple[FPLClient, aiohttp.ClientSession]:
     session = aiohttp.ClientSession()
     fpl_class = _ensure_fpl_class()
     return fpl_class(session), session
+
+
+async def create_authenticated_fpl_session() -> tuple[FPLClient, aiohttp.ClientSession]:
+    """Create an authenticated FPL session using FPL_EMAIL and FPL_PASSWORD env vars.
+
+    Returns the FPL client and session. Caller must close session when done.
+    Raises ValueError if credentials are not configured.
+    """
+    email = os.environ.get("FPL_EMAIL")
+    password = os.environ.get("FPL_PASSWORD")
+
+    if not email or not password:
+        raise ValueError(
+            "FPL authentication requires FPL_EMAIL and FPL_PASSWORD environment variables"
+        )
+
+    session = aiohttp.ClientSession()
+    fpl_class = _ensure_fpl_class()
+    fpl = fpl_class(session)
+
+    await fpl.login(email=email, password=password)
+
+    return fpl, session
 
 
 def _to_plain(obj: Any, _seen: set[int] | None = None) -> Any:
@@ -161,6 +185,7 @@ def reset_bootstrap_cache() -> None:
 __all__ = [
     "DEFAULT_TIMEZONE",
     "FPL_TIMEZONE",
+    "create_authenticated_fpl_session",
     "create_fpl_session",
     "get_bootstrap_data",
     "map_position",
