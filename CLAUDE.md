@@ -155,7 +155,22 @@ The project uses strict mypy settings in `pyproject.toml`:
 - `ignore_missing_imports = false` to catch all import issues (add type ignore comments as needed).
 
 ## File Guide
-- `fpl_intelligence_analyzer.py` – multi-stage LLM analyzer with validation + quality review.
+- `fpl_intelligence_analyzer.py` – wrapper script calling `analyzer.cli.main()`.
+- `src/fpl_influencer_hivemind/analyzer/` – refactored multi-stage LLM analyzer module:
+  - `__init__.py` – public exports (`FPLIntelligenceAnalyzer`, `ChannelAnalysis`).
+  - `constants.py` – `PL_TEAMS_2025_26`, `PL_TEAMS_CONTEXT`.
+  - `models.py` – `ChannelAnalysis`, `PlayerLookupEntry`, `SquadPlayerEntry`, `DecisionOption`.
+  - `api.py` – `AnthropicClient`, `make_anthropic_call` with retry, `extract_last_json`.
+  - `normalization.py` – name helpers (`normalize_name`, `canonicalize_player_label`, `build_player_lookup`).
+  - `stages/gap.py` – `stage_gap_analysis`, `aggregate_influencer_consensus`.
+  - `stages/transfer.py` – `stage_transfer_plan`, `apply_transfer_pricing`, `compute_post_transfer_squad`.
+  - `stages/lineup.py` – `stage_lineup_selection`, `aggregate_influencer_xi`.
+  - `validation/cohesion.py` – `validate_gap_to_transfer_cohesion`, `validate_consensus_coverage`, `validate_risk_contingency`.
+  - `validation/mechanical.py` – `validate_transfers`, `validate_lineup`, `validate_all`.
+  - `quality.py` – `holistic_quality_review`.
+  - `report.py` – `generate_consensus_section`, `generate_channel_notes`, `format_gap_section`, `format_action_plan`, `assemble_report`.
+  - `orchestrator.py` – `FPLIntelligenceAnalyzer` class, `_run_staged_analysis`, `_build_decision_options`.
+  - `cli.py` – `main()`, argparse.
 - `src/fpl_influencer_hivemind/pipeline.py` – orchestrator + logging callbacks + transcript prompts.
 - `src/fpl_influencer_hivemind/services/discovery.py` – strategy layer for channel discovery (heuristic default).
 - `src/fpl_influencer_hivemind/services/transcripts.py` – transcript wrapper returning `{text, language, translated, segments[]}`.

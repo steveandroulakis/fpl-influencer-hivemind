@@ -89,7 +89,10 @@ pythonpath = ["src"]
 
 [tool.coverage.run]
 source = ["src"]
-omit = ["src/fpl_influencer_hivemind/transcripts/*"]
+omit = [
+    "src/fpl_influencer_hivemind/transcripts/*",
+    "src/fpl_influencer_hivemind/analyzer/*",  # API-heavy, requires external services
+]
 
 [tool.coverage.report]
 exclude_also = [
