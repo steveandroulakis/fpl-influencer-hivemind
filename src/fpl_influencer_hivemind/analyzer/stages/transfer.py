@@ -32,6 +32,44 @@ from src.fpl_influencer_hivemind.types import GapAnalysis, Transfer, TransferPla
 logger = logging.getLogger(__name__)
 
 
+def _build_ft_guidance(fts: int, gap: GapAnalysis) -> str:
+    """Build FT-aware strategy guidance for the transfer prompt."""
+    gap_count = len(gap.players_missing) + len(gap.players_to_sell)
+
+    if fts == 0:
+        return (
+            "FT STRATEGY: You have 0 free transfers. Only recommend transfers if "
+            "the gap is critical enough to justify a -4 hit. Otherwise, roll."
+        )
+    elif fts == 1:
+        if gap_count == 0:
+            return "FT STRATEGY: 1 FT available but no gaps identified. Consider rolling."
+        return (
+            "FT STRATEGY: 1 FT available. Address the single most important gap, "
+            "or roll if gaps are minor."
+        )
+    else:  # fts >= 2
+        if gap_count == 0:
+            return (
+                f"FT STRATEGY: {fts} FTs available but no gaps identified. "
+                "Roll to bank transfers for future use."
+            )
+        elif gap_count == 1:
+            return (
+                f"FT STRATEGY: {fts} FTs available, 1 gap identified. "
+                "Use 1 FT to address the gap; bank the rest."
+            )
+        else:
+            # Multiple FTs and multiple gaps
+            use_count = min(fts, gap_count)
+            return (
+                f"FT STRATEGY: {fts} FTs available, {gap_count} gaps identified. "
+                f"Consider using up to {use_count} FTs to address multiple gaps. "
+                "Prioritize by gap severity and influencer consensus. "
+                "Don't waste FTs - unused transfers are lost at 2 max."
+            )
+
+
 def stage_transfer_plan(
     client: AnthropicClient,
     gap: GapAnalysis,
@@ -67,6 +105,11 @@ def stage_transfer_plan(
         directive_section = (
             f"\nUSER DIRECTIVE (HIGH PRIORITY - FOLLOW THIS):\n{commentary}\n"
         )
+
+    # FT-aware strategy guidance
+    ft_guidance = _build_ft_guidance(fts, gap)
+    if ft_guidance:
+        directive_section += f"\n{ft_guidance}\n"
 
     prompt = f"""Generate specific FPL transfers for GW{gameweek} based on gap analysis.
 

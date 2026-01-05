@@ -649,8 +649,25 @@ Return valid JSON only, matching the provided schema exactly."""
         gameweek: int,
         commentary: str | None = None,
     ) -> list[DecisionOption]:
-        """Create 2-3 decision options: primary + conservative (+ optional chase)."""
+        """Create 2-3 decision options ensuring meaningful differentiation.
+
+        FT-aware logic:
+        - Option A: Primary (influencer-aligned) - from staged analysis
+        - Option B: Depends on Option A and FT count:
+          - If A has transfers → roll (conservative)
+          - If A has NO transfers but gaps exist → activate transfer
+          - If A has NO transfers and no gaps → roll
+        - Option C: FT-aware aggressive option:
+          - 0 FTs + gaps → take hit for critical target
+          - 1 FT + gaps → chase single target
+          - 2+ FTs + multiple gaps → maximize FT usage
+        """
         options: list[DecisionOption] = []
+        fts = int(squad_context.get("free_transfers", 1))
+        has_primary_transfers = len(primary_transfers.transfers) > 0
+        has_gaps = bool(gap.players_missing or gap.players_to_sell)
+        gap_count = len(gap.players_missing) + len(gap.players_to_sell)
+        primary_transfer_count = len(primary_transfers.transfers)
 
         options.append(
             DecisionOption(
@@ -661,6 +678,105 @@ Return valid JSON only, matching the provided schema exactly."""
             )
         )
 
+        # Option B: differentiate based on what Option A recommends
+        if has_primary_transfers:
+            # Option A has transfers → Option B is conservative (roll)
+            self._add_roll_option(
+                options,
+                squad_context,
+                original_squad,
+                channel_analyses,
+                gameweek,
+                primary_lineup,
+                commentary,
+            )
+        elif has_gaps:
+            # Option A has NO transfers but gaps exist → Option B activates a transfer
+            self._add_activate_transfer_option(
+                options,
+                gap,
+                squad_context,
+                original_squad,
+                channel_analyses,
+                condensed_players,
+                player_lookup,
+                gameweek,
+                primary_lineup,
+                commentary,
+            )
+        else:
+            # No transfers, no gaps → roll is the only alternative
+            self._add_roll_option(
+                options,
+                squad_context,
+                original_squad,
+                channel_analyses,
+                gameweek,
+                primary_lineup,
+                commentary,
+            )
+
+        # Option C: FT-aware aggressive option
+        target = gap.captain_gap or (
+            gap.players_missing[0].name if gap.players_missing else None
+        )
+
+        if fts == 0 and has_gaps:
+            # 0 FTs but gaps exist → offer "take hit" option
+            self._add_take_hit_option(
+                options,
+                gap,
+                squad_context,
+                original_squad,
+                channel_analyses,
+                condensed_players,
+                player_lookup,
+                gameweek,
+                commentary,
+            )
+        elif fts >= 2 and gap_count >= 2 and primary_transfer_count < fts:
+            # Multiple FTs and gaps, primary didn't use all → offer "maximize FTs" option
+            self._add_maximize_fts_option(
+                options,
+                gap,
+                squad_context,
+                original_squad,
+                channel_analyses,
+                condensed_players,
+                player_lookup,
+                gameweek,
+                fts,
+                gap_count,
+                commentary,
+            )
+        elif target:
+            # Standard aggressive chase for single target
+            self._add_aggressive_option(
+                options,
+                gap,
+                squad_context,
+                original_squad,
+                channel_analyses,
+                condensed_players,
+                player_lookup,
+                gameweek,
+                target,
+                commentary,
+            )
+
+        return options
+
+    def _add_roll_option(
+        self,
+        options: list[DecisionOption],
+        squad_context: dict[str, Any],
+        original_squad: list[dict[str, Any]],
+        channel_analyses: list[ChannelAnalysis],
+        gameweek: int,
+        fallback_lineup: LineupPlan,
+        commentary: str | None,
+    ) -> None:
+        """Add conservative roll-transfer option."""
         conservative_commentary = self._merge_commentary(
             commentary,
             "CONSERVATIVE PLAN: make no transfers and prioritize safe minutes.",
@@ -686,7 +802,7 @@ Return valid JSON only, matching the provided schema exactly."""
             self.logger.warning(
                 "Conservative lineup failed validation; using primary lineup fallback"
             )
-            conservative_lineup = primary_lineup
+            conservative_lineup = fallback_lineup
 
         options.append(
             DecisionOption(
@@ -697,57 +813,336 @@ Return valid JSON only, matching the provided schema exactly."""
             )
         )
 
-        target = gap.captain_gap or (
-            gap.players_missing[0].name if gap.players_missing else None
+    def _add_activate_transfer_option(
+        self,
+        options: list[DecisionOption],
+        gap: GapAnalysis,
+        squad_context: dict[str, Any],
+        original_squad: list[dict[str, Any]],
+        channel_analyses: list[ChannelAnalysis],
+        condensed_players: list[dict[str, Any]],
+        player_lookup: dict[str, list[PlayerLookupEntry]],
+        gameweek: int,
+        fallback_lineup: LineupPlan,
+        commentary: str | None,
+    ) -> None:
+        """Add option that activates a transfer when primary recommends none but gaps exist."""
+        # Identify top gap target
+        top_target = None
+        if gap.players_missing:
+            top_target = gap.players_missing[0].name
+        elif gap.players_to_sell:
+            top_target = f"replacement for {gap.players_to_sell[0].name}"
+
+        activate_commentary = self._merge_commentary(
+            commentary,
+            f"ACTIVATE TRANSFER: gaps identified, address top gap ({top_target}). "
+            "Do NOT roll - make exactly 1 transfer to address the most important gap.",
         )
-        if target:
-            chase_commentary = self._merge_commentary(
-                commentary,
-                f"AGGRESSIVE PLAN: prioritize bringing in {target} even if it requires a hit.",
+        activate_transfers = stage_transfer_plan(
+            self.client,
+            gap,
+            squad_context,
+            condensed_players,
+            channel_analyses,
+            gameweek,
+            commentary=activate_commentary,
+        )
+        activate_transfers, pricing_errors = apply_transfer_pricing(
+            activate_transfers, squad_context, player_lookup
+        )
+
+        # If still no transfers after forcing, fall back to roll
+        if not activate_transfers.transfers:
+            self.logger.warning(
+                "Activate transfer option still produced no transfers; falling back to roll"
             )
-            chase_transfers = stage_transfer_plan(
-                self.client,
-                gap,
+            self._add_roll_option(
+                options,
                 squad_context,
-                condensed_players,
+                original_squad,
                 channel_analyses,
                 gameweek,
-                commentary=chase_commentary,
+                fallback_lineup,
+                commentary,
             )
-            chase_transfers, pricing_errors = apply_transfer_pricing(
-                chase_transfers, squad_context, player_lookup
-            )
-            post_chase_squad = compute_post_transfer_squad(
-                original_squad, chase_transfers.transfers
-            )
-            chase_errors = pricing_errors + validate_transfers(
-                chase_transfers, original_squad, post_chase_squad
-            )
-            if not chase_errors:
-                chase_lineup = stage_lineup_selection(
-                    self.client,
-                    post_chase_squad,
-                    channel_analyses,
-                    gameweek,
-                    commentary=chase_commentary,
-                )
-                lineup_errors = validate_lineup(chase_lineup, post_chase_squad)
-                if not lineup_errors:
-                    options.append(
-                        DecisionOption(
-                            label="Option C: Aggressive (consensus chase)",
-                            transfers=chase_transfers,
-                            lineup=chase_lineup,
-                            rationale=f"High-conviction pivot toward {target} despite hit risk.",
-                        )
-                    )
-            else:
-                self.logger.warning(
-                    "Skipping aggressive option due to validation errors: %s",
-                    chase_errors,
-                )
+            return
 
-        return options
+        post_activate_squad = compute_post_transfer_squad(
+            original_squad, activate_transfers.transfers
+        )
+        activate_errors = pricing_errors + validate_transfers(
+            activate_transfers, original_squad, post_activate_squad
+        )
+
+        if activate_errors:
+            self.logger.warning(
+                "Activate transfer option failed validation: %s; falling back to roll",
+                activate_errors,
+            )
+            self._add_roll_option(
+                options,
+                squad_context,
+                original_squad,
+                channel_analyses,
+                gameweek,
+                fallback_lineup,
+                commentary,
+            )
+            return
+
+        # Generate lineup for post-transfer squad
+        activate_lineup = stage_lineup_selection(
+            self.client,
+            post_activate_squad,
+            channel_analyses,
+            gameweek,
+            commentary=activate_commentary,
+        )
+        lineup_errors = validate_lineup(activate_lineup, post_activate_squad)
+        if lineup_errors:
+            self.logger.warning(
+                "Activate transfer lineup failed validation; using primary lineup fallback"
+            )
+            activate_lineup = fallback_lineup
+
+        options.append(
+            DecisionOption(
+                label="Option B: Activate transfer (address gaps)",
+                transfers=activate_transfers,
+                lineup=activate_lineup,
+                rationale=f"Use FT to address gap: {top_target}.",
+            )
+        )
+
+    def _add_aggressive_option(
+        self,
+        options: list[DecisionOption],
+        gap: GapAnalysis,
+        squad_context: dict[str, Any],
+        original_squad: list[dict[str, Any]],
+        channel_analyses: list[ChannelAnalysis],
+        condensed_players: list[dict[str, Any]],
+        player_lookup: dict[str, list[PlayerLookupEntry]],
+        gameweek: int,
+        target: str,
+        commentary: str | None,
+    ) -> None:
+        """Add aggressive chase option if validation passes."""
+        chase_commentary = self._merge_commentary(
+            commentary,
+            f"AGGRESSIVE PLAN: prioritize bringing in {target} even if it requires a hit.",
+        )
+        chase_transfers = stage_transfer_plan(
+            self.client,
+            gap,
+            squad_context,
+            condensed_players,
+            channel_analyses,
+            gameweek,
+            commentary=chase_commentary,
+        )
+        chase_transfers, pricing_errors = apply_transfer_pricing(
+            chase_transfers, squad_context, player_lookup
+        )
+        post_chase_squad = compute_post_transfer_squad(
+            original_squad, chase_transfers.transfers
+        )
+        chase_errors = pricing_errors + validate_transfers(
+            chase_transfers, original_squad, post_chase_squad
+        )
+
+        if chase_errors:
+            self.logger.warning(
+                "Skipping aggressive option due to transfer validation errors: %s",
+                chase_errors,
+            )
+            return
+
+        chase_lineup = stage_lineup_selection(
+            self.client,
+            post_chase_squad,
+            channel_analyses,
+            gameweek,
+            commentary=chase_commentary,
+        )
+        lineup_errors = validate_lineup(chase_lineup, post_chase_squad)
+        if lineup_errors:
+            self.logger.warning(
+                "Skipping aggressive option due to lineup validation errors: %s",
+                lineup_errors,
+            )
+            return
+
+        options.append(
+            DecisionOption(
+                label="Option C: Aggressive (consensus chase)",
+                transfers=chase_transfers,
+                lineup=chase_lineup,
+                rationale=f"High-conviction pivot toward {target} despite hit risk.",
+            )
+        )
+
+    def _add_take_hit_option(
+        self,
+        options: list[DecisionOption],
+        gap: GapAnalysis,
+        squad_context: dict[str, Any],
+        original_squad: list[dict[str, Any]],
+        channel_analyses: list[ChannelAnalysis],
+        condensed_players: list[dict[str, Any]],
+        player_lookup: dict[str, list[PlayerLookupEntry]],
+        gameweek: int,
+        commentary: str | None,
+    ) -> None:
+        """Add option to take a hit when 0 FTs but critical gaps exist."""
+        top_target = None
+        if gap.players_missing:
+            top_target = gap.players_missing[0].name
+        elif gap.players_to_sell:
+            top_target = f"replacement for {gap.players_to_sell[0].name}"
+
+        if not top_target:
+            return
+
+        hit_commentary = self._merge_commentary(
+            commentary,
+            f"TAKE HIT: 0 FTs available but critical gap identified ({top_target}). "
+            "Make exactly 1 transfer and accept the -4 hit to address the most urgent gap.",
+        )
+        hit_transfers = stage_transfer_plan(
+            self.client,
+            gap,
+            squad_context,
+            condensed_players,
+            channel_analyses,
+            gameweek,
+            commentary=hit_commentary,
+        )
+        hit_transfers, pricing_errors = apply_transfer_pricing(
+            hit_transfers, squad_context, player_lookup
+        )
+
+        if not hit_transfers.transfers:
+            self.logger.warning("Take hit option produced no transfers; skipping")
+            return
+
+        post_hit_squad = compute_post_transfer_squad(
+            original_squad, hit_transfers.transfers
+        )
+        hit_errors = pricing_errors + validate_transfers(
+            hit_transfers, original_squad, post_hit_squad
+        )
+
+        if hit_errors:
+            self.logger.warning(
+                "Skipping take hit option due to validation errors: %s", hit_errors
+            )
+            return
+
+        hit_lineup = stage_lineup_selection(
+            self.client,
+            post_hit_squad,
+            channel_analyses,
+            gameweek,
+            commentary=hit_commentary,
+        )
+        lineup_errors = validate_lineup(hit_lineup, post_hit_squad)
+        if lineup_errors:
+            self.logger.warning(
+                "Skipping take hit option due to lineup errors: %s", lineup_errors
+            )
+            return
+
+        options.append(
+            DecisionOption(
+                label="Option C: Take hit (address critical gap)",
+                transfers=hit_transfers,
+                lineup=hit_lineup,
+                rationale=f"Accept -4 hit to address critical gap: {top_target}.",
+            )
+        )
+
+    def _add_maximize_fts_option(
+        self,
+        options: list[DecisionOption],
+        gap: GapAnalysis,
+        squad_context: dict[str, Any],
+        original_squad: list[dict[str, Any]],
+        channel_analyses: list[ChannelAnalysis],
+        condensed_players: list[dict[str, Any]],
+        player_lookup: dict[str, list[PlayerLookupEntry]],
+        gameweek: int,
+        fts: int,
+        gap_count: int,
+        commentary: str | None,
+    ) -> None:
+        """Add option to maximize FT usage when multiple FTs and gaps available."""
+        use_count = min(fts, gap_count)
+        gap_targets = []
+        for p in gap.players_missing[:use_count]:
+            gap_targets.append(p.name)
+        for p in gap.players_to_sell[: use_count - len(gap_targets)]:
+            gap_targets.append(f"sell {p.name}")
+
+        max_commentary = self._merge_commentary(
+            commentary,
+            f"MAXIMIZE FTs: {fts} FTs available, {gap_count} gaps identified. "
+            f"Use exactly {use_count} transfers to address: {', '.join(gap_targets)}. "
+            "Don't waste FTs - unused transfers beyond 2 are lost.",
+        )
+        max_transfers = stage_transfer_plan(
+            self.client,
+            gap,
+            squad_context,
+            condensed_players,
+            channel_analyses,
+            gameweek,
+            commentary=max_commentary,
+        )
+        max_transfers, pricing_errors = apply_transfer_pricing(
+            max_transfers, squad_context, player_lookup
+        )
+
+        if not max_transfers.transfers:
+            self.logger.warning("Maximize FTs option produced no transfers; skipping")
+            return
+
+        post_max_squad = compute_post_transfer_squad(
+            original_squad, max_transfers.transfers
+        )
+        max_errors = pricing_errors + validate_transfers(
+            max_transfers, original_squad, post_max_squad
+        )
+
+        if max_errors:
+            self.logger.warning(
+                "Skipping maximize FTs option due to validation errors: %s", max_errors
+            )
+            return
+
+        max_lineup = stage_lineup_selection(
+            self.client,
+            post_max_squad,
+            channel_analyses,
+            gameweek,
+            commentary=max_commentary,
+        )
+        lineup_errors = validate_lineup(max_lineup, post_max_squad)
+        if lineup_errors:
+            self.logger.warning(
+                "Skipping maximize FTs option due to lineup errors: %s", lineup_errors
+            )
+            return
+
+        options.append(
+            DecisionOption(
+                label=f"Option C: Maximize FTs (use {len(max_transfers.transfers)}/{fts})",
+                transfers=max_transfers,
+                lineup=max_lineup,
+                rationale=f"Use available FTs to address multiple gaps: {', '.join(gap_targets)}.",
+            )
+        )
 
     def run_analysis(
         self,

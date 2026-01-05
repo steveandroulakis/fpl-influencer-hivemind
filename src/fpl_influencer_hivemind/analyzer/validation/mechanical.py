@@ -98,15 +98,15 @@ def validate_lineup(
     if not (1 <= pos_count["FWD"] <= 3):
         errors.append(f"XI must have 1-3 FWD, has {pos_count['FWD']}")
 
-    # Captain/vice in XI
+    # Captain/vice in XI (normalize names for comparison)
     if lineup.captain:
         cap_name = lineup.captain.split(" (")[0]
-        if cap_name not in xi_names:
+        if normalize_name(cap_name) not in xi_names:
             errors.append(f"Captain '{cap_name}' not in starting XI")
 
     if lineup.vice_captain:
         vice_name = lineup.vice_captain.split(" (")[0]
-        if vice_name not in xi_names:
+        if normalize_name(vice_name) not in xi_names:
             errors.append(f"Vice '{vice_name}' not in starting XI")
 
     # All players exist in post-transfer squad
