@@ -126,7 +126,7 @@ def select_single_channel(
     )
     if not candidates:
         raise VideoPickerError(
-            f"No videos passed heuristic filtering for {channel_name}"
+            f"No team selection video found for {channel_name}"
         )
 
     selected_video = candidates[0]
@@ -473,6 +473,16 @@ class HeuristicFilter:  # pragma: no cover - exercised indirectly via select_sin
         "starting xi",
     ]
 
+    # Required for a video to be selected - must have at least one of these
+    TEAM_SELECTION_KEYWORDS: ClassVar[list[str]] = [
+        "team selection",
+        "my team",
+        "team reveal",
+        "final team",
+        "starting xi",
+        "my fpl gw",  # Common pattern: "MY FPL GW21 TEAM"
+    ]
+
     NEGATIVE_KEYWORDS: ClassVar[list[str]] = [
         "deadline stream",
         "watchalong",
@@ -501,6 +511,19 @@ class HeuristicFilter:  # pragma: no cover - exercised indirectly via select_sin
             if match:
                 return int(match.group(1))
         return None
+
+    def has_team_selection_signal(self, video: VideoItem) -> bool:
+        """Check if video is a team selection video for the target gameweek."""
+        text = f"{video.normalized_title} {video.description.lower()}"
+        has_keywords = any(kw in text for kw in self.TEAM_SELECTION_KEYWORDS)
+        if not has_keywords:
+            return False
+        # If we have a target gameweek, video must match it or have no GW mentioned
+        if self.gameweek:
+            detected_gw = self.extract_gameweek_number(text)
+            if detected_gw and detected_gw != self.gameweek:
+                return False  # Wrong gameweek
+        return True
 
     def calculate_score(self, video: VideoItem) -> float:
         """Calculate heuristic score for a video."""
@@ -547,7 +570,8 @@ class HeuristicFilter:  # pragma: no cover - exercised indirectly via select_sin
 
         for video in videos:
             score = self.calculate_score(video)
-            if score > 0:  # Only keep videos with positive scores
+            # Only keep videos with positive scores AND team selection signal
+            if score > 0 and self.has_team_selection_signal(video):
                 scored_videos.append((video, score))
 
         # Sort by score descending, then by recency
