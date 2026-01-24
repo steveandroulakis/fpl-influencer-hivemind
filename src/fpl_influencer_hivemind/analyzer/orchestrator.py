@@ -18,6 +18,7 @@ from src.fpl_influencer_hivemind.analyzer.constants import PL_TEAMS_CONTEXT
 from src.fpl_influencer_hivemind.analyzer.models import (
     ChannelAnalysis,
     DecisionOption,
+    OptionRequest,
     PlayerLookupEntry,
 )
 from src.fpl_influencer_hivemind.analyzer.normalization import (
@@ -50,6 +51,7 @@ from src.fpl_influencer_hivemind.types import (
     GapAnalysis,
     LineupPlan,
     QualityReview,
+    ScoredGapAnalysis,
     TransferPlan,
 )
 
@@ -116,27 +118,36 @@ class FPLIntelligenceAnalyzer:
     def condense_player_list(
         self, top_players: list[dict[str, Any]]
     ) -> list[dict[str, Any]]:
-        """Condense the top players list to essential data only."""
+        """Condense the top players list to essential data for LLM decision-making."""
         condensed_players = []
 
         for player in top_players:
             condensed_player = {
+                # Core identification
                 "web_name": player.get("web_name", ""),
                 "team_name": player.get("team_name", ""),
                 "position": player.get("position", ""),
                 "price": player.get("price", 0),
+                # Ownership and scoring
                 "selected_by_percent": player.get("selected_by_percent", 0),
                 "total_points": player.get("total_points", 0),
+                # Availability
                 "status": player.get("status", "a"),
                 "news": player.get("news", ""),
                 "chance_of_playing_next_round": player.get(
                     "chance_of_playing_next_round", 100
                 ),
+                # Form and performance metrics (preserved for LLM severity assessment)
+                "form": player.get("form", "0.0"),
+                "ict_index": player.get("ict_index", "0.0"),
+                "expected_points": player.get("ep_next", "0.0"),
+                "minutes": player.get("minutes", 0),
+                "bps": player.get("bps", 0),
             }
             condensed_players.append(condensed_player)
 
         self.logger.debug(
-            f"Condensed {len(top_players)} players to essential data with injury/availability info"
+            f"Condensed {len(top_players)} players with form/performance metrics"
         )
         return condensed_players
 
@@ -422,7 +433,7 @@ Return valid JSON only, matching the provided schema exactly."""
         transfer_momentum: dict[str, Any] | None = None,
         commentary: str | None = None,
         max_stage_attempts: int = 2,
-    ) -> tuple[GapAnalysis, TransferPlan, LineupPlan, QualityReview]:
+    ) -> tuple[ScoredGapAnalysis, TransferPlan, LineupPlan, QualityReview]:
         """Orchestrate all stages with validation retry loop and final quality review."""
         self.logger.info("Starting multi-stage analysis")
 
@@ -433,7 +444,7 @@ Return valid JSON only, matching the provided schema exactly."""
         consensus = aggregate_influencer_consensus(channel_analyses)
 
         # Stage 1: Gap Analysis (2 attempts)
-        gap: GapAnalysis | None = None
+        gap: ScoredGapAnalysis | None = None
         gap_errors: list[str] = []
         for attempt in range(max_stage_attempts):
             self.logger.info(f"Stage 1 attempt {attempt + 1}/{max_stage_attempts}")
@@ -636,9 +647,532 @@ Return valid JSON only, matching the provided schema exactly."""
 
         return gap, transfers, lineup, quality_review
 
-    def _build_decision_options(
+    def _parse_option_requests(self, commentary: str | None) -> list[OptionRequest]:
+        """Parse user commentary to extract specific transfer option requests using LLM.
+
+        Returns list of OptionRequest objects, or empty list if no clear requests found.
+        """
+        if not commentary:
+            return []
+
+        prompt = f"""Extract transfer option requests from this user commentary.
+Look for phrases indicating how many transfers they want (e.g., "1 transfer", "2 transfers with hit", "use all FTs").
+
+USER COMMENTARY:
+{commentary}
+
+Return ONLY valid JSON array. Each element should have:
+- "transfer_count": integer (number of transfers requested)
+- "take_hit": boolean (true if they want to take a hit for extra transfers)
+
+Examples:
+- "Give me options for 1 transfer and 2 transfers with hit" → [{{"transfer_count": 1, "take_hit": false}}, {{"transfer_count": 2, "take_hit": true}}]
+- "Show me 0 transfers and 1 transfer" → [{{"transfer_count": 0, "take_hit": false}}, {{"transfer_count": 1, "take_hit": false}}]
+- "I want to see taking a hit for 2 transfers" → [{{"transfer_count": 2, "take_hit": true}}]
+
+If no specific transfer counts are requested, return empty array: []
+"""
+
+        system = "Extract structured data from text. Return valid JSON only."
+
+        try:
+            response, _ = self.client.call_haiku(prompt, system, max_tokens=500)
+
+            # Clean response
+            response = response.strip()
+            if response.startswith("```"):
+                json_match = re.search(r"```(?:json)?\s*(\[.*?\])\s*```", response, re.DOTALL)
+                if json_match:
+                    response = json_match.group(1)
+
+            parsed = json.loads(response)
+            if not isinstance(parsed, list):
+                return []
+
+            requests: list[OptionRequest] = []
+            for item in parsed:
+                if isinstance(item, dict) and "transfer_count" in item:
+                    requests.append(
+                        OptionRequest(
+                            transfer_count=int(item.get("transfer_count", 0)),
+                            take_hit=bool(item.get("take_hit", False)),
+                        )
+                    )
+
+            # Deduplicate by (count, hit) tuple
+            seen: set[tuple[int, bool]] = set()
+            unique: list[OptionRequest] = []
+            for req in requests:
+                key = (req.transfer_count, req.take_hit)
+                if key not in seen:
+                    seen.add(key)
+                    unique.append(req)
+
+            if unique:
+                self.logger.info(f"Parsed {len(unique)} option requests from commentary")
+            return unique
+
+        except (json.JSONDecodeError, Exception) as e:
+            self.logger.debug(f"Could not parse option requests from commentary: {e}")
+            return []
+
+    def _build_dynamic_label(self, index: int, transfer_count: int, hit_cost: int) -> str:
+        """Generate descriptive label for an option based on transfer count and hit."""
+        label_letter = chr(ord("A") + index)
+        if transfer_count == 0:
+            return f"Option {label_letter}: 0 transfers (roll)"
+        elif hit_cost > 0:
+            return f"Option {label_letter}: {transfer_count} transfer{'s' if transfer_count > 1 else ''} (-{hit_cost} hit)"
+        else:
+            return f"Option {label_letter}: {transfer_count} transfer{'s' if transfer_count > 1 else ''} (no hit)"
+
+    def _build_requested_option(
         self,
-        gap: GapAnalysis,
+        request: OptionRequest,
+        gap: GapAnalysis | ScoredGapAnalysis,
+        squad_context: dict[str, Any],
+        original_squad: list[dict[str, Any]],
+        channel_analyses: list[ChannelAnalysis],
+        condensed_players: list[dict[str, Any]],
+        player_lookup: dict[str, list[PlayerLookupEntry]],
+        gameweek: int,
+        commentary: str | None,
+    ) -> tuple[TransferPlan, LineupPlan, str | None]:
+        """Build a single option for a specific transfer count request.
+
+        Returns (transfers, lineup, warning) where warning is set if request couldn't be fulfilled.
+        """
+        fts = int(squad_context.get("free_transfers", 1))
+        count = request.transfer_count
+
+        # Special case: 0 transfers (roll)
+        if count == 0:
+            roll_transfers = TransferPlan(
+                transfers=[],
+                total_cost=0.0,
+                new_itb=float(squad_context.get("itb", 0.0)),
+                fts_used=0,
+                fts_remaining=fts,
+                hit_cost=0,
+                reasoning="Roll the transfer to bank flexibility.",
+            )
+            roll_lineup = stage_lineup_selection(
+                self.client,
+                original_squad,
+                channel_analyses,
+                gameweek,
+                commentary=self._merge_commentary(
+                    commentary, "CONSERVATIVE: No transfers, prioritize safe minutes."
+                ),
+            )
+            lineup_errors = validate_lineup(roll_lineup, original_squad)
+            if lineup_errors:
+                self.logger.warning(f"Roll lineup validation failed: {lineup_errors}")
+            return roll_transfers, roll_lineup, None
+
+        # Determine if this requires a hit
+        requires_hit = count > fts or request.take_hit
+        hit_cost = max(0, (count - fts) * 4) if requires_hit else 0
+
+        # Build directive for the LLM
+        directive = f"EXACT TRANSFERS: Make exactly {count} transfer{'s' if count > 1 else ''}."
+        if requires_hit:
+            directive += f" Accept the -{hit_cost} hit cost."
+        else:
+            directive += " Stay within free transfers."
+
+        transfer_commentary = self._merge_commentary(commentary, directive)
+
+        # Generate transfers
+        transfers = stage_transfer_plan(
+            self.client,
+            gap,
+            squad_context,
+            condensed_players,
+            channel_analyses,
+            gameweek,
+            commentary=transfer_commentary,
+        )
+        transfers, pricing_errors = apply_transfer_pricing(
+            transfers, squad_context, player_lookup
+        )
+
+        # Check if we got the requested count
+        actual_count = len(transfers.transfers)
+        warning: str | None = None
+
+        if actual_count != count:
+            warning = (
+                f"Requested {count} transfer{'s' if count > 1 else ''} but "
+                f"only {actual_count} feasible (budget/rules constraint)."
+            )
+            self.logger.warning(warning)
+
+        # Validate transfers
+        post_transfer_squad = compute_post_transfer_squad(
+            original_squad, transfers.transfers
+        )
+        transfer_errors = pricing_errors + validate_transfers(
+            transfers, original_squad, post_transfer_squad
+        )
+        if transfer_errors:
+            self.logger.warning(f"Transfer validation errors: {transfer_errors}")
+
+        # Generate lineup
+        lineup = stage_lineup_selection(
+            self.client,
+            post_transfer_squad,
+            channel_analyses,
+            gameweek,
+            commentary=transfer_commentary,
+        )
+        lineup_errors = validate_lineup(lineup, post_transfer_squad)
+        if lineup_errors:
+            self.logger.warning(f"Lineup validation errors: {lineup_errors}")
+
+        return transfers, lineup, warning
+
+    def _build_requested_options(
+        self,
+        requests: list[OptionRequest],
+        gap: GapAnalysis | ScoredGapAnalysis,
+        squad_context: dict[str, Any],
+        original_squad: list[dict[str, Any]],
+        channel_analyses: list[ChannelAnalysis],
+        condensed_players: list[dict[str, Any]],
+        player_lookup: dict[str, list[PlayerLookupEntry]],
+        gameweek: int,
+        commentary: str | None,
+    ) -> list[DecisionOption]:
+        """Build decision options based on explicit user requests."""
+        options: list[DecisionOption] = []
+
+        for i, request in enumerate(requests):
+            self.logger.info(
+                f"Building requested option: {request.transfer_count} transfers "
+                f"(hit={request.take_hit})"
+            )
+
+            transfers, lineup, warning = self._build_requested_option(
+                request,
+                gap,
+                squad_context,
+                original_squad,
+                channel_analyses,
+                condensed_players,
+                player_lookup,
+                gameweek,
+                commentary,
+            )
+
+            # Build dynamic label based on actual result
+            actual_count = len(transfers.transfers)
+            label = self._build_dynamic_label(i, actual_count, transfers.hit_cost)
+
+            # Build rationale
+            if actual_count == 0:
+                rationale = "Roll transfer to bank flexibility."
+            elif transfers.hit_cost > 0:
+                rationale = f"Take -{transfers.hit_cost} hit to make {actual_count} transfer{'s' if actual_count > 1 else ''}."
+            else:
+                rationale = f"Use {actual_count} free transfer{'s' if actual_count > 1 else ''}."
+
+            if warning:
+                rationale += f" Note: {warning}"
+
+            options.append(
+                DecisionOption(
+                    label=label,
+                    transfers=transfers,
+                    lineup=lineup,
+                    rationale=rationale,
+                )
+            )
+
+        return options
+
+    def _build_strategy_label(
+        self,
+        strategy: str,
+        transfers: TransferPlan,
+        addressed_gaps: list[str],
+    ) -> str:
+        """Generate descriptive label for a strategy option."""
+        gap_desc = ""
+        if addressed_gaps:
+            gap_desc = ", ".join(addressed_gaps[:2])
+            if len(addressed_gaps) > 2:
+                gap_desc += f" +{len(addressed_gaps) - 2} more"
+
+        transfer_count = len(transfers.transfers)
+        hit_text = f"-{transfers.hit_cost} hit" if transfers.hit_cost else "no hit"
+
+        if transfer_count == 0:
+            return f"{strategy}: Roll transfer (0 transfers, no hit)"
+
+        plural = "s" if transfer_count > 1 else ""
+        if gap_desc:
+            return f"{strategy}: {gap_desc} ({transfer_count} transfer{plural}, {hit_text})"
+        return f"{strategy}: {transfer_count} transfer{plural} ({hit_text})"
+
+    def _build_strategy_options(
+        self,
+        gap: GapAnalysis | ScoredGapAnalysis,
+        primary_transfers: TransferPlan,  # noqa: ARG002  # Interface consistency
+        primary_lineup: LineupPlan,  # noqa: ARG002  # Interface consistency
+        squad_context: dict[str, Any],
+        original_squad: list[dict[str, Any]],
+        channel_analyses: list[ChannelAnalysis],
+        condensed_players: list[dict[str, Any]],
+        player_lookup: dict[str, list[PlayerLookupEntry]],
+        gameweek: int,
+        commentary: str | None = None,
+    ) -> list[DecisionOption]:
+        """Create 1-3 strategy-based decision options driven by gap SEVERITY.
+
+        Note: primary_transfers/primary_lineup are not used; this function
+        generates fresh transfers based on severity analysis rather than
+        relying on the primary staged analysis output.
+
+        Severity-based logic:
+        - Team is fine (total_severity < 4) → 1 option: Roll
+        - Minor gaps (4 <= severity < 12) → 2 options: Roll vs Fix
+        - Significant gaps (severity >= 12) → 2-3 options with hit consideration
+        - Critical gaps (any severity >= 8) → Always include fix-critical option
+        """
+        options: list[DecisionOption] = []
+        fts = int(squad_context.get("free_transfers", 1))
+
+        # Get severity data (ScoredGapAnalysis has it, GapAnalysis doesn't)
+        is_scored = isinstance(gap, ScoredGapAnalysis)
+        total_severity = gap.total_severity if is_scored else 0.0
+        captain_severity = gap.captain_severity if is_scored else 0.0
+
+        # Identify critical and high-priority gaps
+        critical_gaps: list[str] = []
+        high_gaps: list[str] = []
+
+        if is_scored:
+            for p in gap.players_missing:
+                if p.severity >= 8:
+                    critical_gaps.append(p.name)
+                elif p.severity >= 5:
+                    high_gaps.append(p.name)
+            if (
+                captain_severity >= 8
+                and gap.captain_gap
+                and gap.captain_gap not in critical_gaps
+            ):
+                critical_gaps.insert(0, gap.captain_gap)
+        else:
+            # Fallback for non-scored: use gap presence
+            if gap.captain_gap:
+                critical_gaps.append(gap.captain_gap)
+            for p in gap.players_missing:
+                high_gaps.append(p.name)
+
+        all_gaps = critical_gaps + high_gaps
+
+        # Scenario 1: Team is fine (severity < 4 or no gaps)
+        if total_severity < 4 or (not critical_gaps and not high_gaps):
+            self.logger.info("Low severity - offering roll option only")
+            roll_lineup = stage_lineup_selection(
+                self.client,
+                original_squad,
+                channel_analyses,
+                gameweek,
+                commentary=self._merge_commentary(
+                    commentary, "CONSERVATIVE: No transfers, prioritize safe minutes."
+                ),
+            )
+            options.append(
+                DecisionOption(
+                    label="Conservative: Roll transfer (0 transfers, no hit)",
+                    transfers=TransferPlan(
+                        transfers=[],
+                        total_cost=0.0,
+                        new_itb=float(squad_context.get("itb", 0.0)),
+                        fts_used=0,
+                        fts_remaining=fts,
+                        hit_cost=0,
+                        reasoning="Low gap severity - roll transfer to bank flexibility.",
+                    ),
+                    lineup=roll_lineup,
+                    rationale=f"Gap severity low ({total_severity:.0f}). Roll to bank FT.",
+                )
+            )
+            return options
+
+        # Scenario 2: Has gaps - determine options based on severity
+        self.logger.info(
+            f"Building strategy options: severity={total_severity:.0f}, "
+            f"critical={len(critical_gaps)}, high={len(high_gaps)}, fts={fts}"
+        )
+
+        # Option A: Conservative - fix within FTs, no hits (or roll if 0 FTs)
+        if fts == 0:
+            # 0 FTs: Conservative = roll
+            roll_lineup = stage_lineup_selection(
+                self.client,
+                original_squad,
+                channel_analyses,
+                gameweek,
+                commentary=self._merge_commentary(
+                    commentary, "CONSERVATIVE: No FTs, roll and prioritize safe lineup."
+                ),
+            )
+            options.append(
+                DecisionOption(
+                    label="Conservative: Roll transfer (0 transfers, no hit)",
+                    transfers=TransferPlan(
+                        transfers=[],
+                        total_cost=0.0,
+                        new_itb=float(squad_context.get("itb", 0.0)),
+                        fts_used=0,
+                        fts_remaining=0,
+                        hit_cost=0,
+                        reasoning="No free transfers available - roll for next week.",
+                    ),
+                    lineup=roll_lineup,
+                    rationale="No FTs available. Roll and optimize lineup.",
+                )
+            )
+        else:
+            # Use FTs to address top gaps
+            gaps_to_fix = all_gaps[: min(fts, len(all_gaps))]
+            fix_directive = (
+                f"BALANCED: Use {len(gaps_to_fix)} FT(s) to address: {', '.join(gaps_to_fix)}. "
+                "Stay within free transfers, no hits."
+            )
+            fix_transfers = stage_transfer_plan(
+                self.client,
+                gap,
+                squad_context,
+                condensed_players,
+                channel_analyses,
+                gameweek,
+                commentary=self._merge_commentary(commentary, fix_directive),
+            )
+            fix_transfers, _ = apply_transfer_pricing(
+                fix_transfers, squad_context, player_lookup
+            )
+            post_fix_squad = compute_post_transfer_squad(
+                original_squad, fix_transfers.transfers
+            )
+            fix_lineup = stage_lineup_selection(
+                self.client,
+                post_fix_squad,
+                channel_analyses,
+                gameweek,
+                commentary=self._merge_commentary(commentary, fix_directive),
+            )
+
+            addressed = [t.in_player.split(" (")[0] for t in fix_transfers.transfers]
+            label = self._build_strategy_label("Balanced", fix_transfers, addressed)
+            options.append(
+                DecisionOption(
+                    label=label,
+                    transfers=fix_transfers,
+                    lineup=fix_lineup,
+                    rationale=f"Address top gaps within FTs: {', '.join(gaps_to_fix[:3])}.",
+                )
+            )
+
+        # Option B: If more gaps than FTs and severity justifies, offer expanded option
+        if len(all_gaps) > fts and total_severity > 8:
+            extra_gaps = all_gaps[fts : fts + 2]  # Up to 2 extra
+            extra_severity = 0.0
+            if is_scored:
+                for p in gap.players_missing:
+                    if p.name in extra_gaps:
+                        extra_severity += p.severity
+
+            # Only offer hit if extra severity > 8 (worth the -4)
+            if extra_severity > 8 or (critical_gaps and fts == 0):
+                all_target_gaps = all_gaps[: fts + len(extra_gaps)]
+                hit_directive = (
+                    f"AGGRESSIVE: Address ALL high-priority gaps: {', '.join(all_target_gaps)}. "
+                    f"Accept hit cost if needed to fix critical gaps."
+                )
+                hit_transfers = stage_transfer_plan(
+                    self.client,
+                    gap,
+                    squad_context,
+                    condensed_players,
+                    channel_analyses,
+                    gameweek,
+                    commentary=self._merge_commentary(commentary, hit_directive),
+                )
+                hit_transfers, _ = apply_transfer_pricing(
+                    hit_transfers, squad_context, player_lookup
+                )
+
+                if hit_transfers.transfers:
+                    post_hit_squad = compute_post_transfer_squad(
+                        original_squad, hit_transfers.transfers
+                    )
+                    hit_lineup = stage_lineup_selection(
+                        self.client,
+                        post_hit_squad,
+                        channel_analyses,
+                        gameweek,
+                        commentary=self._merge_commentary(commentary, hit_directive),
+                    )
+
+                    addressed = [
+                        t.in_player.split(" (")[0] for t in hit_transfers.transfers
+                    ]
+                    label = self._build_strategy_label(
+                        "Aggressive", hit_transfers, addressed
+                    )
+                    hit_count = hit_transfers.hit_cost
+                    options.append(
+                        DecisionOption(
+                            label=label,
+                            transfers=hit_transfers,
+                            lineup=hit_lineup,
+                            rationale=(
+                                f"High severity ({total_severity:.0f}) justifies "
+                                f"{'-' + str(hit_count) + ' hit' if hit_count else 'using all FTs'} "
+                                f"to fix: {', '.join(all_target_gaps[:3])}."
+                            ),
+                        )
+                    )
+
+        # Option C: Always offer roll as alternative if not already present
+        has_roll = any("Roll" in opt.label for opt in options)
+        if not has_roll and len(options) < 3:
+            roll_lineup = stage_lineup_selection(
+                self.client,
+                original_squad,
+                channel_analyses,
+                gameweek,
+                commentary=self._merge_commentary(
+                    commentary, "CONSERVATIVE: Roll transfer, optimize lineup."
+                ),
+            )
+            options.append(
+                DecisionOption(
+                    label="Conservative: Roll transfer (0 transfers, no hit)",
+                    transfers=TransferPlan(
+                        transfers=[],
+                        total_cost=0.0,
+                        new_itb=float(squad_context.get("itb", 0.0)),
+                        fts_used=0,
+                        fts_remaining=fts,
+                        hit_cost=0,
+                        reasoning="Alternative: bank FT for flexibility.",
+                    ),
+                    lineup=roll_lineup,
+                    rationale="Lower risk alternative - bank FT for future use.",
+                )
+            )
+
+        return options
+
+    def _build_heuristic_options(
+        self,
+        gap: GapAnalysis | ScoredGapAnalysis,
         primary_transfers: TransferPlan,
         primary_lineup: LineupPlan,
         squad_context: dict[str, Any],
@@ -649,18 +1183,10 @@ Return valid JSON only, matching the provided schema exactly."""
         gameweek: int,
         commentary: str | None = None,
     ) -> list[DecisionOption]:
-        """Create 2-3 decision options ensuring meaningful differentiation.
+        """Legacy: Create 2-3 decision options using FT-based heuristics.
 
-        FT-aware logic:
-        - Option A: Primary (influencer-aligned) - from staged analysis
-        - Option B: Depends on Option A and FT count:
-          - If A has transfers → roll (conservative)
-          - If A has NO transfers but gaps exist → activate transfer
-          - If A has NO transfers and no gaps → roll
-        - Option C: FT-aware aggressive option:
-          - 0 FTs + gaps → take hit for critical target
-          - 1 FT + gaps → chase single target
-          - 2+ FTs + multiple gaps → maximize FT usage
+        Deprecated in favor of _build_strategy_options which uses severity scoring.
+        Kept for backward compatibility when ScoredGapAnalysis is not available.
         """
         options: list[DecisionOption] = []
         fts = int(squad_context.get("free_transfers", 1))
@@ -766,6 +1292,76 @@ Return valid JSON only, matching the provided schema exactly."""
 
         return options
 
+    def _build_decision_options(
+        self,
+        gap: GapAnalysis | ScoredGapAnalysis,
+        primary_transfers: TransferPlan,
+        primary_lineup: LineupPlan,
+        squad_context: dict[str, Any],
+        original_squad: list[dict[str, Any]],
+        channel_analyses: list[ChannelAnalysis],
+        condensed_players: list[dict[str, Any]],
+        player_lookup: dict[str, list[PlayerLookupEntry]],
+        gameweek: int,
+        commentary: str | None = None,
+    ) -> list[DecisionOption]:
+        """Entry point for building decision options.
+
+        Priority:
+        1. If user commentary contains specific transfer requests → _build_requested_options
+        2. If ScoredGapAnalysis available → _build_strategy_options (severity-driven)
+        3. Fallback → _build_heuristic_options (legacy FT-based)
+        """
+        # Try to parse explicit option requests from commentary
+        requests = self._parse_option_requests(commentary)
+
+        if requests:
+            self.logger.info(
+                f"Using commentary-driven options: {[(r.transfer_count, r.take_hit) for r in requests]}"
+            )
+            return self._build_requested_options(
+                requests,
+                gap,
+                squad_context,
+                original_squad,
+                channel_analyses,
+                condensed_players,
+                player_lookup,
+                gameweek,
+                commentary,
+            )
+
+        # Use severity-based strategy options when we have scored gap analysis
+        if isinstance(gap, ScoredGapAnalysis):
+            self.logger.info("Using severity-driven strategy options")
+            return self._build_strategy_options(
+                gap,
+                primary_transfers,
+                primary_lineup,
+                squad_context,
+                original_squad,
+                channel_analyses,
+                condensed_players,
+                player_lookup,
+                gameweek,
+                commentary,
+            )
+
+        # Fall back to heuristic-based options for non-scored gap analysis
+        self.logger.info("Falling back to heuristic options (no severity data)")
+        return self._build_heuristic_options(
+            gap,
+            primary_transfers,
+            primary_lineup,
+            squad_context,
+            original_squad,
+            channel_analyses,
+            condensed_players,
+            player_lookup,
+            gameweek,
+            commentary,
+        )
+
     def _add_roll_option(
         self,
         options: list[DecisionOption],
@@ -816,7 +1412,7 @@ Return valid JSON only, matching the provided schema exactly."""
     def _add_activate_transfer_option(
         self,
         options: list[DecisionOption],
-        gap: GapAnalysis,
+        gap: GapAnalysis | ScoredGapAnalysis,
         squad_context: dict[str, Any],
         original_squad: list[dict[str, Any]],
         channel_analyses: list[ChannelAnalysis],
@@ -918,7 +1514,7 @@ Return valid JSON only, matching the provided schema exactly."""
     def _add_aggressive_option(
         self,
         options: list[DecisionOption],
-        gap: GapAnalysis,
+        gap: GapAnalysis | ScoredGapAnalysis,
         squad_context: dict[str, Any],
         original_squad: list[dict[str, Any]],
         channel_analyses: list[ChannelAnalysis],
@@ -986,7 +1582,7 @@ Return valid JSON only, matching the provided schema exactly."""
     def _add_take_hit_option(
         self,
         options: list[DecisionOption],
-        gap: GapAnalysis,
+        gap: GapAnalysis | ScoredGapAnalysis,
         squad_context: dict[str, Any],
         original_squad: list[dict[str, Any]],
         channel_analyses: list[ChannelAnalysis],
@@ -1066,7 +1662,7 @@ Return valid JSON only, matching the provided schema exactly."""
     def _add_maximize_fts_option(
         self,
         options: list[DecisionOption],
-        gap: GapAnalysis,
+        gap: GapAnalysis | ScoredGapAnalysis,
         squad_context: dict[str, Any],
         original_squad: list[dict[str, Any]],
         channel_analyses: list[ChannelAnalysis],

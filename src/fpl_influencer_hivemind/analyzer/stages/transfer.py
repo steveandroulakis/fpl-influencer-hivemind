@@ -27,52 +27,114 @@ from src.fpl_influencer_hivemind.analyzer.normalization import (
 from src.fpl_influencer_hivemind.analyzer.stages.gap import (
     aggregate_influencer_consensus,
 )
-from src.fpl_influencer_hivemind.types import GapAnalysis, Transfer, TransferPlan
+from src.fpl_influencer_hivemind.types import (
+    GapAnalysis,
+    ScoredGapAnalysis,
+    Transfer,
+    TransferPlan,
+)
 
 logger = logging.getLogger(__name__)
 
 
-def _build_ft_guidance(fts: int, gap: GapAnalysis) -> str:
-    """Build FT-aware strategy guidance for the transfer prompt."""
+def _build_severity_guidance(
+    gap: GapAnalysis | ScoredGapAnalysis,
+    fts: int,
+) -> str:
+    """Build transfer guidance based on severity vs hit cost.
+
+    Rule: Each severity point ~= 0.5-1 expected points.
+    Hit costs 4 points. Recommend hit if severity > 8 (4 pts / 0.5).
+    """
     gap_count = len(gap.players_missing) + len(gap.players_to_sell)
 
-    if fts == 0:
-        return (
-            "FT STRATEGY: You have 0 free transfers. Only recommend transfers if "
-            "the gap is critical enough to justify a -4 hit. Otherwise, roll."
-        )
-    elif fts == 1:
-        if gap_count == 0:
-            return "FT STRATEGY: 1 FT available but no gaps identified. Consider rolling."
-        return (
-            "FT STRATEGY: 1 FT available. Address the single most important gap, "
-            "or roll if gaps are minor."
-        )
-    else:  # fts >= 2
-        if gap_count == 0:
-            return (
-                f"FT STRATEGY: {fts} FTs available but no gaps identified. "
-                "Roll to bank transfers for future use."
+    # Check if we have severity data
+    is_scored = isinstance(gap, ScoredGapAnalysis)
+
+    if is_scored:
+        # Severity-based guidance
+        critical_gaps = [g for g in gap.players_missing if g.severity >= 8]
+        high_gaps = [g for g in gap.players_missing if 5 <= g.severity < 8]
+        total_severity = gap.total_severity
+
+        guidance: list[str] = []
+
+        if gap.captain_severity >= 8:
+            guidance.append(
+                f"CRITICAL: Captain gap ({gap.captain_gap}) has severity {gap.captain_severity:.0f}/10 - "
+                "prioritize bringing in consensus captain"
             )
-        elif gap_count == 1:
-            return (
-                f"FT STRATEGY: {fts} FTs available, 1 gap identified. "
-                "Use 1 FT to address the gap; bank the rest."
+
+        if critical_gaps:
+            critical_names = [g.name for g in critical_gaps]
+            guidance.append(
+                f"CRITICAL gaps (severity >= 8): {', '.join(critical_names)}"
             )
-        else:
-            # Multiple FTs and multiple gaps
-            use_count = min(fts, gap_count)
-            return (
-                f"FT STRATEGY: {fts} FTs available, {gap_count} gaps identified. "
-                f"Consider using up to {use_count} FTs to address multiple gaps. "
-                "Prioritize by gap severity and influencer consensus. "
-                "Don't waste FTs - unused transfers are lost at 2 max."
+
+        if high_gaps:
+            high_names = [g.name for g in high_gaps]
+            guidance.append(f"HIGH priority gaps (severity 5-7): {', '.join(high_names)}")
+
+        # Hit recommendation based on severity
+        if total_severity > 12 and fts == 0:
+            guidance.append(
+                f"SEVERITY JUSTIFIES HIT: Total severity {total_severity:.0f} exceeds threshold (12). "
+                "Consider taking a hit for high-impact transfer."
             )
+        elif total_severity > 16 and fts == 1:
+            guidance.append(
+                f"SEVERITY JUSTIFIES 2ND TRANSFER: Total severity {total_severity:.0f} high enough "
+                "to consider taking a hit for additional transfer."
+            )
+        elif fts >= 2 and total_severity > 8:
+            guidance.append(
+                f"USE MULTIPLE FTs: Severity {total_severity:.0f} justifies using {min(fts, gap_count)} FTs."
+            )
+        elif total_severity < 4:
+            guidance.append(
+                f"LOW SEVERITY ({total_severity:.0f}): Consider rolling transfer unless targeting specific player."
+            )
+
+        guidance.append(f"Total gap severity: {total_severity:.0f}")
+        return "\n".join(guidance)
+    else:
+        # Fallback: non-severity guidance (legacy behavior)
+        if fts == 0:
+            return (
+                "FT STRATEGY: You have 0 free transfers. Only recommend transfers if "
+                "the gap is critical enough to justify a -4 hit. Otherwise, roll."
+            )
+        elif fts == 1:
+            if gap_count == 0:
+                return "FT STRATEGY: 1 FT available but no gaps identified. Consider rolling."
+            return (
+                "FT STRATEGY: 1 FT available. Address the single most important gap, "
+                "or roll if gaps are minor."
+            )
+        else:  # fts >= 2
+            if gap_count == 0:
+                return (
+                    f"FT STRATEGY: {fts} FTs available but no gaps identified. "
+                    "Roll to bank transfers for future use."
+                )
+            elif gap_count == 1:
+                return (
+                    f"FT STRATEGY: {fts} FTs available, 1 gap identified. "
+                    "Use 1 FT to address the gap; bank the rest."
+                )
+            else:
+                use_count = min(fts, gap_count)
+                return (
+                    f"FT STRATEGY: {fts} FTs available, {gap_count} gaps identified. "
+                    f"Consider using up to {use_count} FTs to address multiple gaps. "
+                    "Prioritize by gap severity and influencer consensus. "
+                    "Don't waste FTs - unused transfers are lost at 2 max."
+                )
 
 
 def stage_transfer_plan(
     client: AnthropicClient,
-    gap: GapAnalysis,
+    gap: GapAnalysis | ScoredGapAnalysis,
     squad_context: dict[str, Any],
     condensed_players: list[dict[str, Any]],
     channel_analyses: list[ChannelAnalysis],
@@ -106,10 +168,10 @@ def stage_transfer_plan(
             f"\nUSER DIRECTIVE (HIGH PRIORITY - FOLLOW THIS):\n{commentary}\n"
         )
 
-    # FT-aware strategy guidance
-    ft_guidance = _build_ft_guidance(fts, gap)
-    if ft_guidance:
-        directive_section += f"\n{ft_guidance}\n"
+    # Severity-aware strategy guidance
+    severity_guidance = _build_severity_guidance(gap, fts)
+    if severity_guidance:
+        directive_section += f"\n{severity_guidance}\n"
 
     prompt = f"""Generate specific FPL transfers for GW{gameweek} based on gap analysis.
 

@@ -12,6 +12,7 @@ from src.fpl_influencer_hivemind.analyzer.validation.cohesion import (
 from src.fpl_influencer_hivemind.types import (
     GapAnalysis,
     LineupPlan,
+    ScoredGapAnalysis,
     TransferPlan,
     ValidationResult,
 )
@@ -120,7 +121,7 @@ def validate_lineup(
 
 def validate_all(
     client: AnthropicClient,
-    gap: GapAnalysis,
+    gap: GapAnalysis | ScoredGapAnalysis,
     transfers: TransferPlan,
     lineup: LineupPlan,
     original_squad: list[dict[str, Any]],

@@ -57,6 +57,14 @@ class DecisionOption:
     rationale: str
 
 
+@dataclass(slots=True)
+class OptionRequest:
+    """User-requested transfer option parsed from commentary."""
+
+    transfer_count: int
+    take_hit: bool  # True if user wants to take a hit for this option
+
+
 # Type aliases for common patterns
 ConsensusData = dict[str, Any]
 SquadContext = dict[str, Any]
@@ -65,6 +73,7 @@ __all__ = [
     "ChannelAnalysis",
     "ConsensusData",
     "DecisionOption",
+    "OptionRequest",
     "PlayerLookupEntry",
     "SquadContext",
     "SquadPlayerEntry",

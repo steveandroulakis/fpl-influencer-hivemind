@@ -15,6 +15,7 @@ from src.fpl_influencer_hivemind.types import (
     GapAnalysis,
     LineupPlan,
     QualityReview,
+    ScoredGapAnalysis,
     TransferPlan,
 )
 
@@ -23,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 def holistic_quality_review(
     client: AnthropicClient,
-    gap: GapAnalysis,
+    gap: GapAnalysis | ScoredGapAnalysis,
     transfers: TransferPlan,
     lineup: LineupPlan,
     consensus: dict[str, Any],

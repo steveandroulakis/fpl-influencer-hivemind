@@ -7,7 +7,11 @@ from src.fpl_influencer_hivemind.analyzer.models import (
 from src.fpl_influencer_hivemind.analyzer.stages.gap import (
     aggregate_influencer_consensus,
 )
-from src.fpl_influencer_hivemind.types import GapAnalysis, QualityReview
+from src.fpl_influencer_hivemind.types import (
+    GapAnalysis,
+    QualityReview,
+    ScoredGapAnalysis,
+)
 
 
 def generate_consensus_section(channel_analyses: list[ChannelAnalysis]) -> str:
@@ -99,28 +103,56 @@ def generate_channel_notes(channel_analyses: list[ChannelAnalysis]) -> str:
     return "\n".join(lines)
 
 
-def format_gap_section(gap: GapAnalysis) -> str:
-    """Format Section 3 from GapAnalysis model."""
+def format_gap_section(gap: GapAnalysis | ScoredGapAnalysis) -> str:
+    """Format Section 3 from GapAnalysis model with severity display."""
     lines = ["## 3) My Team vs Influencers (Gap Analysis)\n"]
+
+    # Check if this is a scored gap analysis
+    is_scored = isinstance(gap, ScoredGapAnalysis)
 
     if gap.captain_gap:
         lines.append("### CRITICAL: Captain Gap")
-        lines.append(
-            f"Consensus captain **{gap.captain_gap}** is NOT in your squad!\n"
-        )
+        if is_scored and gap.captain_severity > 0:
+            lines.append(
+                f"Consensus captain **{gap.captain_gap}** is NOT in your squad! "
+                f"(Severity: {gap.captain_severity:.0f}/10)\n"
+            )
+        else:
+            lines.append(
+                f"Consensus captain **{gap.captain_gap}** is NOT in your squad!\n"
+            )
 
     if gap.players_missing:
-        lines.append("### Players I'm Missing (by priority)")
+        lines.append("### Players I'm Missing (by severity)")
         for p in gap.players_missing:
             team_str = f" - {p.team}" if p.team else ""
-            lines.append(f"- **{p.name}** ({p.position}){team_str}")
+            # Check if player has severity info (ScoredPlayerRef)
+            if hasattr(p, "severity") and p.severity > 0:
+                severity_bar = _severity_bar(p.severity)
+                factors_str = ""
+                if hasattr(p, "severity_factors") and p.severity_factors:
+                    factors_str = f"\n  Factors: {', '.join(p.severity_factors)}"
+                lines.append(
+                    f"- **{p.name}** ({p.position}){team_str} — Severity: {p.severity:.0f}/10 {severity_bar}{factors_str}"
+                )
+            else:
+                lines.append(f"- **{p.name}** ({p.position}){team_str}")
         lines.append("")
 
     if gap.players_to_sell:
         lines.append("### Players to Consider Selling")
         for p in gap.players_to_sell:
             team_str = f" - {p.team}" if p.team else ""
-            lines.append(f"- **{p.name}** ({p.position}){team_str}")
+            if hasattr(p, "severity") and p.severity > 0:
+                severity_bar = _severity_bar(p.severity)
+                factors_str = ""
+                if hasattr(p, "severity_factors") and p.severity_factors:
+                    factors_str = f"\n  Factors: {', '.join(p.severity_factors)}"
+                lines.append(
+                    f"- **{p.name}** ({p.position}){team_str} — Severity: {p.severity:.0f}/10 {severity_bar}{factors_str}"
+                )
+            else:
+                lines.append(f"- **{p.name}** ({p.position}){team_str}")
         lines.append("")
 
     if gap.risk_flags:
@@ -135,7 +167,17 @@ def format_gap_section(gap: GapAnalysis) -> str:
             lines.append(f"- {fg}")
         lines.append("")
 
+    # Show total severity if available
+    if is_scored and gap.total_severity > 0:
+        lines.append(f"**Total Severity:** {gap.total_severity:.1f}\n")
+
     return "\n".join(lines)
+
+
+def _severity_bar(severity: float, max_val: float = 10.0) -> str:
+    """Generate a visual severity bar."""
+    filled = int((severity / max_val) * 10)
+    return "█" * filled + "░" * (10 - filled)
 
 
 def format_action_plan(decision_options: list[DecisionOption]) -> str:
@@ -243,7 +285,7 @@ def format_quality_review(review: QualityReview) -> str:
 
 def assemble_report(
     channel_analyses: list[ChannelAnalysis],
-    gap: GapAnalysis,
+    gap: GapAnalysis | ScoredGapAnalysis,
     decision_options: list[DecisionOption],
     gameweek: int,  # noqa: ARG001  # Reserved for future use
     commentary: str | None = None,

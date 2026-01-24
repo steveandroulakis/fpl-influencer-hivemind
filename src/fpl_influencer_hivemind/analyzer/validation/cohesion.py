@@ -15,6 +15,7 @@ from src.fpl_influencer_hivemind.analyzer.normalization import (
 from src.fpl_influencer_hivemind.types import (
     GapAnalysis,
     LineupPlan,
+    ScoredGapAnalysis,
     TransferPlan,
 )
 
@@ -101,7 +102,7 @@ def compute_player_affordability(
 
 def validate_gap_to_transfer_cohesion(
     client: AnthropicClient,
-    gap: GapAnalysis,
+    gap: GapAnalysis | ScoredGapAnalysis,
     transfers: TransferPlan,
     consensus: dict[str, Any],  # noqa: ARG001  # Reserved for future use
 ) -> tuple[list[str], list[str]]:
@@ -244,7 +245,7 @@ def validate_consensus_coverage(
 
 
 def validate_risk_contingency(
-    gap: GapAnalysis,
+    gap: GapAnalysis | ScoredGapAnalysis,
     lineup: LineupPlan,
 ) -> tuple[list[str], list[str]]:
     """Validate risk flags have corresponding contingency in lineup."""

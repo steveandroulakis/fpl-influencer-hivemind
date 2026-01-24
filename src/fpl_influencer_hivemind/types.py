@@ -20,6 +20,16 @@ class PlayerRef(BaseModel):
     team: str | None = None
 
 
+class ScoredPlayerRef(BaseModel):
+    """Player reference with severity score for gap analysis."""
+
+    name: str
+    position: str  # GKP/DEF/MID/FWD
+    team: str | None = None
+    severity: float = 0.0  # 0.0-10.0
+    severity_factors: list[str] = []  # e.g., ["5/6 influencers", "high form"]
+
+
 class RiskFlag(BaseModel):
     """Risk flag for a player."""
 
@@ -35,6 +45,18 @@ class GapAnalysis(BaseModel):
     risk_flags: list[RiskFlag]
     formation_gaps: list[str]
     captain_gap: str | None = None
+
+
+class ScoredGapAnalysis(BaseModel):
+    """Stage 1 output with severity scores for prioritization."""
+
+    players_to_sell: list[ScoredPlayerRef]
+    players_missing: list[ScoredPlayerRef]
+    risk_flags: list[RiskFlag]
+    formation_gaps: list[str]
+    captain_gap: str | None = None
+    captain_severity: float = 0.0  # High if consensus captain not owned
+    total_severity: float = 0.0  # Sum of all gap severities
 
 
 class Transfer(BaseModel):
@@ -213,6 +235,8 @@ __all__ = [
     "PlayerRef",
     "QualityReview",
     "RiskFlag",
+    "ScoredGapAnalysis",
+    "ScoredPlayerRef",
     "TranscriptEntry",
     "TranscriptErrorEntry",
     "TranscriptSegment",

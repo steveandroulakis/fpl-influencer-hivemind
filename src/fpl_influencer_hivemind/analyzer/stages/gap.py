@@ -13,7 +13,7 @@ from src.fpl_influencer_hivemind.analyzer.api import (
 )
 from src.fpl_influencer_hivemind.analyzer.constants import PL_TEAMS_CONTEXT
 from src.fpl_influencer_hivemind.analyzer.models import ChannelAnalysis
-from src.fpl_influencer_hivemind.types import GapAnalysis
+from src.fpl_influencer_hivemind.types import ScoredGapAnalysis
 
 logger = logging.getLogger(__name__)
 
@@ -69,13 +69,14 @@ def stage_gap_analysis(
     transfer_momentum: dict[str, Any] | None = None,
     commentary: str | None = None,
     previous_errors: list[str] | None = None,
-) -> GapAnalysis:
-    """Stage 1: identify gaps between my squad and consensus."""
-    logger.info("Stage 1: Gap Analysis")
+) -> ScoredGapAnalysis:
+    """Stage 1: identify gaps between my squad and consensus with severity scores."""
+    logger.info("Stage 1: Gap Analysis (with severity scoring)")
 
     squad = squad_context["squad"]
     squad_names = {p["name"] for p in squad}
     consensus = aggregate_influencer_consensus(channel_analyses)
+    total_channels = consensus["total_channels"]
 
     # Build transfer momentum section if available
     momentum_section = ""
@@ -89,6 +90,7 @@ def stage_gap_analysis(
                     "name": p.get("web_name"),
                     "team": p.get("team_name"),
                     "net": p.get("net_transfers"),
+                    "form": p.get("form"),
                 }
                 for p in top_in[:5]
             ]
@@ -105,6 +107,7 @@ def stage_gap_analysis(
                     "name": p.get("web_name"),
                     "team": p.get("team_name"),
                     "net": p.get("net_transfers"),
+                    "form": p.get("form"),
                 }
                 for p in top_net[:5]
             ]
@@ -114,7 +117,7 @@ Top Transfers IN: {json.dumps(in_summary, indent=2)}
 Top Transfers OUT: {json.dumps(out_summary, indent=2)}
 Top Net Transfers: {json.dumps(net_summary, indent=2)}
 
-NOTE: Flag players with >100k net transfers NOT mentioned by influencers as potential gaps.
+Use transfer momentum to boost severity: +1 if >100k net transfers.
 """
 
     # Build error feedback section
@@ -147,22 +150,33 @@ INFLUENCER CONSENSUS:
 - Transfers IN recommended: {json.dumps(consensus["transfers_in_counts"], indent=2)}
 - Transfers OUT recommended: {json.dumps(consensus["transfers_out_counts"], indent=2)}
 - Watchlist: {json.dumps(consensus["watchlist"], indent=2)}
-- Total channels analyzed: {consensus["total_channels"]}
+- Total channels analyzed: {total_channels}
 {error_feedback}
-Return JSON matching this schema EXACTLY:
+Return JSON with SEVERITY SCORES (0-10) for each gap:
 {{
   "players_to_sell": [
-    {{"name": "Player Name", "position": "POS", "team": "Team Name"}}
+    {{"name": "Player Name", "position": "POS", "team": "Team Name", "severity": 6.0, "severity_factors": ["3/{total_channels} influencers selling", "poor form"]}}
   ],
   "players_missing": [
-    {{"name": "Player Name", "position": "POS", "team": "Team Name"}}
+    {{"name": "Player Name", "position": "POS", "team": "Team Name", "severity": 8.0, "severity_factors": ["5/{total_channels} influencers", "high form"]}}
   ],
   "risk_flags": [
     {{"player": "Player Name", "risk": "Description of risk"}}
   ],
   "formation_gaps": ["Gap description"],
-  "captain_gap": "Player Name or null"
+  "captain_gap": "Player Name or null",
+  "captain_severity": 9.0,
+  "total_severity": 23.0
 }}
+
+SEVERITY SCORING GUIDELINES:
+- Base: 1 point per influencer recommending (max {total_channels} for {total_channels} channels)
+- Captain gap: +3 bonus (critical for 2x points)
+- Injury replacement: +2 if replacing injured starter
+- Form differential: +1 if replacement has form > 5.0
+- Transfer momentum: +1 if >100k net transfers
+- Maximum per gap: 10
+- total_severity = sum of all players_to_sell + players_missing + captain_severity
 
 {PL_TEAMS_CONTEXT}
 
@@ -170,18 +184,19 @@ Rules:
 1. players_to_sell: ONLY players in MY SQUAD that influencers are selling/benching.
 2. players_missing: Popular picks I don't own; MUST NOT include any player from MY SQUAD.
 3. captain_gap: If consensus captain is NOT in my squad, set this (top priority); else null.
-4. risk_flags: injury/rotation/form/availability risks ONLY (no team-quality speculation).
-5. formation_gaps: position imbalances or formation inflexibility.
-6. Use transfer momentum as a secondary signal for missing players when relevant.
+4. captain_severity: 0 if captain_gap is null; otherwise score based on how critical (usually 6-10).
+5. risk_flags: injury/rotation/form/availability risks ONLY (no team-quality speculation).
+6. formation_gaps: position imbalances or formation inflexibility.
+7. ORDER players_missing and players_to_sell by severity (highest first).
 
 Return ONLY valid JSON, no markdown fences."""
 
     system = """You are an FPL analyst identifying gaps between a manager's squad and influencer recommendations.
-Use only the provided data (no external knowledge). Return valid JSON only."""
+Assign severity scores to prioritize gaps. Use only the provided data (no external knowledge). Return valid JSON only."""
 
     save_debug_content("stage1_gap_analysis_prompt.txt", prompt)
 
-    response, _ = client.call_opus(prompt=prompt, system=system, max_tokens=2000)
+    response, _ = client.call_opus(prompt=prompt, system=system, max_tokens=2500)
 
     save_debug_content("stage1_gap_analysis_response.json", response)
 
@@ -189,16 +204,18 @@ Use only the provided data (no external knowledge). Return valid JSON only."""
     try:
         cleaned = extract_last_json(response)
         data = json.loads(cleaned)
-        return GapAnalysis(**data)
+        return ScoredGapAnalysis(**data)
     except (json.JSONDecodeError, ValidationError) as e:
         logger.error(f"Stage 1 parse error: {e}")
         # Return minimal valid response
-        return GapAnalysis(
+        return ScoredGapAnalysis(
             players_to_sell=[],
             players_missing=[],
             risk_flags=[],
             formation_gaps=[],
             captain_gap=None,
+            captain_severity=0.0,
+            total_severity=0.0,
         )
 
 
