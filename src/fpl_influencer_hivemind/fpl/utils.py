@@ -104,6 +104,52 @@ async def create_authenticated_fpl_session() -> tuple[FPLClient, aiohttp.ClientS
     return fpl, session
 
 
+async def create_token_authenticated_fpl_session() -> (
+    tuple[FPLClient, aiohttp.ClientSession]
+):
+    """Create an authenticated FPL session using a Bearer token.
+
+    Fallback for when email/password login fails due to DataDome bot protection.
+    Requires FPL_BEARER_TOKEN env var (extracted from browser DevTools).
+
+    The token is found in the 'x-api-authorization' header of FPL API requests.
+    Tokens expire after ~8 hours and need periodic refresh.
+
+    Returns the FPL client and session. Caller must close session when done.
+    Raises ValueError if token is not configured.
+    """
+    token = os.environ.get("FPL_BEARER_TOKEN")
+
+    if not token:
+        raise ValueError("FPL token auth requires FPL_BEARER_TOKEN env var")
+
+    # Create session with auth header pre-set
+    session = aiohttp.ClientSession(
+        headers={"x-api-authorization": f"Bearer {token}"}
+    )
+    fpl_class = _ensure_fpl_class()
+    fpl = fpl_class(session)
+
+    return fpl, session
+
+
+async def fetch_my_team_direct(
+    session: aiohttp.ClientSession, team_id: int
+) -> list[dict[str, Any]]:
+    """Fetch team data directly from FPL API with bearer token.
+
+    Bypasses the fpl library which requires internal login state.
+    The session must have x-api-authorization header set.
+    """
+    url = f"https://fantasy.premierleague.com/api/my-team/{team_id}/"
+    async with session.get(url) as resp:
+        if resp.status == 401:
+            raise PermissionError("Token expired or invalid")
+        resp.raise_for_status()
+        data = await resp.json()
+        return cast("list[dict[str, Any]]", data.get("picks", []))
+
+
 def _to_plain(obj: Any, _seen: set[int] | None = None) -> Any:
     if isinstance(obj, str | int | float | bool | type(None)):
         return obj
@@ -187,6 +233,8 @@ __all__ = [
     "FPL_TIMEZONE",
     "create_authenticated_fpl_session",
     "create_fpl_session",
+    "create_token_authenticated_fpl_session",
+    "fetch_my_team_direct",
     "get_bootstrap_data",
     "map_position",
     "normalize_ownership",

@@ -8,6 +8,8 @@ from typing import Any
 from .utils import (
     create_authenticated_fpl_session,
     create_fpl_session,
+    create_token_authenticated_fpl_session,
+    fetch_my_team_direct,
     get_bootstrap_data,
     map_position,
     normalize_price,
@@ -34,7 +36,7 @@ async def _get_current_picks_public(
     for pick in current_picks:
         element_id = pick.get("element")
         player = elements.get(element_id, {})
-        team = teams.get(player.get("team"), {})
+        team = teams.get(player.get("team", 0), {})
         # Public endpoint doesn't have selling_price, fall back to current price
         price = normalize_price(player.get("now_cost", 0))
         detailed.append(
@@ -79,7 +81,55 @@ async def _get_current_picks_authenticated(
     for idx, team_player in enumerate(team_data, 1):
         element_id = team_player.get("element")
         player = elements.get(element_id, {})
-        team = teams.get(player.get("team"), {})
+        team = teams.get(player.get("team", 0), {})
+        pick_info = picks_by_element.get(element_id, {})
+
+        detailed.append(
+            {
+                "position": pick_info.get("position", idx),
+                "element_id": element_id,
+                "web_name": player.get("web_name", "Unknown"),
+                "team_name": team.get("name", "Unknown"),
+                "player_position": map_position(player.get("element_type", 0)),
+                "price": normalize_price(player.get("now_cost", 0)),
+                "total_points": player.get("total_points", 0),
+                "is_captain": pick_info.get("is_captain", False),
+                "is_vice_captain": pick_info.get("is_vice_captain", False),
+                "multiplier": pick_info.get("multiplier", 1),
+                "selling_price": normalize_price(team_player.get("selling_price", 0)),
+            }
+        )
+    detailed.sort(key=lambda item: item.get("position", 0))
+    return detailed
+
+
+async def _get_current_picks_with_direct_fetch(
+    user: Any,
+    bootstrap_data: dict[str, Any],
+    session: Any,
+    team_id: int,
+) -> list[dict[str, Any]]:
+    """Get picks using direct API fetch for selling_price (token auth)."""
+    team_data = await fetch_my_team_direct(session, team_id)
+    if not team_data:
+        return []
+
+    elements = {player["id"]: player for player in bootstrap_data.get("elements", [])}
+    teams = {team["id"]: team for team in bootstrap_data.get("teams", [])}
+
+    # Get picks for captain/vice-captain status
+    picks_by_gameweek = await user.get_picks()
+    current_event = user.current_event
+    current_picks = picks_by_gameweek.get(current_event, [])
+    picks_by_element: dict[int, dict[str, Any]] = {
+        p.get("element"): p for p in current_picks
+    }
+
+    detailed = []
+    for idx, team_player in enumerate(team_data, 1):
+        element_id = team_player.get("element")
+        player = elements.get(element_id, {})
+        team = teams.get(player.get("team", 0), {})
         pick_info = picks_by_element.get(element_id, {})
 
         detailed.append(
@@ -132,11 +182,12 @@ def _format_summary(user: Any) -> dict[str, Any]:
 async def get_my_team_info(entry_id: int) -> dict[str, Any]:
     """Get team info, using authenticated endpoint if credentials available.
 
-    If FPL_EMAIL and FPL_PASSWORD are set, uses authenticated endpoint
-    which provides accurate selling_price. Otherwise falls back to public
-    endpoint where selling_price equals current price.
+    Auth priority:
+    1. FPL_EMAIL + FPL_PASSWORD (standard login)
+    2. FPL_BEARER_TOKEN (token fallback from browser)
+    3. Public endpoint (no auth, selling_price = current price)
     """
-    # Try authenticated endpoint first for accurate selling prices
+    # Try email/password auth first
     try:
         fpl, session = await create_authenticated_fpl_session()
         try:
@@ -152,13 +203,41 @@ async def get_my_team_info(entry_id: int) -> dict[str, Any]:
         finally:
             await safe_close_session(session)
     except ValueError as e:
-        # Auth credentials not configured, fall back to public endpoint
-        logger.warning(f"FPL auth not configured: {e}. Using public endpoint.")
+        # Auth credentials not configured
+        logger.warning(f"FPL email/password not configured: {e}")
     except Exception as e:
-        # Auth failed, fall back to public endpoint
-        logger.warning(f"FPL auth failed: {e}. Falling back to public endpoint.")
+        # Auth failed (likely DataDome blocking)
+        logger.warning(f"FPL email/password auth failed: {e}")
+
+    # Try token-based auth as fallback
+    try:
+        fpl, session = await create_token_authenticated_fpl_session()
+        try:
+            user = await fpl.get_user(entry_id)
+            bootstrap = await get_bootstrap_data(fpl)
+            team_data = {
+                "summary": _format_summary(user),
+                "team_value": await _get_team_value(user),
+                "current_picks": await _get_current_picks_with_direct_fetch(
+                    user, bootstrap, session, entry_id
+                ),
+            }
+            logger.info("Using token-authenticated FPL endpoint (accurate selling prices)")
+            return team_data
+        finally:
+            await safe_close_session(session)
+    except ValueError as e:
+        # Token not configured
+        logger.warning(f"FPL token not configured: {e}")
+    except PermissionError as e:
+        # Token expired/invalid
+        logger.warning(f"FPL token auth failed: {e}. Token may have expired.")
+    except Exception as e:
+        # Other token auth failure
+        logger.warning(f"FPL token auth failed: {e}")
 
     # Fall back to public endpoint (selling_price = current price)
+    logger.info("Falling back to public FPL endpoint (selling_price = current price)")
     fpl, session = await create_fpl_session()
     try:
         user = await fpl.get_user(entry_id)
@@ -168,7 +247,6 @@ async def get_my_team_info(entry_id: int) -> dict[str, Any]:
             "team_value": await _get_team_value(user),
             "current_picks": await _get_current_picks_public(user, bootstrap),
         }
-        logger.info("Using public FPL endpoint (selling_price = current price)")
         return team_data
     finally:
         await safe_close_session(session)

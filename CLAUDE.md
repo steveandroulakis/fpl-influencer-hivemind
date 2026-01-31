@@ -59,6 +59,7 @@ Use `.env` (auto sourced) based on `.env.example`:
 - `YOUTUBE_TRANSCRIPT_IO_KEY` – API token for youtube-transcript.io (primary transcript provider).
 - `ANTHROPIC_API_KEY` – Claude API key (needed for analyzer, optional otherwise).
 - Optional: `FPL_EMAIL`, `FPL_PASSWORD` – FPL login for accurate selling prices (otherwise defaults to current price).
+- Optional: `FPL_BEARER_TOKEN` – token fallback when email/password auth fails (DataDome blocks it). Expires ~8hrs.
 - Optional: `RAPIDAPI_EASYSUB_API_KEY`, `YOUTUBE_COOKIES_PATH` for transcript fallbacks.
 - Optional: `TRANSCRIPT_FETCHER_PREFERENCE` (set to `existing` to bypass youtube-transcript.io or `auto` for default).
 - `PATH` additions for local `uv`/scripts are appended automatically.
@@ -67,6 +68,7 @@ Use `.env` (auto sourced) based on `.env.example`:
 - **YouTube API Key**: create a Google Cloud project → enable YouTube Data API v3 → generate an API key (10k default quota is sufficient).
 - **YouTube Transcript IO**: sign up at youtube-transcript.io → generate an API key → store as `YOUTUBE_TRANSCRIPT_IO_KEY`.
 - **FPL Login**: use your Fantasy Premier League email/password; enables accurate selling prices (you only get 50% of price rises).
+- **FPL Token** (fallback if login fails): open DevTools on fantasy.premierleague.com → Network → find API request → copy `x-api-authorization: Bearer <token>` value. Expires ~8hrs.
 - **RapidAPI EasySubAPI**: sign up at RapidAPI → subscribe to EasySubAPI → copy the key to keep the legacy fallback available.
 - **YouTube cookies**: install "Get cookies.txt LOCALLY", export cookies while logged into YouTube, save to `~/youtube_cookies.txt`, and set `YOUTUBE_COOKIES_PATH`.
 
