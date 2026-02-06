@@ -6,7 +6,7 @@
 - Description: comprehensive FPL decision-support that pairs data collection with Claude-4 analysis for transfer/captain picks.
 - CLI: single entrypoint `uv run fpl-influencer-hivemind` with `collect` and `pipeline` subcommands.
 
-## Core Flow
+## Core Flow (see `PIPELINE-FLOW.md` for a summary of how parts fit together)
 1. **FPL data** (`src/fpl_influencer_hivemind/fpl/`) – fetched in-process via package modules, no manual steps.
 2. **YouTube discovery** (`src/fpl_influencer_hivemind/services/discovery.py`) – pluggable strategies that wrap the heuristic `video_picker` helper.
 3. **Transcript fetch** (`src/fpl_influencer_hivemind/services/transcripts.py`) – yields newline-preserving text plus segment timing metadata (YouTube Transcript IO by default, yt-dlp/EasySubAPI fallback).
