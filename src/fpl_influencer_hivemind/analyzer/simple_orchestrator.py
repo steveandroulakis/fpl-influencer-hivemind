@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from dataclasses import asdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -235,6 +236,268 @@ class SimpleFPLAnalyzer:
         return warnings
 
     @staticmethod
+    def _collect_candidate_players(
+        player_lookup: dict[str, list[PlayerLookupEntry]],
+    ) -> list[dict[str, str]]:
+        candidates: dict[tuple[str, str, str], dict[str, str]] = {}
+        for entries in player_lookup.values():
+            for entry in entries:
+                key = (entry.name, entry.position, entry.team)
+                if key in candidates:
+                    continue
+                candidates[key] = {
+                    "name": entry.name,
+                    "position": entry.position,
+                    "team": entry.team,
+                }
+        ordered = list(candidates.values())
+        ordered.sort(key=lambda item: item["name"])
+        return ordered
+
+    @staticmethod
+    def _collect_extraction_names(extraction: ChannelExtraction) -> list[str]:
+        names: list[str] = []
+
+        def add_list(values: list[str]) -> None:
+            for value in values:
+                if value and value.strip():
+                    names.append(value.strip())
+
+        add_list(extraction.transfers_in_names)
+        add_list(extraction.transfers_out_names)
+        add_list(extraction.starting_xi_names)
+        add_list(extraction.bench_names)
+        add_list(extraction.watchlist_names)
+
+        if extraction.captain_name:
+            names.append(extraction.captain_name.strip())
+        if extraction.vice_name:
+            names.append(extraction.vice_name.strip())
+
+        for rationale in extraction.player_rationales:
+            if rationale.player_name and rationale.player_name.strip():
+                names.append(rationale.player_name.strip())
+
+        return names
+
+    @staticmethod
+    def _collect_unresolved_names(
+        names: list[str],
+        player_lookup: dict[str, list[PlayerLookupEntry]],
+    ) -> list[str]:
+        unresolved: list[str] = []
+        seen: set[str] = set()
+        for name in names:
+            cleaned = name.strip()
+            if not cleaned:
+                continue
+            if cleaned in seen:
+                continue
+            seen.add(cleaned)
+            candidates = player_lookup.get(normalize_name(cleaned), [])
+            if not candidates:
+                unresolved.append(cleaned)
+        return unresolved
+
+    def _correct_names_with_llm(
+        self,
+        names: list[str],
+        candidates: list[dict[str, str]],
+    ) -> dict[str, str]:
+        if not names:
+            return {}
+
+        prompt_template = self._load_prompt("normalize_names.txt")
+        prompt = (
+            f"{prompt_template}\n\n"
+            f"CANDIDATES:\n{json.dumps(candidates, indent=2)}\n\n"
+            f"NAMES:\n{json.dumps(names, indent=2)}"
+        )
+
+        if self.prompts_dir and self.save_prompts:
+            save_debug_content("normalize_names_prompt.txt", prompt)
+
+        response, _ = self.client.call_sonnet(
+            prompt=prompt,
+            system=(
+                "You normalize player names to the provided candidate list. "
+                "Return JSON only."
+            ),
+            max_tokens=800,
+        )
+
+        if self.prompts_dir and self.save_prompts:
+            save_debug_content("normalize_names_response.json", response)
+
+        try:
+            cleaned = extract_last_json(response)
+            payload = json.loads(cleaned)
+        except json.JSONDecodeError as exc:
+            self.logger.error("Name normalization JSON parse failed: %s", exc)
+            return {}
+
+        if isinstance(payload, dict) and "mappings" in payload:
+            mappings = payload.get("mappings")
+        else:
+            mappings = payload
+
+        if not isinstance(mappings, dict):
+            self.logger.error("Name normalization returned non-dict mappings")
+            return {}
+
+        candidate_names = {item["name"] for item in candidates if item.get("name")}
+        cleaned_mappings: dict[str, str] = {}
+        for raw, canonical in mappings.items():
+            if not isinstance(raw, str) or raw.strip() == "":
+                continue
+            if not isinstance(canonical, str):
+                continue
+            canonical_clean = canonical.strip()
+            if not canonical_clean:
+                continue
+            if canonical_clean not in candidate_names:
+                continue
+            cleaned_mappings[raw.strip()] = canonical_clean
+
+        return cleaned_mappings
+
+    @staticmethod
+    def _replace_names_in_text(text: str, mappings: dict[str, str]) -> str:
+        if not text or not mappings:
+            return text
+        replacements = [
+            (raw, canonical)
+            for raw, canonical in mappings.items()
+            if canonical and raw != canonical
+        ]
+        replacements.sort(key=lambda item: len(item[0]), reverse=True)
+        updated = text
+        for raw, canonical in replacements:
+            pattern = re.compile(rf"(?<!\\w){re.escape(raw)}(?!\\w)", re.IGNORECASE)
+            updated = pattern.sub(canonical, updated)
+        return updated
+
+    def _apply_name_corrections(
+        self,
+        extraction: ChannelExtraction,
+        mappings: dict[str, str],
+    ) -> None:
+        if not mappings:
+            return
+
+        def map_name(value: str) -> str:
+            return mappings.get(value, value)
+
+        extraction.captain_name = map_name(extraction.captain_name)
+        extraction.vice_name = map_name(extraction.vice_name)
+        extraction.transfers_in_names = [
+            map_name(name) for name in extraction.transfers_in_names
+        ]
+        extraction.transfers_out_names = [
+            map_name(name) for name in extraction.transfers_out_names
+        ]
+        extraction.starting_xi_names = [
+            map_name(name) for name in extraction.starting_xi_names
+        ]
+        extraction.bench_names = [map_name(name) for name in extraction.bench_names]
+        extraction.watchlist_names = [
+            map_name(name) for name in extraction.watchlist_names
+        ]
+
+        for rationale in extraction.player_rationales:
+            rationale.player_name = map_name(rationale.player_name)
+
+        for issue in extraction.key_issues:
+            issue.topic = self._replace_names_in_text(issue.topic, mappings)
+            issue.quote = self._replace_names_in_text(issue.quote, mappings)
+
+    def _normalize_extraction_names(
+        self,
+        extraction: ChannelExtraction,
+        player_lookup: dict[str, list[PlayerLookupEntry]],
+        candidates: list[dict[str, str]],
+    ) -> None:
+        names = self._collect_extraction_names(extraction)
+        unresolved = self._collect_unresolved_names(names, player_lookup)
+        if not unresolved:
+            return
+        mappings = self._correct_names_with_llm(unresolved, candidates)
+        if not mappings:
+            return
+        self._apply_name_corrections(extraction, mappings)
+
+    def _normalize_key_issues_with_llm(
+        self,
+        extraction: ChannelExtraction,
+        candidates: list[dict[str, str]],
+    ) -> None:
+        if not extraction.key_issues:
+            return
+
+        prompt_template = self._load_prompt("normalize_key_issues.txt")
+        issues_payload = [
+            {"topic": issue.topic, "quote": issue.quote}
+            for issue in extraction.key_issues
+        ]
+        prompt = (
+            f"{prompt_template}\n\n"
+            f"CANDIDATES:\n{json.dumps(candidates, indent=2)}\n\n"
+            f"KEY_ISSUES:\n{json.dumps(issues_payload, indent=2)}"
+        )
+
+        if self.prompts_dir and self.save_prompts:
+            save_debug_content("normalize_key_issues_prompt.txt", prompt)
+
+        response, _ = self.client.call_sonnet(
+            prompt=prompt,
+            system=(
+                "You normalize player names in key issues to the provided "
+                "candidate list. Return JSON only."
+            ),
+            max_tokens=800,
+        )
+
+        if self.prompts_dir and self.save_prompts:
+            save_debug_content("normalize_key_issues_response.json", response)
+
+        try:
+            cleaned = extract_last_json(response)
+            payload = json.loads(cleaned)
+        except json.JSONDecodeError as exc:
+            self.logger.error("Key issue normalization JSON parse failed: %s", exc)
+            return
+
+        if isinstance(payload, dict) and "mappings" in payload:
+            mappings = payload.get("mappings")
+        else:
+            mappings = payload
+
+        if not isinstance(mappings, dict):
+            self.logger.error("Key issue normalization returned invalid payload")
+            return
+
+        candidate_names = {item["name"] for item in candidates if item.get("name")}
+        cleaned_mappings: dict[str, str] = {}
+        for raw, canonical in mappings.items():
+            if not isinstance(raw, str) or raw.strip() == "":
+                continue
+            if not isinstance(canonical, str):
+                continue
+            canonical_clean = canonical.strip()
+            if not canonical_clean:
+                continue
+            if canonical_clean not in candidate_names:
+                continue
+            cleaned_mappings[raw.strip()] = canonical_clean
+
+        if not cleaned_mappings:
+            return
+
+        for issue in extraction.key_issues:
+            issue.topic = self._replace_names_in_text(issue.topic, cleaned_mappings)
+            issue.quote = self._replace_names_in_text(issue.quote, cleaned_mappings)
+
+    @staticmethod
     def _resolve_name(
         name: str,
         player_lookup: dict[str, list[PlayerLookupEntry]],
@@ -373,11 +636,10 @@ class SimpleFPLAnalyzer:
         expected_points = self._to_float(data.get("ep_next", 0.0))
         form = self._to_float(data.get("form", 0.0))
         total_points = self._to_float(data.get("total_points", 0.0))
+        base = form + (total_points / 20.0)
         if expected_points > 0:
-            return expected_points
-        if form > 0:
-            return form
-        return total_points / 10.0
+            return expected_points + base
+        return base
 
     def _build_gap_analysis(
         self,
@@ -841,6 +1103,7 @@ class SimpleFPLAnalyzer:
         transcripts = data["youtube_analysis"]["transcripts"]
 
         player_lookup = build_player_lookup(top_players, my_team, transfer_momentum)
+        candidate_players = self._collect_candidate_players(player_lookup)
 
         extractions: list[ResolvedChannelExtraction] = []
         raw_extractions: list[ChannelExtraction] = []
@@ -858,6 +1121,12 @@ class SimpleFPLAnalyzer:
             )
             if extraction is None:
                 continue
+            self._normalize_extraction_names(
+                extraction,
+                player_lookup,
+                candidate_players,
+            )
+            self._normalize_key_issues_with_llm(extraction, candidate_players)
             self._validate_lineup_shape(extraction)
             raw_extractions.append(extraction)
             extractions.append(self._resolve_extraction(extraction, player_lookup))

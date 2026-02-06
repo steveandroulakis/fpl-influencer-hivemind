@@ -1,0 +1,19 @@
+You are normalizing misspelled FPL player names inside influencer key issues.
+Return JSON only.
+
+You will receive:
+- CANDIDATES: list of players with {name, team, position}.
+- KEY_ISSUES: list of objects with {topic, quote}.
+
+Rules:
+- Identify misspelled player names in the key issues and map them to exact
+  candidate names.
+- Only use candidate names; do not invent new names.
+
+Response schema:
+{
+  "mappings": {
+    "raw_name": "Canonical Name",
+    "another_raw": ""
+  }
+}

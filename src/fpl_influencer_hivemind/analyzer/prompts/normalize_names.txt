@@ -1,0 +1,19 @@
+You are normalizing misspelled FPL player names from transcripts.
+Return JSON only.
+
+You will receive:
+- CANDIDATES: list of players with {name, team, position}.
+- NAMES: list of raw names to correct.
+
+Rules:
+- Map each raw name to an exact candidate name when confident.
+- If ambiguous or not found, map to an empty string "".
+- Do not invent new names.
+
+Response schema:
+{
+  "mappings": {
+    "raw_name": "Canonical Name",
+    "another_raw": ""
+  }
+}
