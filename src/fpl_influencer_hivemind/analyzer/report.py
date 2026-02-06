@@ -6,13 +6,16 @@ from src.fpl_influencer_hivemind.analyzer.models import (
     ChannelAnalysis,
     DecisionOption,
 )
+from src.fpl_influencer_hivemind.analyzer.simple_models import ConsensusSummary
 from src.fpl_influencer_hivemind.analyzer.stages.gap import (
     aggregate_influencer_consensus,
 )
 from src.fpl_influencer_hivemind.types import (
+    ChannelExtraction,
     GapAnalysis,
     QualityReview,
     ScoredGapAnalysis,
+    ValidationResult,
 )
 
 
@@ -61,6 +64,79 @@ def generate_consensus_section(channel_analyses: list[ChannelAnalysis]) -> str:
     return "\n".join(lines)
 
 
+def generate_consensus_section_simple(consensus: ConsensusSummary) -> str:
+    """Build consensus section from deterministic counts."""
+    total = max(consensus.total_channels, 1)
+    lines = ["## 1) Consensus Snapshot\n"]
+
+    if consensus.captains:
+        lines.append("### Captaincy Matrix\n")
+        lines.append("| Captain | Backers | Count |")
+        lines.append("|---------|---------|-------|")
+        for entry in sorted(
+            consensus.captains.values(), key=lambda e: len(e.backers), reverse=True
+        ):
+            name = f"{entry.name} ({entry.position})"
+            lines.append(
+                f"| {name} | {', '.join(entry.backers)} | {len(entry.backers)}/{total} |"
+            )
+        lines.append("")
+
+    if consensus.transfers_in:
+        lines.append("### Transfer Targets\n")
+        for entry in sorted(
+            consensus.transfers_in.values(),
+            key=lambda e: len(e.backers),
+            reverse=True,
+        ):
+            pct = len(entry.backers) / total * 100
+            label = "Universal" if len(entry.backers) == total else f"{pct:.0f}%"
+            lines.append(
+                f"- **{entry.name} ({entry.position})** ({label}): {', '.join(entry.backers)}"
+            )
+        lines.append("")
+
+    if consensus.transfers_out:
+        lines.append("### Players to Sell\n")
+        for entry in sorted(
+            consensus.transfers_out.values(),
+            key=lambda e: len(e.backers),
+            reverse=True,
+        ):
+            pct = len(entry.backers) / total * 100
+            lines.append(
+                f"- **{entry.name} ({entry.position})** ({pct:.0f}%): {', '.join(entry.backers)}"
+            )
+        lines.append("")
+
+    if consensus.watchlist:
+        lines.append("### Watchlist Mentions\n")
+        for entry in sorted(
+            consensus.watchlist.values(),
+            key=lambda e: len(e.backers),
+            reverse=True,
+        ):
+            pct = len(entry.backers) / total * 100
+            lines.append(
+                f"- **{entry.name} ({entry.position})** ({pct:.0f}%): {', '.join(entry.backers)}"
+            )
+        lines.append("")
+
+    if consensus.chips:
+        lines.append("### Chip Plans\n")
+        for chip, backers in sorted(
+            consensus.chips.items(), key=lambda item: len(item[1]), reverse=True
+        ):
+            lines.append(f"- **{chip}**: {', '.join(backers)}")
+        lines.append("")
+
+    if consensus.unresolved:
+        unresolved_names = ", ".join(sorted(consensus.unresolved.keys()))
+        lines.append(f"_Unresolved names (not used in consensus): {unresolved_names}_\n")
+
+    return "\n".join(lines)
+
+
 def generate_channel_notes(channel_analyses: list[ChannelAnalysis]) -> str:
     """Build Section 2: Channel-by-Channel Notes."""
     lines = ["## 2) Channel-by-Channel Notes\n"]
@@ -99,6 +175,52 @@ def generate_channel_notes(channel_analyses: list[ChannelAnalysis]) -> str:
 
         if analysis.key_reasoning:
             lines.append(f"- **Reasoning:** {'; '.join(analysis.key_reasoning[:3])}")
+
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+def _format_timestamp(start: float | None, end: float | None) -> str:
+    if start is None and end is None:
+        return ""
+    if start is not None and end is not None:
+        return f"[{start:.0f}s-{end:.0f}s] "
+    if start is not None:
+        return f"[{start:.0f}s] "
+    return f"[{end:.0f}s] "
+
+
+def generate_context_section(extractions: list[ChannelExtraction]) -> str:
+    """Build evidence-only context section from channel extractions."""
+    lines = ["## 5) Influencer Context (Evidence Only)\n"]
+
+    for extraction in extractions:
+        lines.append(f"### {extraction.channel}")
+
+        if extraction.key_issues:
+            lines.append("**Key Issues:**")
+            for issue in extraction.key_issues[:3]:
+                timestamp = _format_timestamp(issue.start, issue.end)
+                lines.append(
+                    f'- {timestamp}{issue.topic} ({issue.sentiment}): "{issue.quote}"'
+                )
+
+        if extraction.player_rationales:
+            lines.append("**Player Rationales:**")
+            for rationale in extraction.player_rationales[:3]:
+                timestamp = _format_timestamp(rationale.start, rationale.end)
+                lines.append(
+                    f'- {timestamp}{rationale.player_name} ({rationale.stance}): "{rationale.quote}"'
+                )
+
+        if extraction.chip_rationales:
+            lines.append("**Chip Rationales:**")
+            for rationale in extraction.chip_rationales[:2]:
+                timestamp = _format_timestamp(rationale.start, rationale.end)
+                lines.append(
+                    f'- {timestamp}{rationale.chip} {rationale.gameweek}: "{rationale.quote}"'
+                )
 
         lines.append("")
 
@@ -285,6 +407,24 @@ def format_quality_review(review: QualityReview) -> str:
     return "\n".join(lines)
 
 
+def format_quality_audit(audit: ValidationResult) -> str:
+    """Format deterministic quality audit results."""
+    lines = ["## 6) Deterministic Quality Audit\n"]
+    if audit.valid:
+        lines.append("All deterministic checks passed.\n")
+    if audit.errors:
+        lines.append("### Errors")
+        for error in audit.errors:
+            lines.append(f"- {error}")
+        lines.append("")
+    if audit.warnings:
+        lines.append("### Warnings")
+        for warning in audit.warnings:
+            lines.append(f"- {warning}")
+        lines.append("")
+    return "\n".join(lines)
+
+
 def generate_chip_strategy_section(
     chip_consensus: dict[str, list[dict[str, str]]], total_channels: int
 ) -> str:
@@ -398,13 +538,51 @@ def assemble_report(
     return "\n\n".join(sections)
 
 
+def assemble_simple_report(
+    consensus: ConsensusSummary,
+    gap: GapAnalysis | ScoredGapAnalysis,
+    decision_options: list[DecisionOption],
+    gameweek: int,  # noqa: ARG001
+    extractions: list[ChannelExtraction],
+    quality_audit: ValidationResult | None = None,
+    condensed_players: list[dict[str, Any]] | None = None,
+    squad_names: set[str] | None = None,
+    commentary: str | None = None,
+) -> str:
+    """Assemble report for the deterministic pipeline."""
+    sections: list[str] = []
+
+    if commentary:
+        sections.append(f"**User Directive:** {commentary}\n")
+
+    sections.append(generate_consensus_section_simple(consensus))
+    sections.append(format_gap_section(gap))
+
+    if condensed_players and squad_names is not None:
+        ownership_section = generate_ownership_section(condensed_players, squad_names)
+        if ownership_section:
+            sections.append(ownership_section)
+
+    sections.append(format_action_plan(decision_options))
+    sections.append(generate_context_section(extractions))
+
+    if quality_audit:
+        sections.append(format_quality_audit(quality_audit))
+
+    return "\n\n".join(sections)
+
+
 __all__ = [
     "assemble_report",
+    "assemble_simple_report",
     "format_action_plan",
     "format_gap_section",
+    "format_quality_audit",
     "format_quality_review",
     "generate_channel_notes",
     "generate_chip_strategy_section",
     "generate_consensus_section",
+    "generate_consensus_section_simple",
+    "generate_context_section",
     "generate_ownership_section",
 ]

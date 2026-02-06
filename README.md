@@ -1,6 +1,6 @@
 # FPL Influencer Hivemind
 
-A comprehensive Fantasy Premier League (FPL) decision support system that aggregates data from popular FPL influencers and generates AI-powered transfer and captain recommendations using Claude-4 models. The pipeline-first CLI collects influencer videos, transcripts, and FPL data to produce actionable recommendations for team `1178124` (or any entry you supply).
+A comprehensive Fantasy Premier League (FPL) decision support system that aggregates data from popular FPL influencers and generates deterministic transfer and captain recommendations. LLMs are used only for transcript extraction and optional narrative summarization. The pipeline-first CLI collects influencer videos, transcripts, and FPL data to produce actionable recommendations for team `1178124` (or any entry you supply).
 
 ## 🚀 Quick Start
 1. Install dependencies
@@ -10,7 +10,7 @@ A comprehensive Fantasy Premier League (FPL) decision support system that aggreg
 2. Configure environment variables in `.env` (auto-loaded by the CLI – see `.env.example` for a template).
    ```bash
    export YOUTUBE_API_KEY="your-youtube-data-api-v3-key"     # Required for video discovery
-   export ANTHROPIC_API_KEY="your-anthropic-api-key"        # Required for LLM analysis
+   export ANTHROPIC_API_KEY="your-anthropic-api-key"        # Required for transcript extraction (and optional narrative summary)
    export YOUTUBE_TRANSCRIPT_IO_KEY="your-youtube-transcript-io-key"  # Primary transcript provider
 
    # Optional: fine-tune transcript behaviour
@@ -39,7 +39,7 @@ A comprehensive Fantasy Premier League (FPL) decision support system that aggreg
   1. Gameweek + squad data gathered from the FPL API.
   2. Channel-by-channel video discovery runs in-process with live CLI updates.
   3. Transcript downloads execute (with progress per channel) and artifacts land in `var/hivemind/`.
-  4. Interactive prompt lets you choose whether to run the Anthropic analyzer.
+  4. Interactive prompt lets you choose whether to run the deterministic analyzer (LLM extraction only).
   Use `--commentary "Wildcard this week; recommend only wildcard route"` (or similar) to inject a user directive the analyzer treats as a primary requirement.
 
 - **Data collection only**
@@ -55,6 +55,7 @@ Artifacts are timestamped (e.g. `var/hivemind/gw05_team1178124_20250920T104530Z_
 - `src/fpl_influencer_hivemind/services/discovery.py` – pluggable channel discovery strategies (heuristics today, easy to extend).
 - `src/fpl_influencer_hivemind/services/transcripts.py` – transcript gateway (YouTube Transcript IO by default, EasySubAPI/yt-dlp as fallback) returning text plus per-segment timing metadata.
 - `src/fpl_influencer_hivemind/types.py` – shared TypedDict/dataclass models used across the pipeline, discovery, and CLI layers.
+- `src/fpl_influencer_hivemind/analyzer/simple_orchestrator.py` – deterministic analyzer pipeline (LLM extraction only).
 - `src/fpl_influencer_hivemind/youtube/video_picker.py` – reusable video discovery logic (also powers `youtube-titles/fpl_video_picker.py`).
 - `src/fpl_influencer_hivemind/fpl/` – FPL API integration modules (gameweek, team, ownership data).
 - `youtube-transcript/` – legacy transcript downloader retained for fallback and CLI experimentation.
@@ -73,6 +74,18 @@ Latest additions include unit coverage for the discovery helper (`tests/test_vid
 - `./youtube-titles/fpl_video_picker.py --single-channel "FPL Raptor" --gameweek 5 --verbose`
 - `./youtube-transcript/fpl_transcript.py --id VIDEO_ID --format txt`
 - `./fpl_intelligence_analyzer.py --input var/hivemind/gwXX_teamXXXX_*.json --commentary "Triple captain this week"` to force a high-priority directive during analysis.
+- `./fpl_intelligence_analyzer.py --input var/hivemind/gwXX_teamXXXX_*.json --narrative` to produce a narrative-only summary.
+
+## 🧠 Deterministic Logic & Thresholds
+- Consensus is computed by `element_id` from extracted mentions. Unresolved names are excluded from consensus counts.
+- Gap severity = `(backers / total_channels) * 10`, with a +1 bump if `selected_by_percent >= 15`.
+- Captain gap is triggered when the top consensus captain is not owned.
+- Transfer options are deterministic: Roll (no transfers), Consensus (use available FTs), Conservative (1 FT when FTs > 1). Hits are not taken by default.
+- Transfer constraints: position must match, budget must remain >= 0, club limit max 3, and incoming players must be in the top players list.
+- Lineup scoring uses `ep_next`, then `form`, then `total_points` (scaled) to rank players and choose the best formation.
+- Captain is the top consensus captain in the XI; otherwise the highest-scoring XI player. Vice is the next best XI player.
+- Quality audit uses deterministic checks only (`validate_transfers`, `validate_lineup`).
+- Update logic and thresholds in `src/fpl_influencer_hivemind/analyzer/simple_orchestrator.py`.
 
 ## 📁 Output & Logs
 - Temporary working directories live under `var/hivemind/hivemind_*`.

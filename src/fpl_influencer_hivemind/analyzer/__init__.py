@@ -1,11 +1,10 @@
 """FPL Intelligence Analyzer module.
 
-This module provides multi-stage LLM analysis for FPL decision-making
-based on influencer transcript analysis.
+This module provides deterministic FPL analysis with LLM extraction only.
 """
 
 from src.fpl_influencer_hivemind.analyzer.cli import main
 from src.fpl_influencer_hivemind.analyzer.models import ChannelAnalysis
-from src.fpl_influencer_hivemind.analyzer.orchestrator import FPLIntelligenceAnalyzer
+from src.fpl_influencer_hivemind.analyzer.simple_orchestrator import SimpleFPLAnalyzer
 
-__all__ = ["ChannelAnalysis", "FPLIntelligenceAnalyzer", "main"]
+__all__ = ["ChannelAnalysis", "SimpleFPLAnalyzer", "main"]

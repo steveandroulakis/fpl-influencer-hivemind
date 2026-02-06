@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import NotRequired, TypedDict
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # =============================================================================
 # Analyzer Stage Models (Pydantic)
@@ -223,15 +223,84 @@ class ChannelDiscovery:
     alternatives: list[str] = field(default_factory=list)
 
 
+# =============================================================================
+# Simple Pipeline Extraction Models (Pydantic)
+# =============================================================================
+
+
+class TranscriptEvidence(BaseModel):
+    """Evidence snippet from a transcript with optional timing."""
+
+    quote: str
+    start: float | None = None
+    end: float | None = None
+
+
+class ContextIssue(BaseModel):
+    """Read-only influencer context: concerns or themes with evidence."""
+
+    topic: str
+    sentiment: str  # "risk" | "positive" | "neutral"
+    quote: str
+    start: float | None = None
+    end: float | None = None
+
+
+class PlayerRationale(BaseModel):
+    """Read-only influencer rationale for a specific player."""
+
+    player_name: str
+    stance: str  # "in" | "out" | "hold" | "captain" | "avoid"
+    reason: str
+    quote: str
+    start: float | None = None
+    end: float | None = None
+
+
+class ChipRationale(BaseModel):
+    """Read-only influencer rationale for a chip decision."""
+
+    chip: str
+    gameweek: str
+    reason: str
+    quote: str
+    start: float | None = None
+    end: float | None = None
+
+
+class ChannelExtraction(BaseModel):
+    """Raw structured extraction from a transcript (pre-resolution)."""
+
+    channel: str
+    video_id: str
+    confidence: float = 0.0
+    captain_name: str = ""
+    vice_name: str = ""
+    transfers_in_names: list[str] = Field(default_factory=list)
+    transfers_out_names: list[str] = Field(default_factory=list)
+    starting_xi_names: list[str] = Field(default_factory=list)
+    bench_names: list[str] = Field(default_factory=list)
+    watchlist_names: list[str] = Field(default_factory=list)
+    chip_plan: list[str] = Field(default_factory=list)
+    evidence: dict[str, TranscriptEvidence] = Field(default_factory=dict)
+    key_issues: list[ContextIssue] = Field(default_factory=list)
+    player_rationales: list[PlayerRationale] = Field(default_factory=list)
+    chip_rationales: list[ChipRationale] = Field(default_factory=list)
+
+
 __all__ = [
     "ChannelConfig",
     "ChannelDiscovery",
+    "ChannelExtraction",
     "ChannelsFile",
+    "ChipRationale",
+    "ContextIssue",
     "FixableIssue",
     "GameweekInfo",
     "GapAnalysis",
     "LineupPlan",
     "MyTeamPayload",
+    "PlayerRationale",
     "PlayerRef",
     "QualityReview",
     "RiskFlag",
@@ -239,6 +308,7 @@ __all__ = [
     "ScoredPlayerRef",
     "TranscriptEntry",
     "TranscriptErrorEntry",
+    "TranscriptEvidence",
     "TranscriptSegment",
     "Transfer",
     "TransferPlan",

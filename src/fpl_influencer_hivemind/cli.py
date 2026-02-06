@@ -87,6 +87,11 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Optional high-priority user directive passed to the analyzer",
     )
     pipeline_parser.add_argument(
+        "--narrative",
+        action="store_true",
+        help="Generate a narrative-only summary from the computed report",
+    )
+    pipeline_parser.add_argument(
         "--artifacts-dir",
         type=Path,
         default=None,
@@ -236,6 +241,7 @@ def _run_analyzer(
     free_transfers: int,
     verbose: bool,
     commentary: str | None = None,
+    narrative: bool = False,
 ) -> int:
     args = [
         sys.executable,
@@ -251,6 +257,8 @@ def _run_analyzer(
         args.extend(["--commentary", commentary])
     if verbose:
         args.append("--verbose")
+    if narrative:
+        args.append("--narrative")
     try:
         subprocess.run(args, check=True, text=True, cwd=PROJECT_ROOT)
     except subprocess.CalledProcessError as exc:  # pragma: no cover - defensive
@@ -300,6 +308,7 @@ def _run_pipeline(args: argparse.Namespace) -> int:
         free_transfers=args.free_transfers,
         verbose=args.verbose,
         commentary=args.commentary,
+        narrative=args.narrative,
     )
     if status == 0:
         print(f"Analysis complete: {report_path}")

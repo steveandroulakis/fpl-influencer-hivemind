@@ -1,0 +1,33 @@
+You are extracting structured FPL decisions from a transcript.
+Return JSON only.
+
+Rules:
+- Do not infer.
+- Only include what is clearly stated.
+- Include evidence with direct quotes + timestamps if available.
+- Use raw player names as spoken.
+
+Schema:
+{
+  "captain_name": "string|empty",
+  "vice_name": "string|empty",
+  "transfers_in_names": ["..."],
+  "transfers_out_names": ["..."],
+  "starting_xi_names": ["..."],
+  "bench_names": ["..."],
+  "watchlist_names": ["..."],
+  "chip_plan": ["..."],
+  "evidence": {
+    "captain": {"quote": "...", "start": 0.0, "end": 0.0},
+    "transfer_in_<name>": {"quote": "...", "start": 0.0, "end": 0.0}
+  },
+  "key_issues": [
+    {"topic": "...", "sentiment": "risk|positive|neutral", "quote": "...", "start": 0.0, "end": 0.0}
+  ],
+  "player_rationales": [
+    {"player_name": "...", "stance": "in|out|hold|captain|avoid", "reason": "...", "quote": "...", "start": 0.0, "end": 0.0}
+  ],
+  "chip_rationales": [
+    {"chip": "...", "gameweek": "...", "reason": "...", "quote": "...", "start": 0.0, "end": 0.0}
+  ]
+}

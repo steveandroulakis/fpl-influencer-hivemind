@@ -3,13 +3,18 @@
 import argparse
 import sys
 
-from src.fpl_influencer_hivemind.analyzer.orchestrator import FPLIntelligenceAnalyzer
+from src.fpl_influencer_hivemind.analyzer.simple_orchestrator import (
+    SimpleFPLAnalyzer,
+)
 
 
 def main() -> int:
     """Main entry point for the FPL intelligence analyzer."""
     parser = argparse.ArgumentParser(
-        description="FPL Intelligence Analyzer - Generate transfer/captain recommendations from influencer analysis",
+        description=(
+            "FPL Intelligence Analyzer - Deterministic recommendations with "
+            "LLM extraction only"
+        ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -49,11 +54,16 @@ Examples:
         "--commentary",
         help="Optional high-priority user directive for the analysis",
     )
+    parser.add_argument(
+        "--narrative",
+        action="store_true",
+        help="Generate a narrative-only summary from the computed report",
+    )
 
     args = parser.parse_args()
 
     try:
-        analyzer = FPLIntelligenceAnalyzer(
+        analyzer = SimpleFPLAnalyzer(
             verbose=args.verbose, save_prompts=not args.no_save_prompts
         )
         analyzer.run_analysis(
@@ -61,6 +71,7 @@ Examples:
             args.output_file,
             args.free_transfers,
             commentary=args.commentary,
+            narrative=args.narrative,
         )
         return 0
 

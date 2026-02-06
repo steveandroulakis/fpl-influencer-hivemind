@@ -3,61 +3,63 @@
 ## Project Snapshot
 - Purpose: collect FPL influencer sentiment, transcripts, and recommendations for entry `1178124`.
 - Runtime: Python 3.11+ via `uv` virtual environment; `.env` (see `.env.example`) is auto-loaded by the pipeline.
-- Description: comprehensive FPL decision-support that pairs data collection with Claude-4 analysis for transfer/captain picks.
+- Description: accuracy-first FPL decision-support that pairs data collection with deterministic analysis and LLM extraction for transcript parsing.
 - CLI: single entrypoint `uv run fpl-influencer-hivemind` with `collect` and `pipeline` subcommands.
 
 ## Core Flow (see `PIPELINE-FLOW.md` for a summary of how parts fit together)
 1. **FPL data** (`src/fpl_influencer_hivemind/fpl/`) – fetched in-process via package modules, no manual steps.
 2. **YouTube discovery** (`src/fpl_influencer_hivemind/services/discovery.py`) – pluggable strategies that wrap the heuristic `video_picker` helper.
 3. **Transcript fetch** (`src/fpl_influencer_hivemind/services/transcripts.py`) – yields newline-preserving text plus segment timing metadata (YouTube Transcript IO by default, yt-dlp/EasySubAPI fallback).
-4. **Analysis** (`fpl_intelligence_analyzer.py`) – optional, requires `ANTHROPIC_API_KEY`.
+4. **Analysis** (`fpl_intelligence_analyzer.py`) – deterministic pipeline; requires `ANTHROPIC_API_KEY` for transcript extraction (and optional narrative summary).
 
 Artifacts are written under `var/hivemind/` with timestamped filenames.
 
 ## Analyzer Stages
-The analyzer (`fpl_intelligence_analyzer.py`) runs a multi-stage pipeline with validation:
+The analyzer (`fpl_intelligence_analyzer.py`) runs a deterministic pipeline with LLM extraction only:
 
-### Stage 1: Gap Analysis
-- Identifies gaps between user's squad and influencer consensus
-- Outputs: `players_to_sell`, `players_missing`, `risk_flags`, `captain_gap`
+### Stage 1: Transcript Extraction (LLM)
+- Uses `extract_channel.txt` to extract decisions + evidence
+- Outputs `ChannelExtraction` with quotes + optional timestamps
 
-### Stage 2: Transfer Plan
-- Generates specific transfers addressing gaps
-- Validates: budget, club limits, position matching
-- **Cohesion validation**: checks gaps are addressed or justified in reasoning
-- **Consensus validation**: flags if 3+ influencer recs ignored (warning) or 4+ majority ignored (error)
-- Retries up to 2x on validation failure
+### Stage 2: Name Resolution
+- Resolves extracted player names to `element_id` using `build_player_lookup`
+- Unresolved names are kept for evidence only (not used in consensus)
 
-### Stage 3: Lineup Selection
-- Selects starting XI, bench order, captain/vice
-- Validates: 11 starters, 4 bench, formation rules (1 GKP, 3-5 DEF, 2-5 MID, 1-3 FWD)
-- **Risk validation**: risky captain needs safe vice; risky XI players need bench backup
-- Retries up to 2x on validation failure
+### Stage 3: Deterministic Consensus
+- Counts captains, transfers, watchlist, chip plans by `element_id`
+- Consensus data is purely computed (no LLM reasoning)
 
-### Stage 4: Validation
-- Combines mechanical checks (budget, formation) + cohesion checks (stage consistency)
-- Uses LLM (haiku) to verify justifications in reasoning text
-- Errors trigger retry; warnings are logged but don't block
+### Stage 4: Deterministic Gap Analysis
+- `players_missing`: consensus targets not owned
+- `players_to_sell`: consensus sell targets owned
+- Severity is based on backer share (0–10) with an ownership bump (>=15%)
+- `captain_gap` is set if the top captain is not owned
 
-### Stage 5: Quality Review (Corrective)
-- Holistic LLM review (sonnet) for **internal consistency only** (no model knowledge)
-- Compares: gap analysis vs transfers vs lineup vs influencer consensus
-- Outputs `QualityReview` with `fixable_issues` array
-- **Corrective loop**: if fixable issues found, re-runs affected stages with fix instructions
-- Re-runs quality review after corrections
-- Final report includes "Quality Assessment" section with remaining observations
+### Stage 5: Deterministic Transfer Options
+- Rule-based selection using consensus targets within budget/club/position rules
+- Options: Roll, Consensus (use available FTs), Conservative (1 FT if available)
+- No hits by default
+
+### Stage 6: Deterministic Lineup Selection
+- Chooses formation that maximizes score (ep_next → form → total_points)
+- Captain from consensus if in XI; otherwise best-scoring XI player
+- Bench from remaining highest scores with a reserve GK
+
+### Stage 7: Deterministic Quality Audit
+- Mechanical checks only (`validate_transfers`, `validate_lineup`)
+- No LLM quality review
 
 ### Key Models (`types.py`)
-- `GapAnalysis`, `TransferPlan`, `LineupPlan` – stage outputs
-- `ValidationResult` – errors/warnings from validation
-- `QualityReview` – holistic assessment with `fixable_issues: list[FixableIssue]`
-- `FixableIssue` – issue + stage + fix_instruction for corrective loop
+- `ChannelExtraction` – evidence-first transcript extraction
+- `ScoredGapAnalysis` – gap output with severity scores
+- `TransferPlan`, `LineupPlan` – deterministic outputs
+- `ValidationResult` – deterministic audit output
 
 ## Required Environment
 Use `.env` (auto sourced) based on `.env.example`:
 - `YOUTUBE_API_KEY` – YouTube Data API v3 key (needed for video discovery).
 - `YOUTUBE_TRANSCRIPT_IO_KEY` – API token for youtube-transcript.io (primary transcript provider).
-- `ANTHROPIC_API_KEY` – Claude API key (needed for analyzer, optional otherwise).
+- `ANTHROPIC_API_KEY` – Claude API key (needed for transcript extraction + optional narrative summary).
 - Optional: `FPL_EMAIL`, `FPL_PASSWORD` – FPL login for accurate selling prices (otherwise defaults to current price).
 - Optional: `FPL_BEARER_TOKEN` – token fallback when email/password auth fails (DataDome blocks it). Expires ~8hrs.
 - Optional: `RAPIDAPI_EASYSUB_API_KEY`, `YOUTUBE_COOKIES_PATH` for transcript fallbacks.
@@ -160,20 +162,22 @@ The project uses strict mypy settings in `pyproject.toml`:
 
 ## File Guide
 - `fpl_intelligence_analyzer.py` – wrapper script calling `analyzer.cli.main()`.
-- `src/fpl_influencer_hivemind/analyzer/` – refactored multi-stage LLM analyzer module:
-  - `__init__.py` – public exports (`FPLIntelligenceAnalyzer`, `ChannelAnalysis`).
+- `src/fpl_influencer_hivemind/analyzer/` – deterministic analyzer module with LLM extraction only:
+  - `__init__.py` – public exports (`SimpleFPLAnalyzer`, `ChannelAnalysis`).
   - `constants.py` – `PL_TEAMS_2025_26`, `PL_TEAMS_CONTEXT`.
   - `models.py` – `ChannelAnalysis`, `PlayerLookupEntry`, `SquadPlayerEntry`, `DecisionOption`.
   - `api.py` – `AnthropicClient`, `make_anthropic_call` with retry, `extract_last_json`.
   - `normalization.py` – name helpers (`normalize_name`, `canonicalize_player_label`, `build_player_lookup`).
-  - `stages/gap.py` – `stage_gap_analysis`, `aggregate_influencer_consensus`.
-  - `stages/transfer.py` – `stage_transfer_plan`, `apply_transfer_pricing`, `compute_post_transfer_squad`.
-  - `stages/lineup.py` – `stage_lineup_selection`, `aggregate_influencer_xi`.
-  - `validation/cohesion.py` – `validate_gap_to_transfer_cohesion`, `validate_consensus_coverage`, `validate_risk_contingency`.
+  - `stages/gap.py` – legacy gap analysis helpers (not used by CLI).
+  - `stages/transfer.py` – legacy transfer planning helpers (not used by CLI).
+  - `stages/lineup.py` – legacy lineup selection helpers (not used by CLI).
+  - `validation/cohesion.py` – legacy cohesion validators (not used by CLI).
   - `validation/mechanical.py` – `validate_transfers`, `validate_lineup`, `validate_all`.
-  - `quality.py` – `holistic_quality_review`.
-  - `report.py` – `generate_consensus_section`, `generate_channel_notes`, `format_gap_section`, `format_action_plan`, `assemble_report`.
-  - `orchestrator.py` – `FPLIntelligenceAnalyzer` class, `_run_staged_analysis`, `_build_decision_options`.
+  - `quality.py` – legacy LLM quality review (not used by CLI).
+  - `report.py` – report assembly for both legacy and deterministic pipelines.
+  - `simple_orchestrator.py` – `SimpleFPLAnalyzer` deterministic pipeline (LLM extraction only).
+  - `simple_models.py` – deterministic consensus and squad dataclasses.
+  - `orchestrator.py` – legacy multi-stage LLM analyzer (not used by CLI).
   - `cli.py` – `main()`, argparse.
 - `src/fpl_influencer_hivemind/pipeline.py` – orchestrator + logging callbacks + transcript prompts.
 - `src/fpl_influencer_hivemind/services/discovery.py` – strategy layer for channel discovery (heuristic default).
