@@ -13,9 +13,62 @@ from src.fpl_influencer_hivemind.analyzer.api import (
 )
 from src.fpl_influencer_hivemind.analyzer.constants import PL_TEAMS_CONTEXT
 from src.fpl_influencer_hivemind.analyzer.models import ChannelAnalysis
+from src.fpl_influencer_hivemind.analyzer.normalization import normalize_name
 from src.fpl_influencer_hivemind.types import LineupPlan
 
 logger = logging.getLogger(__name__)
+
+_STAT_FIELDS = (
+    "form",
+    "expected_points",
+    "ict_index",
+    "minutes",
+    "bps",
+    "status",
+    "news",
+    "chance_of_playing_next_round",
+    "total_points",
+)
+
+
+def enrich_squad_with_stats(
+    squad: list[dict[str, Any]],
+    condensed_players: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Add performance stats from condensed_players to each squad player.
+
+    Matches by normalized web_name; falls back to name+position if ambiguous.
+    """
+    # Build lookup: normalized name → list of condensed player dicts
+    cp_lookup: dict[str, list[dict[str, Any]]] = {}
+    for cp in condensed_players:
+        key = normalize_name(cp.get("web_name", ""))
+        if key:
+            cp_lookup.setdefault(key, []).append(cp)
+
+    enriched: list[dict[str, Any]] = []
+    for player in squad:
+        p = dict(player)  # shallow copy
+        key = normalize_name(p.get("name", ""))
+        candidates = cp_lookup.get(key, [])
+
+        match: dict[str, Any] | None = None
+        if len(candidates) == 1:
+            match = candidates[0]
+        elif len(candidates) > 1:
+            # Disambiguate by position
+            pos = p.get("position", "")
+            pos_matches = [c for c in candidates if c.get("position") == pos]
+            match = pos_matches[0] if pos_matches else candidates[0]
+
+        if match:
+            for field in _STAT_FIELDS:
+                if field in match:
+                    p[field] = match[field]
+
+        enriched.append(p)
+
+    return enriched
 
 
 def aggregate_influencer_xi(
@@ -43,9 +96,16 @@ def stage_lineup_selection(
     gameweek: int,
     commentary: str | None = None,
     previous_errors: list[str] | None = None,
+    condensed_players: list[dict[str, Any]] | None = None,
 ) -> LineupPlan:
     """Stage 3: select XI, bench, captain from post-transfer squad."""
     logger.info("Stage 3: Lineup Selection")
+
+    # Enrich squad with player stats when available
+    if condensed_players:
+        post_transfer_squad = enrich_squad_with_stats(
+            post_transfer_squad, condensed_players
+        )
 
     squad_names = [p["name"] for p in post_transfer_squad]
     squad_labels = [
@@ -101,6 +161,9 @@ INFLUENCER XI PICKS (players explicitly in their starting XIs):
 
 FORMATION TRENDS (count of formations mentioned):
 {json.dumps(xi_consensus["formation_counts"], indent=2)}
+
+SQUAD PLAYER STATS (form, expected points, availability):
+{json.dumps([{k: p[k] for k in ("name", "position", "form", "expected_points", "ict_index", "minutes", "bps", "status", "news", "chance_of_playing_next_round", "total_points") if k in p} for p in post_transfer_squad], indent=2)}
 {directive_section}
 {error_feedback}
 Return JSON matching this schema EXACTLY:
@@ -123,7 +186,9 @@ Rules:
 5. Use EXACT labels from VALID PLAYER LABELS list.
 6. Player format: "PlayerName (POS)" only.
 7. Prefer players with higher influencer XI backer counts when choices are close.
-8. starting_xi order preference: GK, DEFs, MIDs, FWDs (helps readability).
+8. When two players are close in influencer backing, prefer higher form/expected_points and better availability (chance_of_playing).
+9. Bench players with low chance_of_playing or status != "a" last (they won't auto-sub well).
+10. starting_xi order preference: GK, DEFs, MIDs, FWDs (helps readability).
 
 Return ONLY valid JSON, no markdown fences."""
 
@@ -154,4 +219,4 @@ Use only the provided squad data (no external knowledge). Return valid JSON only
         )
 
 
-__all__ = ["aggregate_influencer_xi", "stage_lineup_selection"]
+__all__ = ["aggregate_influencer_xi", "enrich_squad_with_stats", "stage_lineup_selection"]

@@ -541,6 +541,7 @@ Return valid JSON only, matching the provided schema exactly."""
                 gameweek,
                 commentary=commentary,
                 previous_errors=lineup_errors if lineup_errors else None,
+                condensed_players=condensed_players,
             )
 
             # Mechanical validation
@@ -709,6 +710,7 @@ If no specific transfer counts are requested, return empty array: []
                 commentary=self._merge_commentary(
                     commentary, "CONSERVATIVE: No transfers, prioritize safe minutes."
                 ),
+                condensed_players=condensed_players,
             )
             lineup_errors = validate_lineup(roll_lineup, original_squad)
             if lineup_errors:
@@ -772,6 +774,7 @@ If no specific transfer counts are requested, return empty array: []
             channel_analyses,
             gameweek,
             commentary=transfer_commentary,
+            condensed_players=condensed_players,
         )
         lineup_errors = validate_lineup(lineup, post_transfer_squad)
         if lineup_errors:
@@ -936,6 +939,7 @@ If no specific transfer counts are requested, return empty array: []
                 commentary=self._merge_commentary(
                     commentary, "CONSERVATIVE: No transfers, prioritize safe minutes."
                 ),
+                condensed_players=condensed_players,
             )
             options.append(
                 DecisionOption(
@@ -972,6 +976,7 @@ If no specific transfer counts are requested, return empty array: []
                 commentary=self._merge_commentary(
                     commentary, "CONSERVATIVE: No FTs, roll and prioritize safe lineup."
                 ),
+                condensed_players=condensed_players,
             )
             options.append(
                 DecisionOption(
@@ -1017,6 +1022,7 @@ If no specific transfer counts are requested, return empty array: []
                 channel_analyses,
                 gameweek,
                 commentary=self._merge_commentary(commentary, fix_directive),
+                condensed_players=condensed_players,
             )
 
             addressed = [t.in_player.split(" (")[0] for t in fix_transfers.transfers]
@@ -1069,6 +1075,7 @@ If no specific transfer counts are requested, return empty array: []
                         channel_analyses,
                         gameweek,
                         commentary=self._merge_commentary(commentary, hit_directive),
+                        condensed_players=condensed_players,
                     )
 
                     addressed = [
@@ -1102,6 +1109,7 @@ If no specific transfer counts are requested, return empty array: []
                 commentary=self._merge_commentary(
                     commentary, "CONSERVATIVE: Roll transfer, optimize lineup."
                 ),
+                condensed_players=condensed_players,
             )
             options.append(
                 DecisionOption(
@@ -1172,6 +1180,7 @@ If no specific transfer counts are requested, return empty array: []
                 gameweek,
                 primary_lineup,
                 commentary,
+                condensed_players=condensed_players,
             )
         elif has_gaps:
             # Option A has NO transfers but gaps exist → Option B activates a transfer
@@ -1197,6 +1206,7 @@ If no specific transfer counts are requested, return empty array: []
                 gameweek,
                 primary_lineup,
                 commentary,
+                condensed_players=condensed_players,
             )
 
         # Option C: FT-aware aggressive option
@@ -1333,6 +1343,7 @@ If no specific transfer counts are requested, return empty array: []
         gameweek: int,
         fallback_lineup: LineupPlan,
         commentary: str | None,
+        condensed_players: list[dict[str, Any]] | None = None,
     ) -> None:
         """Add conservative roll-transfer option."""
         conservative_commentary = self._merge_commentary(
@@ -1354,6 +1365,7 @@ If no specific transfer counts are requested, return empty array: []
             channel_analyses,
             gameweek,
             commentary=conservative_commentary,
+            condensed_players=condensed_players,
         )
         lineup_errors = validate_lineup(conservative_lineup, original_squad)
         if lineup_errors:
@@ -1423,6 +1435,7 @@ If no specific transfer counts are requested, return empty array: []
                 gameweek,
                 fallback_lineup,
                 commentary,
+                condensed_players=condensed_players,
             )
             return
 
@@ -1446,6 +1459,7 @@ If no specific transfer counts are requested, return empty array: []
                 gameweek,
                 fallback_lineup,
                 commentary,
+                condensed_players=condensed_players,
             )
             return
 
@@ -1456,6 +1470,7 @@ If no specific transfer counts are requested, return empty array: []
             channel_analyses,
             gameweek,
             commentary=activate_commentary,
+            condensed_players=condensed_players,
         )
         lineup_errors = validate_lineup(activate_lineup, post_activate_squad)
         if lineup_errors:
@@ -1523,6 +1538,7 @@ If no specific transfer counts are requested, return empty array: []
             channel_analyses,
             gameweek,
             commentary=chase_commentary,
+            condensed_players=condensed_players,
         )
         lineup_errors = validate_lineup(chase_lineup, post_chase_squad)
         if lineup_errors:
@@ -1604,6 +1620,7 @@ If no specific transfer counts are requested, return empty array: []
             channel_analyses,
             gameweek,
             commentary=hit_commentary,
+            condensed_players=condensed_players,
         )
         lineup_errors = validate_lineup(hit_lineup, post_hit_squad)
         if lineup_errors:
@@ -1685,6 +1702,7 @@ If no specific transfer counts are requested, return empty array: []
             channel_analyses,
             gameweek,
             commentary=max_commentary,
+            condensed_players=condensed_players,
         )
         lineup_errors = validate_lineup(max_lineup, post_max_squad)
         if lineup_errors:
@@ -1764,6 +1782,7 @@ If no specific transfer counts are requested, return empty array: []
                 gameweek,
                 commentary=commentary,
                 previous_errors=lineup_fixes if lineup_fixes else None,
+                condensed_players=condensed_players,
             )
 
         # Rebuild label from corrected transfers
