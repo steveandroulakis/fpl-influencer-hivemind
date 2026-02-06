@@ -24,7 +24,7 @@ from tenacity import (
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_CHANNELS_CONFIG = PROJECT_ROOT / "youtube-titles" / "channels.json"
+DEFAULT_CHANNELS_CONFIG = PROJECT_ROOT / "fpl_influencer_hivemind" / "data" / "channels.json"
 DEFAULT_ANTHROPIC_MODEL = "claude-3-5-haiku-20241022"
 DEFAULT_TEMPERATURE = 0.0
 
@@ -95,6 +95,84 @@ class SelectionResult:
     heuristic_notes: dict[str, Any]
 
 
+def _llm_pick_video(
+    videos: list[VideoItem],
+    gameweek: int | None,
+    model: str,
+    temperature: float,
+    logger: logging.Logger,
+) -> tuple[int, float, str, list[str]]:
+    """Use an LLM to pick the best team-selection video.
+
+    Returns (chosen_index, confidence, reasoning, matched_signals).
+    Raises on any failure so the caller can fall back to heuristics.
+    """
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise ValueError("ANTHROPIC_API_KEY not set")
+
+    video_list = [
+        {
+            "i": i,
+            "title": v.title,
+            "desc": v.description[:200],
+            "date": v.published_at.strftime("%Y-%m-%d"),
+        }
+        for i, v in enumerate(videos)
+    ]
+
+    gw_context = f" for Gameweek {gameweek}" if gameweek else ""
+    prompt = f"""Which of these YouTube videos is the team selection video{gw_context}?
+
+Videos:
+{json.dumps(video_list, indent=2)}
+
+Return ONLY this JSON (no commentary):
+{{"chosen_index": <int>, "confidence": <0.0-1.0>, "reasoning": "<1 sentence>", "signals": ["<signal>", ...]}}
+
+Rules:
+- Pick the video most likely to contain the creator's FPL team{gw_context}
+- "team selection", "team reveal", "final team", "my team" are strong signals
+- Match the gameweek number in title/description
+- If no clear match exists, pick the closest and set confidence below 0.5
+- If none are team selection videos at all, set chosen_index to -1 and confidence to 0.0"""
+
+    client = anthropic.Anthropic(api_key=api_key)
+    message = client.messages.create(
+        model=model,
+        max_tokens=300,
+        temperature=temperature,
+        system="You are an FPL video classifier. Return ONLY valid JSON.",
+        messages=[{"role": "user", "content": prompt}],
+    )
+
+    from anthropic.types import TextBlock
+
+    if not message.content or not isinstance(message.content[0], TextBlock):
+        raise ValueError("Unexpected response from Anthropic API")
+    response_text = message.content[0].text.strip()
+
+    # Strip code fences if present
+    if "```" in response_text:
+        json_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", response_text, re.DOTALL)
+        if json_match:
+            response_text = json_match.group(1)
+
+    data = json.loads(response_text)
+    chosen_index = int(data["chosen_index"])
+    confidence = float(data["confidence"])
+    reasoning = str(data["reasoning"])
+    signals: list[str] = [str(s) for s in data.get("signals", [])]
+
+    if chosen_index < 0 or chosen_index >= len(videos):
+        raise ValueError(f"LLM returned no match (index={chosen_index})")
+    if not 0.0 <= confidence <= 1.0:
+        confidence = max(0.0, min(1.0, confidence))
+
+    logger.debug("LLM picked index %d (confidence %.2f): %s", chosen_index, confidence, reasoning)
+    return chosen_index, confidence, reasoning, signals
+
+
 def select_single_channel(
     *,
     channel_name: str,
@@ -102,8 +180,8 @@ def select_single_channel(
     gameweek: int | None,
     days_back: int,
     max_per_channel: int,
-    anthropic_model: str = DEFAULT_ANTHROPIC_MODEL,  # noqa: ARG001
-    temperature: float = DEFAULT_TEMPERATURE,  # noqa: ARG001
+    anthropic_model: str = DEFAULT_ANTHROPIC_MODEL,
+    temperature: float = DEFAULT_TEMPERATURE,
     logger: logging.Logger | None = None,
 ) -> ChannelResult:
     """Discover the best team-selection video for a single channel."""
@@ -120,53 +198,53 @@ def select_single_channel(
     if not videos:
         raise VideoPickerError(f"No recent videos found for {channel_name}")
 
-    heuristic_filter = HeuristicFilter(gameweek=gameweek, logger=logger)
-    candidates, _notes = heuristic_filter.filter_and_rank(
-        videos, max_candidates=max_per_channel
-    )
-    if not candidates:
-        raise VideoPickerError(
-            f"No team selection video found for {channel_name}"
+    # Try LLM selection first, fall back to heuristics
+    selected_video: VideoItem | None = None
+    confidence = 0.0
+    reasoning = ""
+    matched_signals: list[str] = []
+    heuristic_score = 0.0
+
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        try:
+            idx, confidence, reasoning, matched_signals = _llm_pick_video(
+                videos, gameweek, anthropic_model, temperature, logger,
+            )
+            selected_video = videos[idx]
+            print(f"  ↳ LLM selected: {selected_video.title[:60]}", flush=True)
+        except Exception as exc:
+            logger.debug("LLM selection failed, falling back to heuristic: %s", exc)
+            selected_video = None
+
+    # Heuristic fallback
+    if selected_video is None:
+        heuristic_filter = HeuristicFilter(gameweek=gameweek, logger=logger)
+        candidates, _notes = heuristic_filter.filter_and_rank(
+            videos, max_candidates=max_per_channel
         )
+        if not candidates:
+            raise VideoPickerError(
+                f"No team selection video found for {channel_name}"
+            )
+        selected_video = candidates[0]
+        heuristic_score_raw = heuristic_filter.calculate_score(selected_video)
+        confidence = min(0.95, heuristic_score_raw / 10.0)
 
-    selected_video = candidates[0]
+        matched_keywords: list[str] = []
+        text = f"{selected_video.normalized_title} {selected_video.description.lower()}"
+        for keyword in heuristic_filter.POSITIVE_KEYWORDS:
+            if keyword in text:
+                matched_keywords.append(keyword)
+        reasoning = "Heuristic selection based on keyword matching"
+        if gameweek:
+            detected_gw = heuristic_filter.extract_gameweek_number(text)
+            if detected_gw == gameweek:
+                reasoning = f"Explicit GW{gameweek} team selection video"
+                matched_keywords.append(f"gw{gameweek}")
+        matched_signals = matched_keywords[:3]
+        heuristic_score = heuristic_filter.calculate_score(selected_video)
 
-    # Use heuristic score as confidence (0.0-1.0 range)
-    heuristic_score_raw = heuristic_filter.calculate_score(selected_video)
-    confidence = min(0.95, heuristic_score_raw / 10.0)  # Scale to 0-1, cap at 0.95
-
-    # Generate reasoning based on matched keywords
-    matched_keywords = []
-    text = f"{selected_video.normalized_title} {selected_video.description.lower()}"
-    for keyword in heuristic_filter.POSITIVE_KEYWORDS:
-        if keyword in text:
-            matched_keywords.append(keyword)
-
-    reasoning = "Heuristic selection based on keyword matching"
-    if gameweek:
-        detected_gw = heuristic_filter.extract_gameweek_number(text)
-        if detected_gw == gameweek:
-            reasoning = f"Explicit GW{gameweek} team selection video with clear title indicating team selection and transfers"
-            matched_keywords.append(f"gw{gameweek}")
-
-    matched_signals: list[str] = matched_keywords[:3]  # Top 3 signals
-
-    # Anthropic ranking disabled for performance - heuristics work well
-    # try:
-    #     ranker = AnthropicRanker(
-    #         model=anthropic_model, temperature=temperature, logger=logger
-    #     )
-    #     ranked = ranker.rank_videos_by_channel({channel_url: candidates}, gameweek)
-    #     if ranked and channel_url in ranked:
-    #         selected_video, anthropic_response = ranked[channel_url]
-    #         confidence = anthropic_response.confidence
-    #         reasoning = anthropic_response.reasoning
-    #         matched_signals = anthropic_response.matched_signals
-    # except Exception as exc:  # pragma: no cover - fallback safety
-    #     logger.debug("Anthropic ranking unavailable, using heuristic result: %s", exc)
-
-    heuristic_score = heuristic_filter.calculate_score(selected_video)
-    alternatives = [video for video in candidates if video is not selected_video][:3]
+    alternatives = [v for v in videos if v is not selected_video][:3]
 
     return ChannelResult(
         channel_name=channel_name,
@@ -908,7 +986,7 @@ Use --single-channel for parallel processing in shell scripts.
     parser.add_argument(
         "--channels-config",
         default=str(DEFAULT_CHANNELS_CONFIG),
-        help="Path to channels.json config file (default: project youtube-titles/channels.json)",
+        help="Path to channels.json config file (default: package data/channels.json)",
     )
     parser.add_argument(
         "--max-per-channel",

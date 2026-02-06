@@ -200,7 +200,7 @@ class MyTeamPayload(TypedDict, total=False):
 
 
 class ChannelsFile(TypedDict):
-    """Structure of ``youtube-titles/channels.json``."""
+    """Structure of ``data/channels.json``."""
 
     channels: list[ChannelConfig]
 

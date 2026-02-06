@@ -10,35 +10,15 @@ import pytest
 from fpl_influencer_hivemind.youtube import video_picker as vp
 
 
-class DummyRanker:
-    """Anthropic stub that returns a deterministic selection."""
-
-    def __init__(self, *args: object, **kwargs: object) -> None:
-        pass
-
-    def rank_videos_by_channel(
-        self,
-        channels_candidates: dict[str, list[vp.VideoItem]],
-        _gameweek: int,
-    ) -> dict[str, tuple[vp.VideoItem, vp.AnthropicChannelResponse]]:
-        if not channels_candidates:
-            raise ValueError("channels_candidates cannot be empty")
-
-        channel_name, videos = next(iter(channels_candidates.items()))
-        video = videos[0]
-        return {
-            channel_name: (
-                video,
-                vp.AnthropicChannelResponse(
-                    channel_name=video.channel_name,
-                    chosen_index=0,
-                    chosen_url=video.url,
-                    confidence=0.95,
-                    matched_signals=["team selection"],
-                    reasoning="Model preference",
-                ),
-            )
-        }
+def _fake_llm_pick(
+    videos: list[vp.VideoItem],  # noqa: ARG001
+    gameweek: int | None,
+    model: str,  # noqa: ARG001
+    temperature: float,  # noqa: ARG001
+    logger: Any,  # noqa: ARG001
+) -> tuple[int, float, str, list[str]]:
+    """Deterministic stub returning first video with high confidence."""
+    return (0, 0.95, f"GW{gameweek} team selection video", ["team selection"])
 
 
 def test_select_single_channel_returns_ranked_result(
@@ -56,7 +36,8 @@ def test_select_single_channel_returns_ranked_result(
         return [video]
 
     monkeypatch.setattr(vp.FPLVideoCollector, "_fetch_channel_videos", fake_fetch)
-    monkeypatch.setattr(vp, "AnthropicRanker", DummyRanker)
+    monkeypatch.setattr(vp, "_llm_pick_video", _fake_llm_pick)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
 
     result = vp.select_single_channel(
         channel_name="FPL Test",
@@ -72,6 +53,40 @@ def test_select_single_channel_returns_ranked_result(
     assert "team selection" in result.matched_signals
 
 
+def test_select_single_channel_heuristic_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When LLM fails, heuristic fallback picks the video."""
+    video = vp.VideoItem(
+        title="GW5 Team Selection",
+        url="https://youtu.be/abc123def45",
+        published_at=datetime(2025, 1, 1, tzinfo=UTC),
+        channel_name="FPL Test",
+        description="My team selection video",
+    )
+
+    def fake_fetch(_self: Any, _channel_url: str) -> list[vp.VideoItem]:
+        return [video]
+
+    def fake_llm_fail(*args: Any, **kwargs: Any) -> None:  # noqa: ARG001
+        raise RuntimeError("API unavailable")
+
+    monkeypatch.setattr(vp.FPLVideoCollector, "_fetch_channel_videos", fake_fetch)
+    monkeypatch.setattr(vp, "_llm_pick_video", fake_llm_fail)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+
+    result = vp.select_single_channel(
+        channel_name="FPL Test",
+        channel_url="https://www.youtube.com/@fpltest",
+        gameweek=5,
+        days_back=7,
+        max_per_channel=3,
+    )
+
+    assert result.picked is video
+    assert result.confidence > 0
+
+
 def test_select_single_channel_raises_when_no_videos(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -79,7 +94,6 @@ def test_select_single_channel_raises_when_no_videos(
         return []
 
     monkeypatch.setattr(vp.FPLVideoCollector, "_fetch_channel_videos", fake_fetch)
-    monkeypatch.setattr(vp, "AnthropicRanker", DummyRanker)
 
     with pytest.raises(vp.VideoPickerError):
         vp.select_single_channel(
