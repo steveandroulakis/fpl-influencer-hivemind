@@ -85,6 +85,7 @@ Use `.env` (auto sourced) based on `.env.example`:
 - Prefer importing modules (`select_single_channel`, etc.) instead of shelling out.
 - Tests use helper stubs (`stub_select_single_channel`) to avoid real API calls; keep them in sync with pipeline behaviour.
 - Coverage pragmas exist for API-heavy classes—only add new ones when external services are unavoidable.
+- Anthropic extraction can hit `stop_reason="max_tokens"` for long transcripts; keep prompts concise and consider retries on truncation (see `SimpleFPLAnalyzer._extract_channel`).
 - When editing docs, keep README and CLAUDE aligned with the "pipeline-first" architecture.
 
 ## Type Safety Rules

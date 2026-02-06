@@ -4,8 +4,12 @@ Return JSON only.
 Rules:
 - Do not infer.
 - Only include what is clearly stated.
-- Include evidence with direct quotes + timestamps if available.
 - Use raw player names as spoken.
+- Keep output concise: cap each list to at most 8 items. Limit key_issues,
+  player_rationales, and chip_rationales to at most 3 items each.
+- Evidence is optional; include only key decisions (captain, vice, transfers,
+  chips) and keep quotes short.
+- Timestamps are optional; set start/end to null when unknown.
 
 Schema:
 {
@@ -18,16 +22,16 @@ Schema:
   "watchlist_names": ["..."],
   "chip_plan": ["..."],
   "evidence": {
-    "captain": {"quote": "...", "start": 0.0, "end": 0.0},
-    "transfer_in_<name>": {"quote": "...", "start": 0.0, "end": 0.0}
+    "captain": {"quote": "...", "start": null, "end": null},
+    "transfer_in_<name>": {"quote": "...", "start": null, "end": null}
   },
   "key_issues": [
-    {"topic": "...", "sentiment": "risk|positive|neutral", "quote": "...", "start": 0.0, "end": 0.0}
+    {"topic": "...", "sentiment": "risk|positive|neutral", "quote": "...", "start": null, "end": null}
   ],
   "player_rationales": [
-    {"player_name": "...", "stance": "in|out|hold|captain|avoid", "reason": "...", "quote": "...", "start": 0.0, "end": 0.0}
+    {"player_name": "...", "stance": "in|out|hold|captain|avoid", "reason": "...", "quote": "...", "start": null, "end": null}
   ],
   "chip_rationales": [
-    {"chip": "...", "gameweek": "...", "reason": "...", "quote": "...", "start": 0.0, "end": 0.0}
+    {"chip": "...", "gameweek": "...", "reason": "...", "quote": "...", "start": null, "end": null}
   ]
 }

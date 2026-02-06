@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from dataclasses import asdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -104,43 +105,91 @@ class SimpleFPLAnalyzer:
             return None
 
         prompt_template = self._load_prompt("extract_channel.txt")
-        segments = transcript.get("segments", [])
-        prompt = (
-            f"{prompt_template}\n\n"
-            f"CHANNEL: {channel_name}\n"
-            f"VIDEO_ID: {video_id}\n"
-            f"TRANSCRIPT:\n{transcript_text}\n\n"
-            f"SEGMENTS (start, duration, text):\n{json.dumps(segments, indent=2)}"
-        )
 
+        def build_prompt(concise: bool) -> str:
+            extra = ""
+            if concise:
+                extra = (
+                    "\n\nCONCISE MODE:\n"
+                    "The previous response was too long or invalid. "
+                    "Return a shorter JSON response that still matches the schema. "
+                    "Prefer fewer items and shorter quotes."
+                )
+            return (
+                f"{prompt_template}{extra}\n\n"
+                f"CHANNEL: {channel_name}\n"
+                f"VIDEO_ID: {video_id}\n"
+                f"TRANSCRIPT:\n{transcript_text}"
+            )
+
+        def parse_response(raw: str) -> ChannelExtraction | None:
+            try:
+                cleaned = extract_last_json(raw)
+                parsed = json.loads(cleaned)
+                if not isinstance(parsed, dict):
+                    raise json.JSONDecodeError("Expected JSON object", cleaned, 0)
+                parsed.update({"channel": channel_name, "video_id": video_id})
+                return ChannelExtraction(**parsed)
+            except (json.JSONDecodeError, ValidationError) as exc:
+                self.logger.error("Extraction parse failed for %s: %s", channel_name, exc)
+                return None
+
+        prompt = build_prompt(concise=False)
         if self.prompts_dir and self.save_prompts:
             save_debug_content(f"{channel_name}_extract_prompt.txt", prompt)
 
-        response, _ = self.client.call_sonnet(
+        response, stop_reason = self.client.call_sonnet(
             prompt=prompt,
             system=(
                 "You are extracting structured FPL decisions from transcripts. "
                 "Return only valid JSON matching the provided schema."
             ),
-            max_tokens=2000,
+            max_tokens=3500,
         )
 
         if self.prompts_dir and self.save_prompts:
             save_debug_content(f"{channel_name}_extract_response.json", response)
 
+        extraction = parse_response(response)
+        if extraction:
+            return extraction
+
+        if stop_reason == "max_tokens":
+            self.logger.warning(
+                "Extraction hit max_tokens for %s; retrying with concise prompt",
+                channel_name,
+            )
+        else:
+            self.logger.warning(
+                "Retrying extraction for %s with concise prompt", channel_name
+            )
+
+        retry_prompt = build_prompt(concise=True)
+        if self.prompts_dir and self.save_prompts:
+            save_debug_content(f"{channel_name}_extract_prompt_retry.txt", retry_prompt)
+
+        retry_response, _ = self.client.call_sonnet(
+            prompt=retry_prompt,
+            system=(
+                "You are extracting structured FPL decisions from transcripts. "
+                "Return only valid JSON matching the provided schema."
+            ),
+            max_tokens=3500,
+        )
+
+        if self.prompts_dir and self.save_prompts:
+            save_debug_content(
+                f"{channel_name}_extract_response_retry.json", retry_response
+            )
+
+        extraction = parse_response(retry_response)
+        if extraction:
+            return extraction
+
         try:
-            cleaned = extract_last_json(response)
-            parsed = json.loads(cleaned)
-            if not isinstance(parsed, dict):
-                raise json.JSONDecodeError("Expected JSON object", cleaned, 0)
-            parsed.update({"channel": channel_name, "video_id": video_id})
-            return ChannelExtraction(**parsed)
-        except (json.JSONDecodeError, ValidationError) as exc:
-            self.logger.error("Extraction parse failed for %s: %s", channel_name, exc)
-            try:
-                return ChannelExtraction(channel=channel_name, video_id=video_id)
-            except ValidationError:
-                return None
+            return ChannelExtraction(channel=channel_name, video_id=video_id)
+        except ValidationError:
+            return None
 
     def _validate_lineup_shape(self, extraction: ChannelExtraction) -> list[str]:
         warnings: list[str] = []
@@ -757,8 +806,8 @@ class SimpleFPLAnalyzer:
         squad: list[SquadPlayer],
         post_squad: list[SquadPlayer],
     ) -> ValidationResult:
-        original = [player.__dict__ for player in squad]
-        updated = [player.__dict__ for player in post_squad]
+        original = [asdict(player) for player in squad]
+        updated = [asdict(player) for player in post_squad]
         errors = validate_transfers(plan, original, updated)
         errors.extend(validate_lineup(lineup, updated))
         return ValidationResult(
