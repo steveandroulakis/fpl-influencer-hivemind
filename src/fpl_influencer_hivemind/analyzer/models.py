@@ -21,6 +21,7 @@ class ChannelAnalysis(BaseModel):
     key_issues_discussed: list[dict[str, str]] = []
     watchlist: list[dict[str, str]] = []
     bank_itb: str | None = None
+    chip_strategy: list[dict[str, str]] = []  # [{"chip": "Wildcard", "gameweek": "GW24", "reasoning": "..."}]
     key_reasoning: list[str] = []
     confidence: float = 0.5
     transcript_length: int = 0

@@ -18,6 +18,11 @@ from src.fpl_influencer_hivemind.types import ScoredGapAnalysis
 logger = logging.getLogger(__name__)
 
 
+_ROTATION_KEYWORDS = frozenset(
+    {"rotation", "rotated", "benched", "benching", "minutes", "rested", "resting"}
+)
+
+
 def aggregate_influencer_consensus(
     channel_analyses: list[ChannelAnalysis],
 ) -> dict[str, Any]:
@@ -26,6 +31,8 @@ def aggregate_influencer_consensus(
     transfers_in_counts: dict[str, list[str]] = {}
     transfers_out_counts: dict[str, list[str]] = {}
     watchlist_items: list[dict[str, Any]] = []
+    rotation_warnings: dict[str, list[str]] = {}  # player → [channel names]
+    chip_consensus: dict[str, list[dict[str, str]]] = {}  # "Wildcard GW24" → [{channel, reasoning}]
 
     for analysis in channel_analyses:
         # Captains
@@ -52,13 +59,63 @@ def aggregate_influencer_consensus(
                 }
             )
 
+        # Chip strategy
+        for chip_rec in analysis.chip_strategy:
+            chip = chip_rec.get("chip", "")
+            gw = chip_rec.get("gameweek", "")
+            reasoning = chip_rec.get("reasoning", "")
+            if chip:
+                key = f"{chip} {gw}".strip()
+                chip_consensus.setdefault(key, []).append(
+                    {"channel": analysis.channel_name, "reasoning": reasoning}
+                )
+
+        # Rotation warnings from key_issues_discussed
+        for issue in analysis.key_issues_discussed:
+            text = (
+                f"{issue.get('issue', '')} {issue.get('opinion', '')}"
+            ).lower()
+            if any(kw in text for kw in _ROTATION_KEYWORDS):
+                # Extract player names mentioned in team_selection / watchlist
+                # to match rotation warning to specific players
+                _tag_rotation_players(
+                    text, analysis, rotation_warnings
+                )
+
     return {
         "captain_counts": captain_counts,
         "transfers_in_counts": transfers_in_counts,
         "transfers_out_counts": transfers_out_counts,
         "watchlist": watchlist_items,
+        "rotation_warnings": rotation_warnings,
+        "chip_consensus": chip_consensus,
         "total_channels": len(channel_analyses),
     }
+
+
+def _tag_rotation_players(
+    issue_text: str,
+    analysis: ChannelAnalysis,
+    rotation_warnings: dict[str, list[str]],
+) -> None:
+    """Match rotation issue text to player names from channel analysis."""
+    # Check all players mentioned in this channel's context
+    all_players = (
+        analysis.team_selection
+        + analysis.transfers_in
+        + [w.get("name", "") for w in analysis.watchlist]
+    )
+    for player_str in all_players:
+        # Extract bare name (strip position tag like "(MID)")
+        name = player_str.split("(")[0].strip()
+        if not name:
+            continue
+        # Check if any part of the player's name appears in the issue text
+        name_parts = name.lower().split()
+        if any(part in issue_text for part in name_parts if len(part) > 2):
+            rotation_warnings.setdefault(player_str, []).append(
+                analysis.channel_name
+            )
 
 
 def stage_gap_analysis(
@@ -69,6 +126,7 @@ def stage_gap_analysis(
     transfer_momentum: dict[str, Any] | None = None,
     commentary: str | None = None,
     previous_errors: list[str] | None = None,
+    condensed_players: list[dict[str, Any]] | None = None,
 ) -> ScoredGapAnalysis:
     """Stage 1: identify gaps between my squad and consensus with severity scores."""
     logger.info("Stage 1: Gap Analysis (with severity scoring)")
@@ -129,6 +187,20 @@ Use transfer momentum to boost severity: +1 if >100k net transfers.
             + "\n\nFix these issues in your response.\n"
         )
 
+    # Build ownership lookup for tiebreaker
+    ownership_section = ""
+    if condensed_players:
+        ownership_map = {
+            p["web_name"]: p.get("selected_by_percent", 0)
+            for p in condensed_players[:80]
+            if p.get("selected_by_percent", 0) >= 10.0
+        }
+        if ownership_map:
+            ownership_section = f"""
+PLAYER OWNERSHIP (selected_by_percent, >=10% only):
+{json.dumps(ownership_map, indent=1)}
+"""
+
     directive_section = ""
     if commentary:
         directive_section = (
@@ -137,6 +209,7 @@ Use transfer momentum to boost severity: +1 if >100k net transfers.
 
     prompt = f"""Analyze gaps between my FPL squad and influencer consensus for GW{gameweek}.
 {momentum_section}
+{ownership_section}
 {directive_section}
 
 MY SQUAD (15 players):
@@ -150,6 +223,7 @@ INFLUENCER CONSENSUS:
 - Transfers IN recommended: {json.dumps(consensus["transfers_in_counts"], indent=2)}
 - Transfers OUT recommended: {json.dumps(consensus["transfers_out_counts"], indent=2)}
 - Watchlist: {json.dumps(consensus["watchlist"], indent=2)}
+- Rotation warnings: {json.dumps(consensus.get("rotation_warnings", {}), indent=2)}
 - Total channels analyzed: {total_channels}
 {error_feedback}
 Return JSON with SEVERITY SCORES (0-10) for each gap:
@@ -175,6 +249,8 @@ SEVERITY SCORING GUIDELINES:
 - Injury replacement: +2 if replacing injured starter
 - Form differential: +1 if replacement has form > 5.0
 - Transfer momentum: +1 if >100k net transfers
+- Rotation risk: -1 to players_missing severity if 2+ influencers flag rotation risk for that player
+- Tiebreaker: when two gaps have equal severity, rank the player with higher ownership (selected_by_percent) first
 - Maximum per gap: 10
 - total_severity = sum of all players_to_sell + players_missing + captain_severity
 

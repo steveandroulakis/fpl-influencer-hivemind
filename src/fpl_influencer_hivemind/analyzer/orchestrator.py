@@ -283,6 +283,9 @@ Return ONLY valid JSON matching this schema (all keys required):
     {{"name": "Player (POS)", "priority": "high|med|low", "why": "reason"}}
   ],
   "bank_itb": "0.5m",
+  "chip_strategy": [
+    {{"chip": "Wildcard|Free Hit|Bench Boost|Triple Captain", "gameweek": "GWxx", "reasoning": "why"}}
+  ],
   "key_reasoning": ["Reason 1", "Reason 2"],
   "confidence": 0.85,
   "transcript_length": {transcript_length}
@@ -297,6 +300,7 @@ Rules:
 - captain_choice/vice_captain_choice: "Not specified" if not stated.
 - bank_itb: string like "0.5m" if stated, otherwise null.
 - Use empty arrays for missing lists.
+- chip_strategy: extract if influencer discusses chip usage timing. Empty array if not mentioned.
 - For short transcripts (<3000 chars), focus on transfers and captain; lower confidence.
 - Do not invent players or decisions not stated in the transcript.
 """
@@ -433,8 +437,12 @@ Return valid JSON only, matching the provided schema exactly."""
         transfer_momentum: dict[str, Any] | None = None,
         commentary: str | None = None,
         max_stage_attempts: int = 2,
-    ) -> tuple[ScoredGapAnalysis, TransferPlan, LineupPlan, QualityReview]:
-        """Orchestrate all stages with validation retry loop and final quality review."""
+    ) -> tuple[ScoredGapAnalysis, TransferPlan, LineupPlan, QualityReview | None]:
+        """Orchestrate stages 1-4 (gap, transfer, lineup, validation).
+
+        Quality review is run separately after decision options are built
+        so it evaluates the actual presented plan, not an internal intermediate.
+        """
         self.logger.info("Starting multi-stage analysis")
 
         squad_context = self._build_squad_context(my_team_data, free_transfers)
@@ -456,6 +464,7 @@ Return valid JSON only, matching the provided schema exactly."""
                 transfer_momentum=transfer_momentum,
                 commentary=commentary,
                 previous_errors=gap_errors if gap_errors else None,
+                condensed_players=condensed_players,
             )
             # Gap analysis doesn't have strict validation, accept it
             break
@@ -575,77 +584,7 @@ Return valid JSON only, matching the provided schema exactly."""
         if final_validation.warnings:
             self.logger.info(f"Final validation warnings: {final_validation.warnings}")
 
-        # Holistic quality review (LLM assessment with corrective loop)
-        quality_review = holistic_quality_review(
-            self.client, gap, transfers, lineup, consensus, squad_context, gameweek
-        )
-        self.logger.info(
-            f"Quality review: confidence={quality_review.confidence_score:.2f}, "
-            f"strength={quality_review.recommendation_strength}"
-        )
-
-        # Corrective loop: if fixable issues found, re-run affected stages
-        if quality_review.fixable_issues:
-            self.logger.info(
-                f"Quality review found {len(quality_review.fixable_issues)} fixable issues"
-            )
-
-            # Group issues by stage
-            transfer_fixes = [
-                f"QUALITY REVIEW FIX: {fi.issue} - {fi.fix_instruction}"
-                for fi in quality_review.fixable_issues
-                if fi.stage == "transfer"
-            ]
-            lineup_fixes = [
-                f"QUALITY REVIEW FIX: {fi.issue} - {fi.fix_instruction}"
-                for fi in quality_review.fixable_issues
-                if fi.stage == "lineup"
-            ]
-
-            # Re-run transfer stage if needed
-            if transfer_fixes:
-                self.logger.info(f"Re-running Stage 2 with {len(transfer_fixes)} fixes")
-                transfers = stage_transfer_plan(
-                    self.client,
-                    gap,
-                    squad_context,
-                    condensed_players,
-                    channel_analyses,
-                    gameweek,
-                    commentary=commentary,
-                    previous_errors=transfer_fixes,
-                )
-                transfers, _ = apply_transfer_pricing(
-                    transfers, squad_context, player_lookup
-                )
-                post_transfer_squad = compute_post_transfer_squad(
-                    original_squad, transfers.transfers
-                )
-
-            # Re-run lineup stage if needed (or if transfers changed)
-            if lineup_fixes or transfer_fixes:
-                self.logger.info(f"Re-running Stage 3 with {len(lineup_fixes)} fixes")
-                lineup = stage_lineup_selection(
-                    self.client,
-                    post_transfer_squad,
-                    channel_analyses,
-                    gameweek,
-                    commentary=commentary,
-                    previous_errors=lineup_fixes if lineup_fixes else None,
-                )
-
-            # Re-run quality review on corrected output
-            self.logger.info("Re-running quality review after corrections")
-            quality_review = holistic_quality_review(
-                self.client, gap, transfers, lineup, consensus, squad_context, gameweek
-            )
-            self.logger.info(
-                f"Updated quality review: confidence={quality_review.confidence_score:.2f}, "
-                f"strength={quality_review.recommendation_strength}, "
-                f"remaining issues={len(quality_review.fixable_issues)}"
-            )
-
-        return gap, transfers, lineup, quality_review
+        return gap, transfers, lineup, None
 
     def _parse_option_requests(self, commentary: str | None) -> list[OptionRequest]:
         """Parse user commentary to extract specific transfer option requests using LLM.
@@ -681,7 +620,9 @@ If no specific transfer counts are requested, return empty array: []
             # Clean response
             response = response.strip()
             if response.startswith("```"):
-                json_match = re.search(r"```(?:json)?\s*(\[.*?\])\s*```", response, re.DOTALL)
+                json_match = re.search(
+                    r"```(?:json)?\s*(\[.*?\])\s*```", response, re.DOTALL
+                )
                 if json_match:
                     response = json_match.group(1)
 
@@ -709,14 +650,18 @@ If no specific transfer counts are requested, return empty array: []
                     unique.append(req)
 
             if unique:
-                self.logger.info(f"Parsed {len(unique)} option requests from commentary")
+                self.logger.info(
+                    f"Parsed {len(unique)} option requests from commentary"
+                )
             return unique
 
         except (json.JSONDecodeError, Exception) as e:
             self.logger.debug(f"Could not parse option requests from commentary: {e}")
             return []
 
-    def _build_dynamic_label(self, index: int, transfer_count: int, hit_cost: int) -> str:
+    def _build_dynamic_label(
+        self, index: int, transfer_count: int, hit_cost: int
+    ) -> str:
         """Generate descriptive label for an option based on transfer count and hit."""
         label_letter = chr(ord("A") + index)
         if transfer_count == 0:
@@ -775,7 +720,9 @@ If no specific transfer counts are requested, return empty array: []
         hit_cost = max(0, (count - fts) * 4) if requires_hit else 0
 
         # Build directive for the LLM
-        directive = f"EXACT TRANSFERS: Make exactly {count} transfer{'s' if count > 1 else ''}."
+        directive = (
+            f"EXACT TRANSFERS: Make exactly {count} transfer{'s' if count > 1 else ''}."
+        )
         if requires_hit:
             directive += f" Accept the -{hit_cost} hit cost."
         else:
@@ -888,6 +835,11 @@ If no specific transfer counts are requested, return empty array: []
                     rationale=rationale,
                 )
             )
+
+        # Sanitize reasoning for all options with transfers
+        for opt in options:
+            if opt.transfers.transfers:
+                self._sanitize_option_reasoning(opt)
 
         return options
 
@@ -1168,6 +1120,11 @@ If no specific transfer counts are requested, return empty array: []
                 )
             )
 
+        # Sanitize reasoning for all options with transfers
+        for opt in options:
+            if opt.transfers.transfers:
+                self._sanitize_option_reasoning(opt)
+
         return options
 
     def _build_heuristic_options(
@@ -1289,6 +1246,11 @@ If no specific transfer counts are requested, return empty array: []
                 target,
                 commentary,
             )
+
+        # Sanitize reasoning for all options with transfers
+        for opt in options:
+            if opt.transfers.transfers:
+                self._sanitize_option_reasoning(opt)
 
         return options
 
@@ -1740,6 +1702,112 @@ If no specific transfer counts are requested, return empty array: []
             )
         )
 
+    def _correct_decision_option(
+        self,
+        option: DecisionOption,
+        review: QualityReview,
+        gap: ScoredGapAnalysis,
+        squad_context: dict[str, Any],
+        condensed_players: list[dict[str, Any]],
+        channel_analyses: list[ChannelAnalysis],
+        player_lookup: dict[str, list[PlayerLookupEntry]],
+        gameweek: int,
+        commentary: str | None = None,
+    ) -> DecisionOption:
+        """Re-run stages for a decision option based on quality review fixes."""
+        original_squad = squad_context["squad"]
+
+        transfer_fixes = [
+            f"QUALITY REVIEW FIX: {fi.issue} - {fi.fix_instruction}"
+            for fi in review.fixable_issues
+            if fi.stage == "transfer"
+        ]
+        lineup_fixes = [
+            f"QUALITY REVIEW FIX: {fi.issue} - {fi.fix_instruction}"
+            for fi in review.fixable_issues
+            if fi.stage == "lineup"
+        ]
+
+        transfers = option.transfers
+        post_transfer_squad = compute_post_transfer_squad(
+            original_squad, transfers.transfers
+        )
+
+        if transfer_fixes:
+            self.logger.info(
+                f"Correcting option transfers: {len(transfer_fixes)} fixes"
+            )
+            transfers = stage_transfer_plan(
+                self.client,
+                gap,
+                squad_context,
+                condensed_players,
+                channel_analyses,
+                gameweek,
+                commentary=commentary,
+                previous_errors=transfer_fixes,
+            )
+            transfers, _ = apply_transfer_pricing(
+                transfers, squad_context, player_lookup
+            )
+            post_transfer_squad = compute_post_transfer_squad(
+                original_squad, transfers.transfers
+            )
+
+        lineup = option.lineup
+        if lineup_fixes or transfer_fixes:
+            self.logger.info(f"Correcting option lineup: {len(lineup_fixes)} fixes")
+            lineup = stage_lineup_selection(
+                self.client,
+                post_transfer_squad,
+                channel_analyses,
+                gameweek,
+                commentary=commentary,
+                previous_errors=lineup_fixes if lineup_fixes else None,
+            )
+
+        # Rebuild label from corrected transfers
+        addressed = [t.in_player.split(" (")[0] for t in transfers.transfers]
+        strategy = option.label.split(":")[0] if ":" in option.label else "Balanced"
+        label = self._build_strategy_label(strategy, transfers, addressed)
+
+        return DecisionOption(
+            label=label,
+            transfers=transfers,
+            lineup=lineup,
+            rationale=option.rationale,
+        )
+
+    @staticmethod
+    def _sanitize_option_reasoning(option: DecisionOption) -> None:
+        """Ensure reasoning text matches actual transfers (mutates in place).
+
+        The LLM sometimes describes transfers it intended to make but couldn't
+        due to budget or pricing constraints. This appends a clarification
+        when the reasoning mentions more player moves than actually exist.
+        """
+        actual_transfers = option.transfers.transfers
+        actual_count = len(actual_transfers)
+        reasoning = option.transfers.reasoning
+
+        # Extract "X out ... for Y" / "X → Y" patterns from reasoning
+        out_mentions = set(re.findall(r"(\w[\w\s.'-]+?)\s+out\b", reasoning, re.I))
+        arrow_mentions = set(re.findall(r"(\w[\w\s.'-]+?)\s*→", reasoning))
+        mentioned_outs = out_mentions | arrow_mentions
+
+        # Compare to actual out-players
+        actual_out_names = {
+            t.out_player.split(" (")[0].strip() for t in actual_transfers
+        }
+
+        extra_mentions = len(mentioned_outs - actual_out_names) if mentioned_outs else 0
+        if extra_mentions > 0 and actual_count < len(mentioned_outs):
+            option.transfers.reasoning = (
+                f"{reasoning} "
+                f"[Note: {actual_count} transfer{'s' if actual_count != 1 else ''} "
+                f"executed; remaining moves deferred due to constraints.]"
+            )
+
     def run_analysis(
         self,
         input_file: str,
@@ -1818,6 +1886,23 @@ If no specific transfer counts are requested, return empty array: []
                         f"No transcript found for {channel_name or video_id or 'Unknown'}"
                     )
 
+            # Drop low-quality analyses (short transcript OR low confidence)
+            pre_filter = len(channel_analyses)
+            filtered: list[ChannelAnalysis] = []
+            for a in channel_analyses:
+                if a.confidence < 0.70 or a.transcript_length < 3000:
+                    self.logger.warning(
+                        f"Dropping {a.channel_name}: confidence={a.confidence}, "
+                        f"transcript_length={a.transcript_length}"
+                    )
+                else:
+                    filtered.append(a)
+            channel_analyses = filtered
+            if pre_filter > len(channel_analyses):
+                self.logger.info(
+                    f"Kept {len(channel_analyses)}/{pre_filter} channels after quality filter"
+                )
+
             if not channel_analyses:
                 raise ValueError("No successful channel analyses - cannot proceed")
 
@@ -1839,6 +1924,7 @@ If no specific transfer counts are requested, return empty array: []
             )
 
             squad_context = self._build_squad_context(my_team_data, free_transfers)
+            consensus = aggregate_influencer_consensus(channel_analyses)
             decision_options = self._build_decision_options(
                 gap,
                 transfers,
@@ -1852,7 +1938,55 @@ If no specific transfer counts are requested, return empty array: []
                 commentary=commentary,
             )
 
+            # Quality review on the PRIMARY decision option (not the internal plan)
+            quality_review: QualityReview | None = None
+            if decision_options:
+                primary = decision_options[0]
+                quality_review = holistic_quality_review(
+                    self.client,
+                    gap,
+                    primary.transfers,
+                    primary.lineup,
+                    consensus,
+                    squad_context,
+                    gameweek,
+                )
+                self.logger.info(
+                    f"Quality review: confidence={quality_review.confidence_score:.2f}, "
+                    f"strength={quality_review.recommendation_strength}"
+                )
+
+                # Corrective loop on the primary option
+                if quality_review.fixable_issues:
+                    decision_options[0] = self._correct_decision_option(
+                        decision_options[0],
+                        quality_review,
+                        gap,
+                        squad_context,
+                        condensed_players,
+                        channel_analyses,
+                        player_lookup,
+                        gameweek,
+                        commentary=commentary,
+                    )
+                    # Re-run quality review after corrections
+                    quality_review = holistic_quality_review(
+                        self.client,
+                        gap,
+                        decision_options[0].transfers,
+                        decision_options[0].lineup,
+                        consensus,
+                        squad_context,
+                        gameweek,
+                    )
+                    self.logger.info(
+                        f"Updated quality review: confidence={quality_review.confidence_score:.2f}, "
+                        f"strength={quality_review.recommendation_strength}, "
+                        f"remaining issues={len(quality_review.fixable_issues)}"
+                    )
+
             # Assemble final report from stage outputs
+            squad_names = {p["name"] for p in squad_context["squad"]}
             final_report = assemble_report(
                 channel_analyses,
                 gap,
@@ -1860,6 +1994,8 @@ If no specific transfer counts are requested, return empty array: []
                 gameweek,
                 commentary=commentary,
                 quality_review=quality_review,
+                condensed_players=condensed_players,
+                squad_names=squad_names,
             )
 
             # Add header with metadata

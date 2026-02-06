@@ -1,5 +1,7 @@
 """Report generation module for the FPL Intelligence Analyzer."""
 
+from typing import Any
+
 from src.fpl_influencer_hivemind.analyzer.models import (
     ChannelAnalysis,
     DecisionOption,
@@ -283,6 +285,75 @@ def format_quality_review(review: QualityReview) -> str:
     return "\n".join(lines)
 
 
+def generate_chip_strategy_section(
+    chip_consensus: dict[str, list[dict[str, str]]], total_channels: int
+) -> str:
+    """Build chip strategy consensus section from aggregated chip data."""
+    if not chip_consensus:
+        return ""
+
+    lines = ["## Chip Strategy Consensus\n"]
+    lines.append("| Chip | Backers | Count |")
+    lines.append("|------|---------|-------|")
+
+    for key, entries in sorted(
+        chip_consensus.items(), key=lambda x: len(x[1]), reverse=True
+    ):
+        backers = ", ".join(e["channel"] for e in entries)
+        lines.append(f"| {key} | {backers} | {len(entries)}/{total_channels} |")
+
+    lines.append("")
+
+    # Add key reasoning quotes (one per chip, from first backer)
+    lines.append("**Key Reasoning:**")
+    for key, entries in sorted(
+        chip_consensus.items(), key=lambda x: len(x[1]), reverse=True
+    ):
+        reasoning = entries[0].get("reasoning", "")
+        if reasoning:
+            lines.append(f"- **{key}**: {reasoning}")
+    lines.append("")
+
+    return "\n".join(lines)
+
+
+def generate_ownership_section(
+    condensed_players: list[dict[str, Any]],
+    squad_names: set[str],
+    ownership_threshold: float = 15.0,
+    max_shown: int = 10,
+) -> str:
+    """Build section showing high-ownership players missing from squad."""
+    missing: list[dict[str, Any]] = []
+    for p in condensed_players:
+        name = p.get("web_name", "")
+        if not name or name in squad_names:
+            continue
+        ownership = float(p.get("selected_by_percent", 0))
+        if ownership >= ownership_threshold:
+            missing.append(p)
+
+    if not missing:
+        return ""
+
+    # Sort by ownership desc, take top N
+    missing.sort(key=lambda x: float(x.get("selected_by_percent", 0)), reverse=True)
+    missing = missing[:max_shown]
+
+    lines = ["## Popular Players You're Missing\n"]
+    lines.append("| Player | Pos | Team | Ownership | Price |")
+    lines.append("|--------|-----|------|-----------|-------|")
+    for p in missing:
+        lines.append(
+            f"| {p.get('web_name', '')} | {p.get('position', '')} | "
+            f"{p.get('team_name', '')} | {float(p.get('selected_by_percent', 0)):.1f}% | "
+            f"{float(p.get('price', 0)):.1f}m |"
+        )
+    lines.append("")
+
+    return "\n".join(lines)
+
+
 def assemble_report(
     channel_analyses: list[ChannelAnalysis],
     gap: GapAnalysis | ScoredGapAnalysis,
@@ -290,6 +361,8 @@ def assemble_report(
     gameweek: int,  # noqa: ARG001  # Reserved for future use
     commentary: str | None = None,
     quality_review: QualityReview | None = None,
+    condensed_players: list[dict[str, Any]] | None = None,
+    squad_names: set[str] | None = None,
 ) -> str:
     """Assemble final markdown report from stage outputs."""
     sections = []
@@ -299,7 +372,23 @@ def assemble_report(
 
     sections.append(generate_consensus_section(channel_analyses))
     sections.append(generate_channel_notes(channel_analyses))
+
+    # Chip strategy section (from consensus data)
+    consensus = aggregate_influencer_consensus(channel_analyses)
+    chip_section = generate_chip_strategy_section(
+        consensus.get("chip_consensus", {}), consensus["total_channels"]
+    )
+    if chip_section:
+        sections.append(chip_section)
+
     sections.append(format_gap_section(gap))
+
+    # Ownership section
+    if condensed_players and squad_names is not None:
+        ownership_section = generate_ownership_section(condensed_players, squad_names)
+        if ownership_section:
+            sections.append(ownership_section)
+
     sections.append(format_action_plan(decision_options))
 
     # Add quality review section if available
@@ -315,5 +404,7 @@ __all__ = [
     "format_gap_section",
     "format_quality_review",
     "generate_channel_notes",
+    "generate_chip_strategy_section",
     "generate_consensus_section",
+    "generate_ownership_section",
 ]

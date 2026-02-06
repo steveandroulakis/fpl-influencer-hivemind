@@ -118,8 +118,8 @@ class AnthropicClient:
     def __init__(self) -> None:
         """Initialize the Anthropic client."""
         self.client = init_anthropic_client()
-        self.sonnet_model = "claude-opus-4-5-20251101"
-        self.opus_model = "claude-opus-4-5-20251101"
+        self.sonnet_model = "claude-opus-4-6"
+        self.opus_model = "claude-opus-4-6"
         self.haiku_model = "claude-3-5-haiku-20241022"
 
     def call(
